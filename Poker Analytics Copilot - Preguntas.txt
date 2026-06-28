@@ -1,0 +1,14 @@
+Pegunta - Capacidad
+
+Calcula mi winrate por poscición - Calcular wr
+Cuál es mi procentaje de XR vs small cbet en 2bp oop pfc? - Calcular freq
+Cuál es mi porcentaje de raise vs small cbet en 3bp ip pfc? - Calcular freq
+Cuál es mi winrate en button cuando abro con X, Y, Z manos? - Calcular wr
+Cuál es mi winrate as 2bp ip pfc blind vs blind? - Calcular wr
+Dame mi 3bet preflop por posición - Calcular freq
+Cúal es mi winrate en botes squeezeados? - Calcular wr
+Cuál es mi winrate por site? - Calcular wr
+Cuál es mi frecuencia de 2nd barrel OTT as 3BP OOP PFR after 33% cbet OTF? - Calcular freq
+Cuál es el success de mis apuestas OTR as 2bp oop pfc after XC-X-B? - Calcular freq
+Dame el top 10 de manos que perdí en 3bp ip pfc este mes - Buscar manos
+Dime cómo voy en XR freq este mes - Generar reportes
