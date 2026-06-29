@@ -18,3 +18,4 @@ while True:
     result = run_query(query_name, df, group_by=parsed_query.get("group_by"))
 
     print(result)
+    
