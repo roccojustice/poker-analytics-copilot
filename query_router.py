@@ -1,11 +1,11 @@
 from analytics import (
     winrate_by,
-    threebet_by_position,
+    threebet,
 )
 
 def run_query(query_name, df, group_by=None):
-    if query_name == "threebet_position":
-        return threebet_by_position(df)
+    if query_name == "threebet":
+        return threebet(df, group_by)
     
     elif query_name == "winrate":
         return winrate_by(df, group_by)

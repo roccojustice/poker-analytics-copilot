@@ -17,7 +17,8 @@ AVAILABLE_QUERIES = {
             "What is my winrate in BB?",
         ],
     },
-    "threebet_position": {
+    "threebet": {
+        "group_by_options": ["Position"],
         "description": (
             "Calculate Hero's 3Bet percentage grouped by position. "
             "Use this when the user asks about 3Bet, re-raising preflop, "
