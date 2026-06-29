@@ -89,4 +89,7 @@ If the question does not match any available tool, return:
 
     content = response.choices[0].message.content
 
-    return json.loads(content)
+    try:
+        return json.loads(content)
+    except json.JSONDecodeError:
+        return {"query_name": "unknown"}
