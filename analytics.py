@@ -1,4 +1,4 @@
-def winrate_by_position(df):
+"""def winrate_by_position(df):
     result = (
         df.groupby("Position")
         .agg(
@@ -21,8 +21,19 @@ def winrate_by_site(df):
         )
     )
     result["bb_per_100"] = result["avg_bb_per_hand"] * 100
-    return result.sort_values("bb_per_100", ascending=False)
+    return result.sort_values("bb_per_100", ascending=False)"""
 
+def winrate_by(df, group_by):
+    result = (
+        df.groupby(group_by)
+        .agg(
+            hands=(group_by, "count"),
+            bb_won=("BB Won", "sum"),
+            avg_bb_per_hand=("BB Won", "mean")
+        )
+    )
+    result["bb_per_100"] = result["avg_bb_per_hand"] * 100
+    return result.sort_values("bb_per_100", ascending=False)
 
 def threebet_by_position(df):
     opps = df[df["Facing PF Action"] == "1 Raiser"].copy()

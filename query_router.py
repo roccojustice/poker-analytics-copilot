@@ -1,19 +1,15 @@
 from analytics import (
-    winrate_by_position,
-    winrate_by_site,
+    winrate_by,
     threebet_by_position,
 )
 
-
-def run_query(query_name, df):
-    if query_name == "winrate_position":
-        return winrate_by_position(df)
-
-    elif query_name == "winrate_site":
-        return winrate_by_site(df)
-
-    elif query_name == "threebet_position":
+def run_query(query_name, df, group_by=None):
+    if query_name == "threebet_position":
         return threebet_by_position(df)
-
+    
+    elif query_name == "winrate":
+        return winrate_by(df, group_by)
+    
     else:
         raise ValueError(f"Unknown query: {query_name}")
+    

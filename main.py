@@ -15,6 +15,6 @@ while True:
         continue
     query_name = parsed_query["query_name"]
 
-    result = run_query(query_name, df)
+    result = run_query(query_name, df, group_by=parsed_query.get("group_by"))
 
     print(result)

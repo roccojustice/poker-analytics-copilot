@@ -8,20 +8,13 @@ client = OpenAI()
 
 
 AVAILABLE_QUERIES = {
-    "winrate_position": {
-        "description": "Calculate Hero's BB/100 grouped by playing position.",
+    "winrate": {
+        "group_by_options": ["Position", "Site"],
+        "description": "Calculate Hero's BB/100 grouped by any dimension.",
         "examples": [
-            "Calcula mi winrate por posición",
-            "¿Qué posición gana más?",
-            "¿Cuál es mi winrate en BB?",
-        ],
-    },
-    "winrate_site": {
-        "description": "Calculate Hero's BB/100 grouped by poker site.",
-        "examples": [
-            "Calcula mi winrate por site",
-            "¿En qué sitio gano más?",
-            "Muéstrame mi winrate por plataforma",
+            "Calculate my winrate by position",
+            "What position wins the most?",
+            "What is my winrate in BB?",
         ],
     },
     "threebet_position": {
@@ -31,10 +24,10 @@ AVAILABLE_QUERIES = {
             "raising after another player opened the pot, or raise frequency versus an open."
         ),
         "examples": [
-            "Dame mi 3bet por posición",
-            "¿Qué tanto resubo preflop por posición?",
-            "Calcula mi porcentaje de raise cuando alguien ya abrió el bote antes que yo",
-            "¿Con qué frecuencia hago raise vs open raise?",
+            "Calculate my 3Bet percentage by position",
+            "What position has the highest 3Bet percentage?",
+            "What is my 3Bet percentage when someone opens the pot?",
+            "What is my raise frequency versus an open raise?",
         ],
     },
 }
@@ -45,6 +38,9 @@ def build_tool_descriptions() -> str:
 
     for name, info in AVAILABLE_QUERIES.items():
         tool_descriptions += f"\nTool name: {name}\n"
+        if "group_by_options" in info:
+            tool_descriptions += f"\nGroup by options: {', '.join(info['group_by_options'])}\n"
+        
         tool_descriptions += f"Description: {info['description']}\n"
         tool_descriptions += "Examples:\n"
 
@@ -67,10 +63,11 @@ Available tools:
 
 Return ONLY valid JSON.
 
-JSON format:
-{{
-  "query_name": "tool_name"
-}}
+JSON format when tool requires group_by:
+{{"query_name": "tool_name", "group_by": "dimension"}}
+
+JSON format when tool does not require group_by:
+{{"query_name": "tool_name"}}
 
 If the question does not match any available tool, return:
 {{
