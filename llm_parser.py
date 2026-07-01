@@ -31,6 +31,20 @@ AVAILABLE_QUERIES = {
             "What is my raise frequency versus an open raise?",
         ],
     },
+    "preflop_stats": {
+        "group_by_options": ["position"],
+        "description": (
+            "Calculate Hero's preflop stats grouped by position. "
+            "Use this when the user asks about VPIP or PFR, "
+            "putting money into the pot or open raise from any position"
+        ),
+        "examples": [
+            "Calculate my vpip & pfr by position",
+            "How much do I raise preflop from the button?",
+            "How much do I vpip from the CO?",
+            "What is my raise frequency as PFR?",
+        ],
+    },
 }
 
 
