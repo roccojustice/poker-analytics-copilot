@@ -1,4 +1,6 @@
 def winrate_by(df, group_by):
+    df = df.copy()
+    df["BB Won"] = df["amt_won"] / df["amt_bb"]
     result = (
         df.groupby(group_by)
         .agg(
@@ -11,14 +13,11 @@ def winrate_by(df, group_by):
     return result.sort_values("bb_per_100", ascending=False)
 
 def threebet(df, group_by):
-    opps = df[df["Facing PF Action"] == "1 Raiser"].copy()
-    opps["is_3bet"] = opps["PF Act"].astype(str).str.startswith("R")
-
     result = (
-        opps.groupby(group_by)
+        df.groupby(group_by)
         .agg(
-            opportunities=("is_3bet", "count"),
-            threebets=("is_3bet", "sum")
+            opportunities=("flg_p_3bet_opp", "sum"),
+            threebets=("flg_p_3bet", "sum")
         )
     )
     result["threebet_pct"] = result["threebets"] / result["opportunities"] * 100

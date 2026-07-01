@@ -1,8 +1,11 @@
 import pandas as pd
 from query_router import run_query
 from llm_parser import parse_user_query
+from db import get_hero_hands
 
-df = pd.read_csv("poker_analytics_data.csv")
+df = get_hero_hands()
+print(df.head())
+print(df.dtypes)
 
 while True:
     user_question = input("Enter your poker analytics question (or type 'exit' to quit): ")

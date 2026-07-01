@@ -9,7 +9,7 @@ client = OpenAI()
 
 AVAILABLE_QUERIES = {
     "winrate": {
-        "group_by_options": ["Position", "Site"],
+        "group_by_options": ["position", "site"],
         "description": "Calculate Hero's BB/100 grouped by any dimension.",
         "examples": [
             "Calculate my winrate by position",
@@ -18,7 +18,7 @@ AVAILABLE_QUERIES = {
         ],
     },
     "threebet": {
-        "group_by_options": ["Position"],
+        "group_by_options": ["position"],
         "description": (
             "Calculate Hero's 3Bet percentage grouped by position. "
             "Use this when the user asks about 3Bet, re-raising preflop, "
