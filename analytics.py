@@ -1,21 +1,14 @@
+from db import get_hero_hands
 
-def analyze_metric(df, group_by, metric):
-    df = df.copy()
-    if metric not in METRIC_CONFIGS:
-        raise ValueError(f"Unknown metric: {metric}")
+_cached_df = None
 
-    config = METRIC_CONFIGS[metric]
-    if "generate_columns" in config:
-        for col_name, func in config["generate_columns"].items():
-            df[col_name] = func(df)
 
-    result = df.groupby(group_by).agg(hands=(group_by, "count"), **config["agg"])
+def get_hero_df():
+    global _cached_df
+    if _cached_df is None:
+        _cached_df = get_hero_hands()
+    return _cached_df
 
-    if config["derived"]:
-        for col_name, func in config["derived"].items():
-            result[col_name] = func(result)
-
-    return result.sort_values(config["sort_by"], ascending=False)
 
 METRIC_CONFIGS = {
     "winrate": {
