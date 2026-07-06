@@ -1,11 +1,8 @@
-import pandas as pd
-from query_router import run_query
+from query_router import (
+    run_query,
+    is_filter_query
+)
 from llm_parser import parse_user_query
-from db import get_hero_hands
-
-df = get_hero_hands()
-print(df.head())
-print(df.dtypes)
 
 while True:
     user_question = input("Enter your poker analytics question (or type 'exit' to quit): ")
@@ -18,7 +15,11 @@ while True:
         continue
     query_name = parsed_query["query_name"]
 
-    result = run_query(query_name, df, group_by=parsed_query.get("group_by"))
+    if is_filter_query(query_name):
+        result = run_query(query_name, limit=parsed_query.get("limit"))
+        print(f"Found {len(result)} hands matching '{query_name}'.")
+    else:
+        result = run_query(query_name, group_by=parsed_query.get("group_by"))
 
     print(result)
     

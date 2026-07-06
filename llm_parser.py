@@ -45,6 +45,18 @@ AVAILABLE_QUERIES = {
             "What is my raise frequency as PFR?",
         ],
     },
+    "check_river_2bp_ip_pfr": {
+        "description": (
+            "Retrieve individual hand histories where Hero checked the river as the "
+            "preflop raiser (PFR), in position (IP), in a 2-bet pot (2bp), heads-up. "
+            "Returns the raw hand history text for each matching hand, not an aggregated stat."
+        ),
+        "examples": [
+            "Show me hands where I checked the river as 2bp ip pfr",
+            "Show my check river hands as preflop raiser in position",
+            "Give me the top 10 hands where I checked river ip as pfr in a 2bet pot",
+        ],
+    },
 }
 
 
@@ -83,6 +95,12 @@ JSON format when tool requires group_by:
 
 JSON format when tool does not require group_by:
 {{"query_name": "tool_name"}}
+
+If the tool retrieves individual hands and the user asks for a specific number of hands
+(e.g. "top 10", "first 20"), include a "limit" key with that integer:
+{{"query_name": "tool_name", "limit": 10}}
+
+If no specific number is requested, omit "limit" entirely.
 
 If the question does not match any available tool, return:
 {{
