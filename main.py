@@ -4,6 +4,10 @@ from query_router import (
 )
 from llm_parser import parse_user_query
 
+import pandas as pd
+pd.set_option('display.max_columns', None)
+pd.set_option('display.width', None)
+
 while True:
     user_question = input("Enter your poker analytics question (or type 'exit' to quit): ")
     if user_question.lower() == "exit":
