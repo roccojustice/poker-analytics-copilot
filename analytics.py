@@ -60,7 +60,7 @@ def analyze_metric(df, group_by, metric):
 
     result = df.groupby(group_by).agg(hands=(group_by, "count"), **config["agg"])
 
-    if config["derived"]:
+    if "derived" in config:
         for col_name, func in config["derived"].items():
             result[col_name] = func(result)
 
