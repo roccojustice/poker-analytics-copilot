@@ -133,6 +133,17 @@ def get_hand_details(id_hands, id_player=10):
         "final_hand_group", "final_hand_details", "winning_hand_group", "winning_hand_details",
     ])
 
+    df = df.fillna({
+        "final_hand": "No showdown",
+        "winning_hand": "No showdown",
+        "flop": "",
+        "turn": "",
+        "river": "",
+        "f_act": "",
+        "t_act": "",
+        "r_act": "",
+    })
+
     return df
 
 
