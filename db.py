@@ -27,6 +27,37 @@ def get_hero_hands():
     engine.dispose()
     return df
 
+def hand_filter_fold_to_3bet_preflop(id_player=10, limit=None):
+    engine = create_engine(f'postgresql+psycopg2://{os.getenv("POSTGRES_USER")}:{os.getenv("POSTGRES_PASSWORD")}@{os.getenv("POSTGRES_HOST")}:{os.getenv("POSTGRES_PORT")}/{os.getenv("POSTGRES_DB")}')
+
+    query = """
+        WITH hand_raise_totals AS (
+            SELECT id_hand, SUM(cnt_p_raise) AS total_p_raises
+            FROM cash_hand_player_statistics
+            GROUP BY id_hand
+        )
+        SELECT chps.id_hand
+        FROM cash_hand_player_statistics chps
+            JOIN hand_raise_totals hrt ON chps.id_hand = hrt.id_hand
+            JOIN cash_hand_summary chs ON chps.id_hand = chs.id_hand
+        WHERE chps.id_player = %(id_player)s
+            AND chps.flg_p_first_raise = true
+            AND chps.flg_p_face_raise = true
+            AND chps.flg_p_4bet_def_opp = false
+            AND chps.flg_p_fold = true
+            AND hrt.total_p_raises >= 2
+            AND chps.cnt_p_face_limpers = 0
+        ORDER BY chps.id_hand"""
+
+    params = {"id_player": id_player}
+    if limit is not None:
+        query += " LIMIT %(limit)s"
+        params["limit"] = limit
+
+    df = pd.read_sql(query, engine, params=params)
+    engine.dispose()
+    return df
+
 
 def hand_filter_check_river_2bp_ip_pfr(id_player=10, limit=None):
     engine = create_engine(f'postgresql+psycopg2://{os.getenv("POSTGRES_USER")}:{os.getenv("POSTGRES_PASSWORD")}@{os.getenv("POSTGRES_HOST")}:{os.getenv("POSTGRES_PORT")}/{os.getenv("POSTGRES_DB")}')
@@ -149,6 +180,7 @@ def get_hand_details(id_hands, id_player=10):
 
 FILTER_QUERIES = {
     "check_river_2bp_ip_pfr": hand_filter_check_river_2bp_ip_pfr,
+    "fold_to_3bet_preflop": hand_filter_fold_to_3bet_preflop,
 }
 
 

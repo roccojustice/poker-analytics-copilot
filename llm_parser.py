@@ -57,6 +57,17 @@ AVAILABLE_QUERIES = {
             "Give me the top 10 hands where I checked river ip as pfr in a 2bet pot",
         ],
     },
+    "fold_to_3bet_preflop": {
+        "description": (
+            "Retrieve individual hand histories where Hero folded to a 3Bet preflop as the original raiser (OPR). "
+            "Returns a structured table of matching hands (position, cards, actions per street, pot, winner), not an aggregated stat."
+        ),
+        "examples": [
+            "Show me hands where I folded to a 3Bet preflop",
+            "Show my hands where I folded to 3Bets",
+            "Give me the top 10 hands where I folded to 3Bets preflop",
+        ],
+    },
 }
 
 
