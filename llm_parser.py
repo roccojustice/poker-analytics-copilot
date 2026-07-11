@@ -49,7 +49,7 @@ AVAILABLE_QUERIES = {
         "description": (
             "Retrieve individual hand histories where Hero checked the river as the "
             "preflop raiser (PFR), in position (IP), in a 2-bet pot (2bp), heads-up. "
-            "Returns the raw hand history text for each matching hand, not an aggregated stat."
+            "Returns a structured table of matching hands (position, cards, actions per street, pot, winner), not an aggregated stat."
         ),
         "examples": [
             "Show me hands where I checked the river as 2bp ip pfr",
