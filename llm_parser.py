@@ -68,6 +68,18 @@ AVAILABLE_QUERIES = {
             "Give me the top 10 hands where I folded to 3Bets preflop",
         ],
     },
+    "fold_vs_small_cbet_2bp_oop_pfc": {
+        "description": (
+            "Retrieve individual hand histories where Hero folded to a small continuation bet (20-33% pot) "
+            "on the flop, as the preflop caller (PFC), out of position (OOP), in a 2-bet pot (2bp), heads-up. "
+            "Returns a structured table of matching hands (position, cards, actions per street, pot, winner), not an aggregated stat."
+        ),
+        "examples": [
+            "Show me hands where I folded to a small cbet out of position",
+            "Show my hands where I folded to a small continuation bet as the caller",
+            "Give me the top 10 hands where I folded vs a 20-33% pot cbet oop as pfc",
+        ],
+    },
 }
 
 
