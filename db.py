@@ -5,6 +5,7 @@ from sqlalchemy import create_engine
 from poker_cards import decode_card_id
 
 load_dotenv()
+engine = create_engine(f'postgresql+psycopg2://{os.getenv("POSTGRES_USER")}:{os.getenv("POSTGRES_PASSWORD")}@{os.getenv("POSTGRES_HOST")}:{os.getenv("POSTGRES_PORT")}/{os.getenv("POSTGRES_DB")}')
 
 FILTER_QUERIES = {
     "check_river_2bp_ip_pfr": 
@@ -36,7 +37,6 @@ FILTER_QUERIES = {
 }
 
 def get_hero_hands():
-    engine = create_engine(f'postgresql+psycopg2://{os.getenv("POSTGRES_USER")}:{os.getenv("POSTGRES_PASSWORD")}@{os.getenv("POSTGRES_HOST")}:{os.getenv("POSTGRES_PORT")}/{os.getenv("POSTGRES_DB")}')
 
     query = """
         SELECT amt_won, cl.amt_bb, flg_p_3bet_opp, flg_p_3bet, description AS position, site_name AS site, flg_vpip AS vpip, flg_p_first_raise AS pfr
@@ -53,13 +53,11 @@ def get_hero_hands():
         WHERE chps.id_player IN (10, 9580)"""
 
     df = pd.read_sql(query, engine)
-    engine.dispose()
     return df
 
 def run_filter_query(filter_name, id_player=10, limit=None):
     if filter_name not in FILTER_QUERIES:
         raise ValueError(f"Unknown filter: {filter_name}")
-    engine = create_engine(f'postgresql+psycopg2://{os.getenv("POSTGRES_USER")}:{os.getenv("POSTGRES_PASSWORD")}@{os.getenv("POSTGRES_HOST")}:{os.getenv("POSTGRES_PORT")}/{os.getenv("POSTGRES_DB")}')
 
     query = """
         WITH hand_raise_totals AS (
@@ -81,11 +79,9 @@ def run_filter_query(filter_name, id_player=10, limit=None):
         params["limit"] = limit
 
     df = pd.read_sql(query, engine, params=params)
-    engine.dispose()
     return df
 
 def get_hand_details(id_hands, id_player=10):
-    engine = create_engine(f'postgresql+psycopg2://{os.getenv("POSTGRES_USER")}:{os.getenv("POSTGRES_PASSWORD")}@{os.getenv("POSTGRES_HOST")}:{os.getenv("POSTGRES_PORT")}/{os.getenv("POSTGRES_DB")}')
 
     query = """
         SELECT
@@ -135,7 +131,6 @@ def get_hand_details(id_hands, id_player=10):
 
     params = {"id_hands": list(id_hands), "id_player": id_player}
     df = pd.read_sql(query, engine, params=params)
-    engine.dispose()
 
     def decode(card_id):
         if pd.isna(card_id) or card_id == 0:
