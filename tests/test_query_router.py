@@ -12,3 +12,11 @@ def test_run_query_with_group_by():
 def test_run_query_with_unknown_query():
     with pytest.raises(ValueError):
         run_query("unknown_query", group_by=None, limit=None)
+
+def test_run_query_with_invalid_group_by():
+    with pytest.raises(ValueError):
+        run_query("winrate", group_by="invalid_group", limit=None)
+
+def test_run_query_with_none_group_by_for_metric():
+    with pytest.raises(ValueError):
+        run_query("winrate", group_by=None, limit=None)

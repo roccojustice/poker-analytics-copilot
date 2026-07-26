@@ -9,10 +9,14 @@ from db import (
     get_hand_details,
 )
 
+from queries import AVAILABLE_QUERIES
+
 def run_query(query_name, group_by=None, limit=None):
     if query_name in METRIC_CONFIGS:
         if limit is not None:
             raise ValueError(f"Limit is not applicable for metric queries: {query_name}")
+        if group_by not in AVAILABLE_QUERIES[query_name]["group_by_options"]:
+            raise ValueError(f"Invalid group by option for {query_name}: {group_by}")
 
         df = get_hero_df()
         return analyze_metric(df, group_by, query_name)
