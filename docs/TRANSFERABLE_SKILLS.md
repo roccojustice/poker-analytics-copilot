@@ -39,3 +39,7 @@ One AI Engineering skill per session — the thing worth applying in *any* proje
 ### Session 21 (2026-07-26)
 **Skill:** A clean, conflict-free git merge is not evidence the merged code works — git's conflict detection is textual/line-level only, never semantic. Two non-overlapping changes across branches can combine into broken code with zero conflicts reported.
 **Apply when:** merging any branch with independently-developed changes — re-run the test suite after every merge, not only after resolving conflicts, and explicitly note what the suite does *not* cover (e.g. an integration point no test touches).
+
+### Session 22 (2026-07-27)
+**Skill:** Designing a service's error boundary means separating what crosses out to the client (minimal, safe) from what stays logged internally (rich, complete) — they aren't a trade-off against each other, they're two different destinations for two different audiences.
+**Apply when:** any system exposes an interface to a caller that shouldn't see internals (an API, a webhook, an agent's tool-call response) — never let internal detail leak out, but never throw it away either; log it where only you can see it.
