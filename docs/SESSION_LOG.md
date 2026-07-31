@@ -25,3 +25,4 @@ Tracks time actually invested in this project. Populated automatically at the en
 | 20 | 2026-07-25 | 1h 10m | group_by validation guard + bug fixes; docs/ tracking system created |
 | 21 | 2026-07-26 | 51m | Branch-scoping fix resolved via real feature-branch git workflow |
 | 22 | 2026-07-27 | 54m | Live smoke test of api.py + exception handler shipped and sabotage-verified |
+| 23 | 2026-07-31 | 1h 35m | First api.py test (TestClient + monkeypatch) shipped; decorator/OOP gap surfaced |
