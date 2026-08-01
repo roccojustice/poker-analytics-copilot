@@ -26,3 +26,4 @@ Tracks time actually invested in this project. Populated automatically at the en
 | 21 | 2026-07-26 | 51m | Branch-scoping fix resolved via real feature-branch git workflow |
 | 22 | 2026-07-27 | 54m | Live smoke test of api.py + exception handler shipped and sabotage-verified |
 | 23 | 2026-07-31 | 1h 35m | First api.py test (TestClient + monkeypatch) shipped; decorator/OOP gap surfaced |
+| 24 | 2026-08-01 | 1h 17m | Standalone primer: functions as first-class objects, higher-order functions, closures |

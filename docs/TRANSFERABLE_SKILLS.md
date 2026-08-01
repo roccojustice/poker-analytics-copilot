@@ -47,3 +47,7 @@ One AI Engineering skill per session — the thing worth applying in *any* proje
 ### Session 23 (2026-07-31)
 **Skill:** Testing an endpoint that depends on external services requires two things at once, not a choice between them — a real HTTP test harness (`TestClient`) so the request travels through the framework's actual dispatch (routing, middleware, error handlers), plus mocking (`monkeypatch`) so external dependencies (DB, LLM) never get hit for real. Also: when mocking an imported name, patch it where it's *used* (the importing module's namespace), not where it's *defined* — `from module import name` copies the reference at import time, so patching the original doesn't reach the copy.
 **Apply when:** testing any web endpoint/handler that both calls out to external services and relies on framework-level behavior (middleware, exception handlers, auth) that only fires on the real request path — and generally, whenever mocking something reached via `from x import y`.
+
+### Session 24 (2026-08-01)
+**Skill:** Closures / function factories let you generate a family of parameterized functions from one template instead of writing near-duplicate functions per case.
+**Apply when:** you catch yourself about to write several near-identical functions that differ only in one or two fixed values — a validator per rule, a handler per event type, an aggregation per metric (the same principle already behind this project's own `METRIC_CONFIGS`).
