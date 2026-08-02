@@ -51,3 +51,7 @@ One AI Engineering skill per session — the thing worth applying in *any* proje
 ### Session 24 (2026-08-01)
 **Skill:** Closures / function factories let you generate a family of parameterized functions from one template instead of writing near-duplicate functions per case.
 **Apply when:** you catch yourself about to write several near-identical functions that differ only in one or two fixed values — a validator per rule, a handler per event type, an aggregation per metric (the same principle already behind this project's own `METRIC_CONFIGS`).
+
+### Session 25 (2026-08-02)
+**Skill:** Distinguish decorators that *register* a function (return it unchanged, just note it for later use — verifiable via `is`) from decorators that *wrap* a function (return a new function with altered behavior). This is the exact mechanism most AI agent frameworks use to expose Python functions as LLM-callable tools (`@tool`, `@function_tool`) — a registering-type decorator, same as `@app.exception_handler` or `@app.post`.
+**Apply when:** reading unfamiliar code that uses decorators — from tool-calling frameworks (agent SDKs registering tools) to web frameworks (routes, error handlers) to observability wrappers (`@traceable`, `@observe`) — check whether the decorator changes the wrapped function's behavior or just annotates it for later discovery.
