@@ -28,3 +28,4 @@ Tracks time actually invested in this project. Populated automatically at the en
 | 23 | 2026-07-31 | 1h 35m | First api.py test (TestClient + monkeypatch) shipped; decorator/OOP gap surfaced |
 | 24 | 2026-08-01 | 1h 17m | Standalone primer: functions as first-class objects, higher-order functions, closures |
 | 25 | 2026-08-02 | 1h 33m | Standalone primer part 2/3: decorators (registering vs. wrapping, parametrized 3-level) |
+| 26 | 2026-08-05 | 1h 55m | Standalone primer part 3/3: OOP (classes, inheritance, closes `question: str` mystery) |

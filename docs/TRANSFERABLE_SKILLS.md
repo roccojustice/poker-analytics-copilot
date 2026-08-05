@@ -55,3 +55,7 @@ One AI Engineering skill per session — the thing worth applying in *any* proje
 ### Session 25 (2026-08-02)
 **Skill:** Distinguish decorators that *register* a function (return it unchanged, just note it for later use — verifiable via `is`) from decorators that *wrap* a function (return a new function with altered behavior). This is the exact mechanism most AI agent frameworks use to expose Python functions as LLM-callable tools (`@tool`, `@function_tool`) — a registering-type decorator, same as `@app.exception_handler` or `@app.post`.
 **Apply when:** reading unfamiliar code that uses decorators — from tool-calling frameworks (agent SDKs registering tools) to web frameworks (routes, error handlers) to observability wrappers (`@traceable`, `@observe`) — check whether the decorator changes the wrapped function's behavior or just annotates it for later discovery.
+
+### Session 26 (2026-08-05)
+**Skill:** Treat an inherited parent class as an API surface to inspect (`dir()`, docs, source) before assuming you need to build something yourself — not a black box. Confirmed via `pydantic.BaseModel`: `model_dump()` and a full validating `__init__` come for free, generated from the subclass's own type annotations.
+**Apply when:** building on top of any framework/SDK base class you didn't write (Pydantic models, LangChain tools/agents, ORM base classes) — check what behavior you already get before writing redundant code.
