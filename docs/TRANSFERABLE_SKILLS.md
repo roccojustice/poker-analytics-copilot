@@ -59,3 +59,7 @@ One AI Engineering skill per session — the thing worth applying in *any* proje
 ### Session 26 (2026-08-05)
 **Skill:** Treat an inherited parent class as an API surface to inspect (`dir()`, docs, source) before assuming you need to build something yourself — not a black box. Confirmed via `pydantic.BaseModel`: `model_dump()` and a full validating `__init__` come for free, generated from the subclass's own type annotations.
 **Apply when:** building on top of any framework/SDK base class you didn't write (Pydantic models, LangChain tools/agents, ORM base classes) — check what behavior you already get before writing redundant code.
+
+### Session 27 (2026-08-07)
+**Skill:** Diagnose when a test failure comes from the *testing harness's own default behavior*, not the code under test — read the traceback for where execution actually stops rather than assuming the bug is in your application logic. Confirmed via `TestClient`'s `raise_server_exceptions=True` default, which re-raises unhandled exceptions instead of routing them through the app's own registered exception handler.
+**Apply when:** using any test/eval harness over a system with its own error handling (agent frameworks, API test clients, eval runners) — the harness has a policy layer of its own, separate from the app being tested, and it's worth checking before assuming a red result means your code is wrong.
