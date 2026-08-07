@@ -22,3 +22,16 @@ def test_query_golden_path(monkeypatch):
 
     assert response.status_code == 200
     assert response.json() == {"result": [{"pos": "BB", "amt_won": 1, "amt_bb": 1}]}
+
+def test_handle_unexpected_exception(monkeypatch):
+    client_no_raise = TestClient(app, raise_server_exceptions=False)
+
+    def fake_parse_user_query(question):
+        raise Exception("Test exception")
+
+    monkeypatch.setattr("api.parse_user_query", fake_parse_user_query)
+
+    response = client_no_raise.post("/query", json={"question": "winrate by position"})
+
+    assert response.status_code == 500
+    assert response.json() == {"error": "Something went wrong processing your question. Please try again."}
