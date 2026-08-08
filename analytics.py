@@ -1,7 +1,13 @@
+import pandas as pd
 from db import get_hero_hands
+
 
 _cached_df = None
 
+
+def since_date_filter(df, since_date):
+    df = df[df["date_played"] >= pd.to_datetime(since_date)]
+    return df
 
 def get_hero_df():
     global _cached_df

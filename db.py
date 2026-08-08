@@ -39,7 +39,7 @@ FILTER_QUERIES = {
 def get_hero_hands():
 
     query = """
-        SELECT amt_won, cl.amt_bb, flg_p_3bet_opp, flg_p_3bet, description AS position, site_name AS site, flg_vpip AS vpip, flg_p_first_raise AS pfr
+        SELECT amt_won, cl.amt_bb, flg_p_3bet_opp, flg_p_3bet, description AS position, site_name AS site, flg_vpip AS vpip, flg_p_first_raise AS pfr, chps.date_played
         FROM cash_hand_player_statistics chps
         JOIN 
             (SELECT DISTINCT ON (position) position, description
