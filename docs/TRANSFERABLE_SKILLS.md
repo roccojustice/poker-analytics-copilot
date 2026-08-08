@@ -63,3 +63,7 @@ One AI Engineering skill per session — the thing worth applying in *any* proje
 ### Session 27 (2026-08-07)
 **Skill:** Diagnose when a test failure comes from the *testing harness's own default behavior*, not the code under test — read the traceback for where execution actually stops rather than assuming the bug is in your application logic. Confirmed via `TestClient`'s `raise_server_exceptions=True` default, which re-raises unhandled exceptions instead of routing them through the app's own registered exception handler.
 **Apply when:** using any test/eval harness over a system with its own error handling (agent frameworks, API test clients, eval runners) — the harness has a policy layer of its own, separate from the app being tested, and it's worth checking before assuming a red result means your code is wrong.
+
+### Session 28 (2026-08-08)
+**Skill:** Deciding which pipeline layer a transformation belongs in should be driven by whether that layer caches or refetches on every call — not a stylistic preference between, say, SQL and pandas. Confirmed by placing `since_date_filter` post-cache in pandas for the metrics pipeline (which caches via `get_hero_df()`), while the equivalent filter for `run_filter_query` (which hits Postgres fresh every call, no cache) will need to live in SQL instead.
+**Apply when:** a system has a caching layer (embeddings, an LLM call's result, a dataset fetched from an API) coexisting with a non-cached layer — the right place to filter/transform depends on which layer you're touching, not on tool preference.

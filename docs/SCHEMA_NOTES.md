@@ -50,6 +50,10 @@ Empirical findings about PokerTracker 4's Postgres schema — none of this is do
 - `hand_raise_totals` — a CTE (used identically across all 3 `FILTER_QUERIES` entries) counting total preflop raises per hand, exposed as `hrt.total_p_raises`. Shared skeleton: this CTE + a fixed set of `JOIN`s is what all filter queries have in common; only the `WHERE` fragment varies (this is the empirical basis for the Rule-of-Three stress test in session 8 that confirmed the filters share only a SQL skeleton, not repeated Python logic).
 - `cnt_players_f` (on `cash_hand_summary`) — number of players who saw the flop. Used with `flg_p_first_raise=false` and `hrt.total_p_raises=1` to infer "Hero is the sole preflop caller" without needing an explicit VPIP condition.
 
+## Dates
+- `date_played` exists on **both** `cash_hand_player_statistics` (chps) and `cash_hand_summary` (chs) — referencing it unqualified in a query that joins both tables raises Postgres `AmbiguousColumn`. Must qualify (`chps.date_played`), same as any other column present on more than one joined table.
+- Read into pandas via `pd.read_sql`, `date_played` comes back as `datetime64[us]` — confirmed empirically (predicted correctly before running).
+
 ## Tables joined across the project
 `cash_hand_player_statistics` (chps), `cash_hand_summary` (chs), `lookup_positions`, `lookup_sites`, `cash_limit`, `lookup_hand_ranks` (joined twice: Hero's final hand + the winning hand), `lookup_actions` (joined three times: one per street), `player` (winner's display name).
 
