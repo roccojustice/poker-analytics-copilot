@@ -25,10 +25,7 @@ def run_query(query_name, group_by=None, limit=None, since_date=None):
     if query_name in FILTER_QUERIES:
         if group_by is not None:
             raise ValueError(f"Group by is not applicable for filter queries: {query_name}")
-        if since_date is not None:
-            raise ValueError(f"since_date is not applicable for filter queries: {query_name}")
-
-        matching_hands = run_filter_query(query_name, limit=limit)
+        matching_hands = run_filter_query(query_name, limit=limit, since_date=since_date)
         return get_hand_details(matching_hands["id_hand"])
     raise ValueError(f"Unknown query: {query_name}")
 

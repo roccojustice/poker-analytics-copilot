@@ -55,7 +55,7 @@ def get_hero_hands():
     df = pd.read_sql(query, engine)
     return df
 
-def run_filter_query(filter_name, id_player=10, limit=None):
+def run_filter_query(filter_name, id_player=10, limit=None, since_date=None):
     if filter_name not in FILTER_QUERIES:
         raise ValueError(f"Unknown filter: {filter_name}")
 
@@ -70,10 +70,15 @@ def run_filter_query(filter_name, id_player=10, limit=None):
             JOIN hand_raise_totals hrt ON chps.id_hand = hrt.id_hand
             JOIN cash_hand_summary chs ON chps.id_hand = chs.id_hand
         WHERE chps.id_player = %(id_player)s
-            """ + FILTER_QUERIES[filter_name] + """
-        ORDER BY chps.id_hand"""
+            """ + FILTER_QUERIES[filter_name]
 
     params = {"id_player": id_player}
+    if since_date is not None:
+        query += " AND chps.date_played >= %(since_date)s"
+        params["since_date"] = since_date
+
+    query += " ORDER BY chps.id_hand"
+
     if limit is not None:
         query += " LIMIT %(limit)s"
         params["limit"] = limit
