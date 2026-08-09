@@ -31,3 +31,4 @@ Tracks time actually invested in this project. Populated automatically at the en
 | 26 | 2026-08-05 | 1h 55m | Standalone primer part 3/3: OOP (classes, inheritance, closes `question: str` mystery) |
 | 27 | 2026-08-07 | 1h 09m | Exception-handler test for api.py shipped; TestClient default-behavior bug found and fixed |
 | 28 | 2026-08-08 | 1h 45m | "Since Date" date_range slice shipped for metrics pipeline; fastapi-endpoint merged into main and retired |
+| 29 | 2026-08-09 | 1h 00m | SQL-side since_date filtering shipped for run_filter_query (closes date_range part 2) |
