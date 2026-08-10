@@ -1,6 +1,6 @@
 import pandas as pd
 import pytest
-from analytics import analyze_metric
+from analytics import analyze_metric, since_date_filter
 
 def test_analyze_metrics():
    # Test case 1: Basic functionality
@@ -23,3 +23,12 @@ def test_analyze_metrics_invalid_metric():
    with pytest.raises(ValueError):
       df = pd.DataFrame({'pos': ['BB'], 'amt_won': [1], 'amt_bb': [1]})
       analyze_metric(df, group_by='pos', metric='invented_metric')
+
+def test_since_date_filter():
+   df = pd.DataFrame({
+       'date_played': pd.to_datetime(['2023-01-01', '2023-02-01', '2023-03-01']),
+       'amt_won': [1, 2, 3]
+   })
+
+   filtered_df = since_date_filter(df, since_date='2023-02-01')
+   assert list(filtered_df['amt_won']) == [2, 3], "Filtered DataFrame should have 2 rows and its 'amt_won' values should be [2, 3]"
