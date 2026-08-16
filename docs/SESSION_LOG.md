@@ -18,7 +18,7 @@ Tracks time actually invested in this project. Populated automatically at the en
 | 12 | 2026-07-19 | n/d | pytest.raises started, cut short by power outage |
 | 13 | 2026-07-19 | n/d | Error-case tests completed and shipped |
 | 14 | 2026-07-20 | n/d | Tooling bundle (tests/, pyproject.toml, ruff); UTF-16 bug fixed |
-| 15+16 | 2026-07-20 / 2026-07-21 | n/d | test_db.py reconciled; filter composability design opened; LinkedIn drafting started |
+| 15+16 | 2026-07-20 / 2026-07-21 | n/d | test_db.py reconciled; filter composability design opened |
 | 17 | 2026-07-22 | n/d | Filter composability closed (paused); gap-mapping exercise; date_range design closed |
 | 18 | 2026-07-23 | n/d | CLAUDE.md written (Milestone 1 closed); FastAPI endpoint drafted, cut short |
 | 19 | 2026-07-24 | n/d | First live test of api.py; LLM-output validation gap found and proven |
@@ -33,3 +33,5 @@ Tracks time actually invested in this project. Populated automatically at the en
 | 28 | 2026-08-08 | 1h 45m | "Since Date" date_range slice shipped for metrics pipeline; fastapi-endpoint merged into main and retired |
 | 29 | 2026-08-09 | 1h 00m | SQL-side since_date filtering shipped for run_filter_query (closes date_range part 2) |
 | 30 | 2026-08-10 | 1h 16m | since_date test-coverage gap closed across analytics.py, query_router.py, db.py |
+| 31 | 2026-08-15 | 1h 40m | since_date llm_parser.py wiring tested live; example-contamination bug fixed, compound relative-date arithmetic bug found and deferred |
+| 32 | 2026-08-16 | 1h 44m | since_date redesigned: LLM extracts components, Python resolves via relativedelta (closes fabricated-year bug) |
