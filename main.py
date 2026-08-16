@@ -14,16 +14,17 @@ while True:
         break
 
     parsed_query = parse_user_query(user_question)
+    print(parsed_query)
     if parsed_query["query_name"] == "unknown":
         print("Sorry, I couldn't understand your question. Please try again.")
         continue
     query_name = parsed_query["query_name"]
 
     if is_filter_query(query_name):
-        result = run_query(query_name, limit=parsed_query.get("limit"))
+        result = run_query(query_name, limit=parsed_query.get("limit"), since_date=parsed_query.get("since_date"))
         print(f"Found {len(result)} hands matching '{query_name}'.")
     else:
-        result = run_query(query_name, group_by=parsed_query.get("group_by"))
+        result = run_query(query_name, group_by=parsed_query.get("group_by"), since_date=parsed_query.get("since_date"))
 
     print(result)
     

@@ -2,6 +2,8 @@ import json
 from dotenv import load_dotenv
 from openai import OpenAI
 from queries import AVAILABLE_QUERIES
+from datetime import datetime, date
+from dateutil.relativedelta import relativedelta
 
 load_dotenv()
 
@@ -32,6 +34,8 @@ You are a query planner for a poker analytics application.
 
 Your job is to map the user's natural language question to exactly one available tool.
 
+Today is {datetime.now().strftime("%Y-%m-%d")}
+
 Available tools:
 {tool_descriptions}
 
@@ -47,6 +51,21 @@ If the tool retrieves individual hands and the user asks for a specific number o
 (e.g. "top 10", "first 20"), include a "limit" key with that integer:
 {{"query_name": "tool_name", "limit": 10}}
 
+If the user asks for hands since a specific date, include a "since_date" key with an object
+describing the date relative to today. Only include the fields that apply:
+- "month": target month as an integer 1-12 (absolute), if a specific month is named
+- "years": number of years back from today (negative integer, relative)
+- "months": number of months back from today (negative integer, relative)
+- "days": number of days back from today (negative integer, relative)
+
+Examples:
+"since march" -> {{"since_date": {{"month": 3}}}}
+"since yesterday" -> {{"since_date": {{"days": -1}}}}
+"since november last year" -> {{"since_date": {{"month": 11, "years": -1}}}}
+"day" is optional and can be included if the user specifies a day of the month.
+JSON format when tool requires since_date:
+{{"query_name": "tool_name", "since_date": {{"month": "month", "years": "years", "days": "days"}}}}
+
 If no specific number is requested, omit "limit" entirely.
 
 If the question does not match any available tool, return:
@@ -54,7 +73,7 @@ If the question does not match any available tool, return:
   "query_name": "unknown"
 }}
 """
-
+    print(system_prompt)
     response = client.chat.completions.create(
         model="gpt-4o-mini",
         messages=[
@@ -67,6 +86,13 @@ If the question does not match any available tool, return:
     content = response.choices[0].message.content
 
     try:
-        return json.loads(content)
+        parsed = json.loads(content)
+        if parsed.get("since_date") is None:
+            return parsed
+        if "month" in parsed["since_date"]:
+            if "day" not in parsed["since_date"]:
+                parsed["since_date"]["day"] = 1
+        parsed["since_date"] = (date.today() + relativedelta(**parsed["since_date"])).strftime("%Y-%m-%d")
+        return parsed
     except json.JSONDecodeError:
         return {"query_name": "unknown"}
