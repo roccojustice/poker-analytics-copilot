@@ -71,7 +71,6 @@ If the question does not match any available tool, return:
   "query_name": "unknown"
 }}
 """
-    print(system_prompt)
     response = client.chat.completions.create(
         model="gpt-4o-mini",
         messages=[

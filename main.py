@@ -14,7 +14,6 @@ while True:
         break
 
     parsed_query = parse_user_query(user_question)
-    print(parsed_query)
     if parsed_query["query_name"] == "unknown":
         print("Sorry, I couldn't understand your question. Please try again.")
         continue
