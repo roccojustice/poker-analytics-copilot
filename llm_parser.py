@@ -41,11 +41,11 @@ Available tools:
 
 Return ONLY valid JSON.
 
-JSON format when tool requires group_by:
-{{"query_name": "tool_name", "group_by": "dimension"}}
-
-JSON format when tool does not require group_by:
+This is the basic JSON format for all tools:
 {{"query_name": "tool_name"}}
+
+If the tool requires a group_by dimension, include a "group_by" key with that dimension:
+{{"query_name": "tool_name", "group_by": "dimension"}}
 
 If the tool retrieves individual hands and the user asks for a specific number of hands
 (e.g. "top 10", "first 20"), include a "limit" key with that integer:
@@ -63,8 +63,6 @@ Examples:
 "since yesterday" -> {{"since_date": {{"days": -1}}}}
 "since november last year" -> {{"since_date": {{"month": 11, "years": -1}}}}
 "day" is optional and can be included if the user specifies a day of the month.
-JSON format when tool requires since_date:
-{{"query_name": "tool_name", "since_date": {{"month": "month", "years": "years", "days": "days"}}}}
 
 If no specific number is requested, omit "limit" entirely.
 
