@@ -35,3 +35,5 @@ Tracks time actually invested in this project. Populated automatically at the en
 | 30 | 2026-08-10 | 1h 16m | since_date test-coverage gap closed across analytics.py, query_router.py, db.py |
 | 31 | 2026-08-15 | 1h 40m | since_date llm_parser.py wiring tested live; example-contamination bug fixed, compound relative-date arithmetic bug found and deferred |
 | 32 | 2026-08-16 | 1h 44m | since_date redesigned: LLM extracts components, Python resolves via relativedelta (closes fabricated-year bug) |
+| 33 | 2026-08-17 | 1h 47m | Real group_by/since_date prompt bug found and fixed live; test_llm_parser.py started (mocking nested SDK method) |
+| 34 | 2026-08-18 | 1h 07m | test_llm_parser.py sabotage-verified + 2 new cases shipped (month-only default, malformed JSON); 2 self-introduced bugs caught live |
