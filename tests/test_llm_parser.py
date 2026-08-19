@@ -22,6 +22,10 @@ def fake_create_month_only(**kwargs):
 def fake_create_query_name_unknown(**kwargs):
     return FakeResponse('{"query_name": "winrate", "group_by": "player", "since_date": {"month": 03} }')
 
+def fake_create_no_since_date(**kwargs):
+    return FakeResponse('{"query_name": "winrate", "group_by": "position" }')
+
+
 def test_parse_user_query(monkeypatch):
     monkeypatch.setattr("llm_parser.client.chat.completions.create", fake_create)
 
@@ -45,3 +49,11 @@ def test_parse_user_query_unknown(monkeypatch):
     parsed_query = parse_user_query(user_question)
 
     assert parsed_query == {"query_name": "unknown"}, "The query name should be unknown"
+
+def test_parse_user_query_no_since_date(monkeypatch):
+    monkeypatch.setattr("llm_parser.client.chat.completions.create", fake_create_no_since_date)
+
+    user_question = "What is my winrate by position?"
+    parsed_query = parse_user_query(user_question)
+
+    assert parsed_query == {"query_name": "winrate", "group_by": "position"}, "The JSON should not contain a since_date key when the user does not specify a date"
