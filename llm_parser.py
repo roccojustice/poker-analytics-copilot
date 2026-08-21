@@ -9,25 +9,50 @@ load_dotenv()
 
 client = OpenAI()
 
-def build_tool_descriptions() -> str:
-    tool_descriptions = ""
+def build_tool_schemas():
+    tool_schemas = []
 
     for name, info in AVAILABLE_QUERIES.items():
-        tool_descriptions += f"\nTool name: {name}\n"
+        schema = {
+            "type": "function",
+            "function": {
+                "name": name,
+                "description": info["description"] + ", ".join(info["examples"]),
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "since_date": {
+                            "type": "object",
+                            "properties": {
+                                "month": {"type": "integer", "minimum": 1, "maximum": 12, "description": "Target calendar month as an integer 1-12 (e.g. 11 for November), if the user names a specific month. This is absolute, not a relative offset."},
+                                "years": {"type": "integer", "description": "Number of years to go back from today, as a negative integer (e.g. -1 for one year ago). This is a relative offset, not an absolute year."},
+                                "months": {"type": "integer", "description": "Number of months to go back from today, as a negative integer (e.g. -2 for two months ago). This is a relative offset, not an absolute month."},
+                                "days": {"type": "integer", "description": "Number of days to go back from today, as a negative integer (e.g. -1 for yesterday). This is a relative offset, not an absolute day count."},
+                                "day": {"type": "integer", "minimum": 1, "maximum": 31, "description": "Target day of the month as an integer 1-31, if the user names a specific day. This is absolute, not a relative offset."}
+                            },
+                            "description": "Filter results to only include data since this date (YYYY-MM-DD).",
+                        },
+                    },
+                }
+            }
+        }
+
         if "group_by_options" in info:
-            tool_descriptions += f"\nGroup by options: {', '.join(info['group_by_options'])}\n"
-        
-        tool_descriptions += f"Description: {info['description']}\n"
-        tool_descriptions += "Examples:\n"
+            schema["function"]["parameters"]["properties"]["group_by"] = {
+                "type": "string",
+                "enum": info["group_by_options"],
+            }
+            schema["function"]["parameters"]["required"] = ["group_by"]
 
-        for example in info["examples"]:
-            tool_descriptions += f"- {example}\n"
+        if "group_by_options" not in info:
+            schema["function"]["parameters"]["properties"]["limit"] = {"type": "integer"}
 
-    return tool_descriptions
+        tool_schemas.append(schema)
 
+    return tool_schemas
 
 def parse_user_query(user_question: str) -> dict:
-    tool_descriptions = build_tool_descriptions()
+    tool_schemas = build_tool_schemas()
 
     system_prompt = f"""
 You are a query planner for a poker analytics application.
@@ -37,39 +62,8 @@ Your job is to map the user's natural language question to exactly one available
 Today is {datetime.now().strftime("%Y-%m-%d")}
 
 Available tools:
-{tool_descriptions}
+{tool_schemas}
 
-Return ONLY valid JSON.
-
-This is the basic JSON format for all tools:
-{{"query_name": "tool_name"}}
-
-If the tool requires a group_by dimension, include a "group_by" key with that dimension:
-{{"query_name": "tool_name", "group_by": "dimension"}}
-
-If the tool retrieves individual hands and the user asks for a specific number of hands
-(e.g. "top 10", "first 20"), include a "limit" key with that integer:
-{{"query_name": "tool_name", "limit": 10}}
-
-If the user asks for hands since a specific date, include a "since_date" key with an object
-describing the date relative to today. Only include the fields that apply:
-- "month": target month as an integer 1-12 (absolute), if a specific month is named
-- "years": number of years back from today (negative integer, relative)
-- "months": number of months back from today (negative integer, relative)
-- "days": number of days back from today (negative integer, relative)
-
-Examples:
-"since march" -> {{"since_date": {{"month": 3}}}}
-"since yesterday" -> {{"since_date": {{"days": -1}}}}
-"since november last year" -> {{"since_date": {{"month": 11, "years": -1}}}}
-"day" is optional and can be included if the user specifies a day of the month.
-
-If no specific number is requested, omit "limit" entirely.
-
-If the question does not match any available tool, return:
-{{
-  "query_name": "unknown"
-}}
 """
     response = client.chat.completions.create(
         model="gpt-4o-mini",
@@ -77,19 +71,27 @@ If the question does not match any available tool, return:
             {"role": "system", "content": system_prompt},
             {"role": "user", "content": user_question},
         ],
+        tools=build_tool_schemas(),
+        tool_choice="auto",
         temperature=0,
     )
 
-    content = response.choices[0].message.content
+    content = response.choices[0].message.tool_calls
 
-    try:
-        parsed = json.loads(content)
-        if parsed.get("since_date") is None:
-            return parsed
-        if "month" in parsed["since_date"]:
-            if "day" not in parsed["since_date"]:
-                parsed["since_date"]["day"] = 1
-        parsed["since_date"] = (date.today() + relativedelta(**parsed["since_date"])).strftime("%Y-%m-%d")
-        return parsed
-    except json.JSONDecodeError:
+    if content is None:
         return {"query_name": "unknown"}
+
+    tool_call = content[0]
+    query_name = tool_call.function.name
+    args = json.loads(tool_call.function.arguments)
+    parsed = {"query_name": query_name, **args}
+
+    if parsed.get("since_date") is None:
+        return parsed
+    if "month" in parsed["since_date"]:
+        if "day" not in parsed["since_date"]:
+            parsed["since_date"]["day"] = 1
+    parsed["since_date"] = (date.today() + relativedelta(**parsed["since_date"])).strftime("%Y-%m-%d")
+    return parsed
+
+

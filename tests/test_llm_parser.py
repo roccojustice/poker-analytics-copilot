@@ -1,29 +1,41 @@
 from llm_parser import parse_user_query
 
 
+class FakeFunction:
+    def __init__(self, name, arguments):
+        self.name = name
+        self.arguments = arguments
+
+class FakeToolCall:
+    def __init__(self, name, arguments):
+        self.function = FakeFunction(name, arguments)
+
 class FakeMessage:
-    def __init__(self, content):
-        self.content = content
+    def __init__(self, tool_calls):
+        self.tool_calls = tool_calls
 
 class FakeChoices:
-    def __init__(self, content):
-        self.message = FakeMessage(content)
+    def __init__(self, tool_calls):
+        self.message = FakeMessage(tool_calls)
 
 class FakeResponse:
-    def __init__(self, content):
-        self.choices = [FakeChoices(content)]
+    def __init__(self, tool_calls):
+        self.choices = [FakeChoices(tool_calls)]
 
 def fake_create(**kwargs):
-    return FakeResponse('{"query_name": "winrate", "group_by": "position", "since_date": {"month": 11, "years": -1} }')
+    tool_calls = [FakeToolCall("winrate", '{"group_by": "position", "since_date": {"month": 11, "years": -1}}')]
+    return FakeResponse(tool_calls)
 
 def fake_create_month_only(**kwargs):
-    return FakeResponse('{"query_name": "winrate", "group_by": "position", "since_date": {"month": 3} }')
+    tool_calls = [FakeToolCall("winrate", '{"group_by": "position", "since_date": {"month": 3}}')]
+    return FakeResponse(tool_calls)
 
-def fake_create_query_name_unknown(**kwargs):
-    return FakeResponse('{"query_name": "winrate", "group_by": "player", "since_date": {"month": 03} }')
+def fake_create_no_tool_selected(**kwargs):
+    return FakeResponse(None)
 
 def fake_create_no_since_date(**kwargs):
-    return FakeResponse('{"query_name": "winrate", "group_by": "position" }')
+    tool_calls = [FakeToolCall("winrate", '{"group_by": "position"}')]
+    return FakeResponse(tool_calls)
 
 
 def test_parse_user_query(monkeypatch):
@@ -43,12 +55,12 @@ def test_parse_user_query_month_only(monkeypatch):
     assert parsed_query["since_date"] == "2026-03-01", "The date should be 2026-03-01"
 
 def test_parse_user_query_unknown(monkeypatch):
-    monkeypatch.setattr("llm_parser.client.chat.completions.create", fake_create_query_name_unknown)
+    monkeypatch.setattr("llm_parser.client.chat.completions.create", fake_create_no_tool_selected)
 
-    user_question = "What is my winrate by position since March?"
+    user_question = "What's the weather like today?"
     parsed_query = parse_user_query(user_question)
 
-    assert parsed_query == {"query_name": "unknown"}, "The query name should be unknown"
+    assert parsed_query == {"query_name": "unknown"}, "The query name should be unknown when no tool is selected"
 
 def test_parse_user_query_no_since_date(monkeypatch):
     monkeypatch.setattr("llm_parser.client.chat.completions.create", fake_create_no_since_date)
