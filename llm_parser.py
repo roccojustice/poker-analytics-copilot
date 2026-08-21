@@ -45,7 +45,10 @@ def build_tool_schemas():
             schema["function"]["parameters"]["required"] = ["group_by"]
 
         if "group_by_options" not in info:
-            schema["function"]["parameters"]["properties"]["limit"] = {"type": "integer"}
+            schema["function"]["parameters"]["properties"]["limit"] = {
+                "type": "integer",
+                "description": "Number of hands to return, only when the user gives an explicit count (e.g. 'top 10', '5 hands'). If the user says something vague like 'a few' or 'some hands' with no number, omit this field entirely instead of guessing.",
+            }
 
         tool_schemas.append(schema)
 
