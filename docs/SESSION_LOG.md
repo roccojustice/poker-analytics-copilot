@@ -39,3 +39,4 @@ Tracks time actually invested in this project. Populated automatically at the en
 | 34 | 2026-08-18 | 1h 07m | test_llm_parser.py sabotage-verified + 2 new cases shipped (month-only default, malformed JSON); 2 self-introduced bugs caught live |
 | 35 | 2026-08-19 | 3h 02m | since_date vertical slice closed (4th test case, sabotage-verified); native tool calling migration started — build_tool_schemas() + parse_user_query() rewritten, live "years" semantics bug found and fixed |
 | 36 | 2026-08-21 | 1h 41m | Native tool calling migration closed (fakes rebuilt, 20/20 green); limit schema description gap found via real stress-test and fixed |
+| 37 | 2026-08-23 | 1h 24m | Pure design session (no code): v2 conversational filter composability sketched (accumulate/reset/clarify); multi-agent triggers clarified |
