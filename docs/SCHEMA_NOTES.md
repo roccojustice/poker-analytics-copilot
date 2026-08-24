@@ -27,7 +27,8 @@ Empirical findings about PokerTracker 4's Postgres schema — none of this is do
 
 ## Flags — preflop
 - `flg_p_3bet_opp` / `flg_p_3bet` — had the opportunity to 3-bet / actually 3-bet, preflop.
-- `flg_p_first_raise` — Hero made the first raise preflop (i.e. Hero is PFR/original raiser). `flg_p_first_raise=false` means Hero did not open — used (combined with other conditions) to infer "Hero called" (PFC), since there's no direct "PFC" flag.
+- `flg_p_first_raise` — Hero made the first raise preflop (i.e. Hero is PFR/original raiser). `flg_p_first_raise=false` means Hero did not open — NOT the same as "Hero cold-called the open" (see `flg_p_ccall` below); also true for folds, 3-bets, squeezes, etc.
+- `flg_p_ccall` — confirmed to exist in the real PT4 schema (Session 38, verified in pgAdmin; matches the public PT3 schema docs description: "cold called pre-flop... a flat call of a pre-flop raise"). Still ambiguous on its own between cold-calling the open vs. cold-calling a 3bet+ — combine with `hrt.total_p_raises = 1` (see `hand_raise_totals` below) to mean specifically "cold-called the open, single-raised pot."
 - `flg_p_face_raise` — Hero faced a raise preflop.
 - `flg_p_3bet_def_opp` — Hero faced a 3-bet preflop (same `_def_opp` convention as above).
 - `flg_p_4bet_def_opp` — Hero faced a 4-bet-or-more preflop.
