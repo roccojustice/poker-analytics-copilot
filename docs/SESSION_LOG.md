@@ -41,3 +41,4 @@ Tracks time actually invested in this project. Populated automatically at the en
 | 36 | 2026-08-21 | 1h 41m | Native tool calling migration closed (fakes rebuilt, 20/20 green); limit schema description gap found via real stress-test and fixed |
 | 37 | 2026-08-23 | 1h 24m | Pure design session (no code): v2 conversational filter composability sketched (accumulate/reset/clarify); multi-agent triggers clarified |
 | 38 | 2026-08-24 | 1h 06m | Atomic filters: both open backlog judgment calls resolved (pfr/pfc, total_p_raises parametrization); ATOMIC_FILTERS + RECIPES written, uncommitted |
+| 39 | 2026-08-26 | 3h 36m | Recipe-assembly function closed and wired (2 real bugs fixed via predict-then-run); FILTER_QUERIES retired, renamed to FILTER_RECIPES; new real recipe built, exposed a 10-hand PT4 discrepancy left unresolved and uncommitted |

@@ -23,7 +23,7 @@ Empirical findings about PokerTracker 4's Postgres schema — none of this is do
 
 ## Position
 - `lookup_positions` needs `DISTINCT ON` for position dedup across different game types (same position can appear more than once per game type otherwise).
-- Position is tracked **per street**, not once per hand: `flg_f_has_position` (flop), `flg_r_has_position` (river). A turn equivalent (`flg_t_has_position`?) is assumed by naming convention but **not yet verified against the real schema** — see `BACKLOG.md`.
+- Position is tracked **per street**, not once per hand: `flg_f_has_position` (flop), `flg_r_has_position` (river), `flg_t_has_position` (turn) — confirmed to exist (Session 39), resolving what had been an open schema gap in `BACKLOG.md`.
 
 ## Flags — preflop
 - `flg_p_3bet_opp` / `flg_p_3bet` — had the opportunity to 3-bet / actually 3-bet, preflop.
@@ -44,7 +44,12 @@ Empirical findings about PokerTracker 4's Postgres schema — none of this is do
 
 ## Flags — turn / river
 - `flg_t_check` — Hero checked the turn (confirmed via schema, same flag-per-street-action convention).
+- `flg_t_has_position` — Hero has position on the turn (acts last). Same convention as `flg_f_has_position`/`flg_r_has_position`.
+- `flg_t_cbet_opp` — Hero had the opportunity to continuation-bet the turn. Empirically confirmed (Session 39, no counterexamples found in real data) to imply both `flg_f_cbet = true` and `flg_f_face_raise = false` — i.e. this single flag already encodes "bet the flop as PFR and the bet wasn't raised," collapsing what would otherwise be 3 separate atomic conditions into one.
 - `flg_r_check` — Hero checked the river.
+
+## Known anomalies (unresolved)
+- A recipe built on `flg_t_has_position` + `flg_t_cbet_opp` (`2bp_ip_pfr_turn_cbet_opp`, Session 39) returned 4123 hands vs. 4113 in a PT4-exported hand list for the same filter — a strict superset, 10 extra hands, all on **GG Poker**, all with `hand_no` starting `RC` or `HD` (most GG Poker hand numbers in this DB are plain numeric — these are not). Cause not yet identified; see `BACKLOG.md` for the open investigation and next diagnostic step.
 
 ## Derived / computed in-app (not raw PT4 columns)
 - Pocket pairs: PT4's own "pair" flag conflates board-paired hands (e.g. KT on T73r) with true pocket pairs (22–AA on the same board) — there is no direct flag for "started with a pocket pair." Must derive from `holecard_1`/`holecard_2` via rank extraction (see Card encoding above).
