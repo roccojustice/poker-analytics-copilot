@@ -5,7 +5,7 @@ from analytics import (
     since_date_filter,
 )
 from db import (
-    FILTER_QUERIES,
+    FILTER_RECIPES,
     run_filter_query,
     get_hand_details,
 )
@@ -22,7 +22,7 @@ def run_query(query_name, group_by=None, limit=None, since_date=None):
         if since_date is not None:
             df = since_date_filter(df, since_date)
         return analyze_metric(df, group_by, query_name)
-    if query_name in FILTER_QUERIES:
+    if query_name in FILTER_RECIPES:
         if group_by is not None:
             raise ValueError(f"Group by is not applicable for filter queries: {query_name}")
         matching_hands = run_filter_query(query_name, limit=limit, since_date=since_date)
@@ -30,4 +30,4 @@ def run_query(query_name, group_by=None, limit=None, since_date=None):
     raise ValueError(f"Unknown query: {query_name}")
 
 def is_filter_query(query_name):
-    return query_name in FILTER_QUERIES
+    return query_name in FILTER_RECIPES

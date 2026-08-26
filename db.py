@@ -7,34 +7,74 @@ from poker_cards import decode_card_id
 load_dotenv()
 engine = create_engine(f'postgresql+psycopg2://{os.getenv("POSTGRES_USER")}:{os.getenv("POSTGRES_PASSWORD")}@{os.getenv("POSTGRES_HOST")}:{os.getenv("POSTGRES_PORT")}/{os.getenv("POSTGRES_DB")}')
 
-FILTER_QUERIES = {
-    "check_river_2bp_ip_pfr": 
-        """AND chps.flg_p_first_raise = true
-            AND hrt.total_p_raises = 1
-            AND chps.cnt_p_face_limpers = 0
-            AND chps.flg_r_has_position = true
-            AND chps.flg_r_check = true
-            AND chs.cnt_players_f = 2
-            AND chs.cnt_players_r = 2""",
+ATOMIC_FILTERS = {
+    "first_raise": "chps.flg_p_first_raise = true",
+    "ccall": "chps.flg_p_first_raise = false",
+    "faced_raise_preflop": "chps.flg_p_face_raise = true",
+    "no_4bet_faced": "chps.flg_p_4bet_def_opp = false",
+    "fold_preflop": "chps.flg_p_fold = true",
+    "no_limpers_faced": "chps.cnt_p_face_limpers = 0",
+    "total_raises": lambda op, param_name: f"hrt.total_p_raises {op} %({param_name})s",
 
-    "fold_to_3bet_preflop": 
-        """AND chps.flg_p_first_raise = true
-            AND chps.flg_p_face_raise = true
-            AND chps.flg_p_4bet_def_opp = false
-            AND chps.flg_p_fold = true
-            AND hrt.total_p_raises >= 2
-            AND chps.cnt_p_face_limpers = 0""",
+    "heads_up_flop": "chs.cnt_players_f = 2",
+    "oop_flop": "chps.flg_f_has_position = false",
+    "faced_cbet_flop": "chps.flg_f_cbet_def_opp = true",
+    "small_cbet_facing_pct": "chps.val_f_bet_facing_pct BETWEEN 20 AND 33",
+    "no_check_raise_flop": "chps.flg_f_check_raise = false",
+    "fold_flop": "chps.flg_f_fold = true",
 
-    "fold_vs_small_cbet_2bp_oop_pfc": 
-        """AND chps.flg_p_first_raise = false
-            AND hrt.total_p_raises = 1
-            AND chs.cnt_players_f = 2
-            AND chps.flg_f_has_position = false
-            AND chps.flg_f_cbet_def_opp = true
-            AND chps.val_f_bet_facing_pct BETWEEN 20 AND 33
-            AND chps.flg_f_check_raise = false
-            AND chps.flg_f_fold = true""",
+    "heads_up_river": "chs.cnt_players_r = 2",
+    "ip_river": "chps.flg_r_has_position = true",
+    "check_river": "chps.flg_r_check = true",
 }
+
+FILTER_RECIPES = {
+    "check_river_2bp_ip_pfr": [
+        "first_raise",
+        ("total_raises", "=", 1),
+        "no_limpers_faced",
+        "heads_up_flop",
+        "ip_river",
+        "check_river",
+    ],
+    "fold_to_3bet_preflop": [
+        "first_raise",
+        "faced_raise_preflop",
+        "no_4bet_faced",
+        "fold_preflop",
+        ("total_raises", ">=", 2),
+        "no_limpers_faced",
+    ],
+    "fold_vs_small_cbet_2bp_oop_pfc": [
+        "ccall",
+        ("total_raises", "=", 1),
+        "heads_up_flop",
+        "oop_flop",
+        "faced_cbet_flop",
+        "small_cbet_facing_pct",
+        "no_check_raise_flop",
+        "fold_flop",
+    ],
+
+}
+
+def build_where_clause(recipe_name):
+    if recipe_name not in FILTER_RECIPES:
+        raise ValueError(f"Unknown recipe: {recipe_name}")
+
+    where_clause = ""
+    params = {}
+    for i, item in enumerate(FILTER_RECIPES[recipe_name]):
+        if isinstance(item, str):
+            where_clause += f" AND {ATOMIC_FILTERS[item]}"
+        elif isinstance(item, tuple) and len(item) == 3:
+            filter_name, op, value = item
+            param_name = f"{filter_name}_{i}"
+            where_clause += f" AND {ATOMIC_FILTERS[filter_name](op, param_name)}"
+            params[param_name] = value
+        else:
+            raise ValueError(f"Invalid recipe item: {item}")
+    return where_clause, params
 
 def get_hero_hands():
 
@@ -56,8 +96,8 @@ def get_hero_hands():
     return df
 
 def run_filter_query(filter_name, id_player=10, limit=None, since_date=None):
-    if filter_name not in FILTER_QUERIES:
-        raise ValueError(f"Unknown filter: {filter_name}")
+
+    where_clause, params = build_where_clause(filter_name)
 
     query = """
         WITH hand_raise_totals AS (
@@ -70,9 +110,9 @@ def run_filter_query(filter_name, id_player=10, limit=None, since_date=None):
             JOIN hand_raise_totals hrt ON chps.id_hand = hrt.id_hand
             JOIN cash_hand_summary chs ON chps.id_hand = chs.id_hand
         WHERE chps.id_player = %(id_player)s
-            """ + FILTER_QUERIES[filter_name]
+            """ + where_clause
 
-    params = {"id_player": id_player}
+    params = params | {"id_player": id_player}
     if since_date is not None:
         query += " AND chps.date_played >= %(since_date)s"
         params["since_date"] = since_date
