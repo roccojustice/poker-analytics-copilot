@@ -45,11 +45,11 @@ Empirical findings about PokerTracker 4's Postgres schema — none of this is do
 ## Flags — turn / river
 - `flg_t_check` — Hero checked the turn (confirmed via schema, same flag-per-street-action convention).
 - `flg_t_has_position` — Hero has position on the turn (acts last). Same convention as `flg_f_has_position`/`flg_r_has_position`.
-- `flg_t_cbet_opp` — Hero had the opportunity to continuation-bet the turn. Empirically confirmed (Session 39, no counterexamples found in real data) to imply both `flg_f_cbet = true` and `flg_f_face_raise = false` — i.e. this single flag already encodes "bet the flop as PFR and the bet wasn't raised," collapsing what would otherwise be 3 separate atomic conditions into one.
+- `flg_t_cbet_opp` — Hero had the opportunity to continuation-bet the turn. Implies `flg_f_cbet = true`, but does **not** imply `flg_f_face_raise = false` — Session 39 claimed this held with no counterexamples, but Session 40 found 10 real counterexamples (`flg_f_cbet=true`, `flg_f_face_raise=true`, `flg_t_cbet_opp=true`, all hands where Hero cbet the flop, got raised, and 3bet the raise). Correction: `flg_t_cbet_opp` collapses only 2 conditions ("bet the flop as PFR"), not 3 — `no_faced_raise_flop` (`flg_f_face_raise = false`) must be added explicitly as its own atomic condition whenever a recipe wants to exclude flop-raise lines.
 - `flg_r_check` — Hero checked the river.
 
-## Known anomalies (unresolved)
-- A recipe built on `flg_t_has_position` + `flg_t_cbet_opp` (`2bp_ip_pfr_turn_cbet_opp`, Session 39) returned 4123 hands vs. 4113 in a PT4-exported hand list for the same filter — a strict superset, 10 extra hands, all on **GG Poker**, all with `hand_no` starting `RC` or `HD` (most GG Poker hand numbers in this DB are plain numeric — these are not). Cause not yet identified; see `BACKLOG.md` for the open investigation and next diagnostic step.
+## Known anomalies (resolved)
+- ~~A recipe built on `flg_t_has_position` + `flg_t_cbet_opp` (`2bp_ip_pfr_turn_cbet_opp`, Session 39) returned 4123 hands vs. 4113 in a PT4-exported hand list for the same filter.~~ **Resolved Session 40:** not a PT4/GG-Poker-specific data issue (a control diagnostic against an already-shipped recipe matched PT4 100%, ruling that out) — the 10 extra hands all had `flg_f_face_raise = true` (Hero 3bet the flop), a case the recipe's WHERE clause didn't exclude. See the `flg_t_cbet_opp` correction above.
 
 ## Derived / computed in-app (not raw PT4 columns)
 - Pocket pairs: PT4's own "pair" flag conflates board-paired hands (e.g. KT on T73r) with true pocket pairs (22–AA on the same board) — there is no direct flag for "started with a pocket pair." Must derive from `holecard_1`/`holecard_2` via rank extraction (see Card encoding above).

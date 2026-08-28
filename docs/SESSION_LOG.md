@@ -42,3 +42,4 @@ Tracks time actually invested in this project. Populated automatically at the en
 | 37 | 2026-08-23 | 1h 24m | Pure design session (no code): v2 conversational filter composability sketched (accumulate/reset/clarify); multi-agent triggers clarified |
 | 38 | 2026-08-24 | 1h 06m | Atomic filters: both open backlog judgment calls resolved (pfr/pfc, total_p_raises parametrization); ATOMIC_FILTERS + RECIPES written, uncommitted |
 | 39 | 2026-08-26 | 3h 36m | Recipe-assembly function closed and wired (2 real bugs fixed via predict-then-run); FILTER_QUERIES retired, renamed to FILTER_RECIPES; new real recipe built, exposed a 10-hand PT4 discrepancy left unresolved and uncommitted |
+| 40 | 2026-08-28 | 59m | GG Poker undercount closed: control diagnostic ruled out a systemic issue, root cause (flop-3bet scope gap) found and fixed, verified 4113/4113 against PT4; SCHEMA_NOTES.md correction to a wrong Session 39 empirical claim |
