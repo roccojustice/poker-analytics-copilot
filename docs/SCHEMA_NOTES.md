@@ -24,6 +24,7 @@ Empirical findings about PokerTracker 4's Postgres schema — none of this is do
 ## Position
 - `lookup_positions` needs `DISTINCT ON` for position dedup across different game types (same position can appear more than once per game type otherwise).
 - Position is tracked **per street**, not once per hand: `flg_f_has_position` (flop), `flg_r_has_position` (river), `flg_t_has_position` (turn) — confirmed to exist (Session 39), resolving what had been an open schema gap in `BACKLOG.md`.
+- In a **heads-up** pot (`cnt_players_f = 2`), position is invariant across streets — `flg_f_has_position == flg_t_has_position == flg_r_has_position` (poker rules: with 2 players, whoever acts last on the flop acts last on every street). A recipe scoped to a HU spot can assert position **once**, on the earliest street it touches, instead of repeating it per street. In multiway pots position *can* change street to street (players fold out) — not relevant yet, no multiway spots analyzed (Session 43).
 
 ## Flags — preflop
 - `flg_p_3bet_opp` / `flg_p_3bet` — had the opportunity to 3-bet / actually 3-bet, preflop.
