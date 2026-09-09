@@ -68,10 +68,12 @@ FILTER_RECIPES = {
 def build_where_clause(recipe_name):
     if recipe_name not in FILTER_RECIPES:
         raise ValueError(f"Unknown recipe: {recipe_name}")
+    return assemble_where(FILTER_RECIPES[recipe_name])
 
+def assemble_where(items):
     where_clause = ""
     params = {}
-    for i, item in enumerate(FILTER_RECIPES[recipe_name]):
+    for i, item in enumerate(items):
         if isinstance(item, str):
             where_clause += f" AND {ATOMIC_FILTERS[item]}"
         elif isinstance(item, tuple) and len(item) == 3:
@@ -80,5 +82,5 @@ def build_where_clause(recipe_name):
             where_clause += f" AND {ATOMIC_FILTERS[filter_name](op, param_name)}"
             params[param_name] = value
         else:
-            raise ValueError(f"Invalid recipe item: {item}")
+            raise ValueError(f"Invalid item: {item}")
     return where_clause, params
