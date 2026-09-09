@@ -49,13 +49,49 @@ def build_tool_schemas():
                 "type": "integer",
                 "description": "Number of hands to return, only when the user gives an explicit count (e.g. 'top 10', '5 hands'). If the user says something vague like 'a few' or 'some hands' with no number, omit this field entirely instead of guessing.",
             }
+            schema["function"]["parameters"]["properties"]["action"] = {
+                "type": "string",
+                "enum": ["extend", "replace"],
+                "description": (
+                    "How this question relates to the currently active filter, if one is described above. "
+                    "'extend' when the user is adding a condition that is compatible with (AND-able onto) the current filter. "
+                    "'replace' when the user is asking a different or incompatible question — a new spot or a condition that "
+                    "logically contradicts the current filter. "
+                    "Omit this field entirely when there is no active filter yet."
+                ),
+            }
 
         tool_schemas.append(schema)
 
+    tool_schemas.append({
+        "type": "function",
+        "function": {
+            "name": "ask_clarifying_question",
+            "description": (
+                "Use this instead of any other tool when the user's question could extend the currently active "
+                "filter in more than one mutually exclusive way, and you cannot tell which one is meant without asking."
+            ),
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "question": {
+                        "type": "string",
+                        "description": "The disambiguating question to show the user, in their own language.",
+                    },
+                },
+                "required": ["question"],
+            },
+        },
+    })
+
     return tool_schemas
 
-def parse_user_query(user_question: str) -> dict:
+def parse_user_query(user_question: str, active_filter_description: str = None) -> dict:
     tool_schemas = build_tool_schemas()
+
+    active_filter_section = ""
+    if active_filter_description is not None:
+        active_filter_section = f"\nCurrently active filter: {active_filter_description}\n"
 
     system_prompt = f"""
 You are a query planner for a poker analytics application.
@@ -63,7 +99,7 @@ You are a query planner for a poker analytics application.
 Your job is to map the user's natural language question to exactly one available tool.
 
 Today is {datetime.now().strftime("%Y-%m-%d")}
-
+{active_filter_section}
 Available tools:
 {tool_schemas}
 
@@ -87,6 +123,10 @@ Available tools:
     tool_call = content[0]
     query_name = tool_call.function.name
     args = json.loads(tool_call.function.arguments)
+
+    if query_name == "ask_clarifying_question":
+        return {"query_name": query_name, "question": args["question"]}
+
     parsed = {"query_name": query_name, **args}
 
     if parsed.get("since_date") is None:
