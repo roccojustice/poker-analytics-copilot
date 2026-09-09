@@ -5,10 +5,10 @@ from analytics import (
     since_date_filter,
 )
 from db import (
-    FILTER_RECIPES,
     run_filter_query,
     get_hand_details,
 )
+from filter_recipes import FILTER_RECIPES
 
 from queries import AVAILABLE_QUERIES
 

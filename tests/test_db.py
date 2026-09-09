@@ -1,7 +1,6 @@
 import pytest
 from db import (
     run_filter_query,
-    FILTER_RECIPES,
 )
 
 def fake_read_sql(query, engine, params=None):
