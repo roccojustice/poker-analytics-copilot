@@ -71,4 +71,16 @@ AVAILABLE_QUERIES = {
             "Give me the top 10 hands where I folded vs a 20-33% pot cbet oop as pfc",
         ],
     },
+    "2bp_ip_pfr_turn_cbet_opp": {
+        "description": (
+            "Retrieve individual hand histories where Hero reached the turn with a continuation-bet opportunity, "
+            "as the preflop raiser (PFR), in position (IP), in a 2-bet pot (2bp), heads-up, having not faced "
+            "a raise on the flop. Returns a structured table of matching hands (position, cards, actions per street, pot, winner), not an aggregated stat."
+        ),
+        "examples": [
+            "Show me hands where I had a turn cbet opportunity as 2bp ip pfr",
+            "Show my hands where I reached the turn with a bet opportunity as preflop raiser in position",
+            "Give me the top 10 hands where I had a turn cbet chance as pfr ip in a 2bet pot",
+        ],
+    },
 }
