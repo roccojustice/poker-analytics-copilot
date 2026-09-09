@@ -26,4 +26,3 @@ while True:
         result = run_query(query_name, group_by=parsed_query.get("group_by"), since_date=parsed_query.get("since_date"))
 
     print(result)
-    
