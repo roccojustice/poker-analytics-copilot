@@ -6,8 +6,10 @@
 
 ## Current milestone
 
-**M1 — Spec + doc-system switch.** Complete this session (pending the
-`feedback_mentorship_style.md` compression, which is staged for user review).
+**M1 — Spec + doc-system switch: done.** `SPEC.md` / `STATE.md` / `DECISIONS.md`
+created, dead docs archived, `/start-session` + `/wrap-up` + memory rewritten,
+`feedback_mentorship_style.md` compressed (user-approved), `CLAUDE.md` updated to
+current architecture. Commits `fc68527` + `29a4d99`, pushed. Next session opens on M2.
 
 ## Next: M2 — Backend contract
 
