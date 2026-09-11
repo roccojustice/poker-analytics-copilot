@@ -45,6 +45,15 @@ Rebuilt to 4 files: `SPEC.md` (north star), `STATE.md` (overwritten each session
 personal-aspiration north star but removed from the per-session wrap-up check.
 `/wrap-up` cut from 7 steps to 3.
 
+## 2026-09-11 (Session 50) — Branch per milestone
+
+Git workflow going forward: one branch per milestone (`m2-backend-contract`,
+`m3-ui`, ...), merged to `main` when the milestone closes. Rejected "direct to
+`main`" — it already mixed M5 groundwork into the M1 close this same session.
+Rejected branch-per-slice — with no reviewer, the extra PR granularity is
+overhead without a payoff; a milestone (weeks, not hours) is the smallest unit
+he actually benefits from isolating.
+
 ## Earlier decisions (pre-pivot, still in force)
 
 - **Position lives inside the `preflop-context` prefix**, not in `situation`
