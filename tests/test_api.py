@@ -23,6 +23,23 @@ def test_query_golden_path(monkeypatch):
     assert response.status_code == 200
     assert response.json() == {"result": [{"pos": "BB", "amt_won": 1, "amt_bb": 1}]}
 
+def test_distribution_pilot_endpoint(monkeypatch):
+    monkeypatch.setattr("api.build_where_clause", lambda name: (" AND flg_x = true", {}))
+    monkeypatch.setattr(
+        "api.compute_distribution",
+        lambda *args, **kwargs: {"check": {"count": 60, "pct": 60.0}, "bet": {"count": 40, "pct": 40.0}},
+    )
+    monkeypatch.setattr("api.run_filter_query", lambda *args, **kwargs: pd.DataFrame({"id_hand": [1, 2, 3]}))
+
+    response = client.get("/distribution/2bp_ip_pfr_turn_cbet_opp")
+
+    assert response.status_code == 200
+    assert response.json() == {
+        "interpreted_filter": "2bp_ip_pfr_turn_cbet_opp",
+        "distribution": {"check": {"count": 60, "pct": 60.0}, "bet": {"count": 40, "pct": 40.0}},
+        "hand_ids": [1, 2, 3],
+    }, "endpoint must assemble interpreted_filter + distribution + hand_ids from the recipe, distribution and filter-query layers"
+
 def test_handle_unexpected_exception(monkeypatch):
     client_no_raise = TestClient(app, raise_server_exceptions=False)
 

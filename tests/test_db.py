@@ -1,6 +1,7 @@
 import pytest
 from db import (
     run_filter_query,
+    run_distribution_query,
 )
 
 def fake_read_sql(query, engine, params=None):
@@ -36,3 +37,18 @@ def test_run_filter_query_clause_order_with_since_date_and_limit(monkeypatch):
     limit_pos = query.index("LIMIT")
     assert since_date_pos < order_by_pos < limit_pos, "SQL clauses must appear in order: WHERE conditions, then ORDER BY, then LIMIT"
     assert result["params"] == {"id_player": 42, "since_date": "2023-01-01", "limit": 10}
+
+def test_run_distribution_query_builds_count_filter_per_action(monkeypatch):
+    monkeypatch.setattr("db.pd.read_sql", fake_read_sql)
+    result = run_distribution_query(
+        " AND flg_x = true", {}, "flg_t_check", {True: "check", False: "bet"}, id_player=42
+    )
+    query = result["query"]
+    assert "COUNT(*) FILTER (WHERE chps.flg_t_check = %(is_check)s) AS check" in query, (
+        "one COUNT(*) FILTER column per action, named after the action"
+    )
+    assert "COUNT(*) FILTER (WHERE chps.flg_t_check = %(is_bet)s) AS bet" in query
+    assert " AND flg_x = true" in query, "the recipe's where_clause must still gate the filtered hand set"
+    assert result["params"] == {"is_check": True, "is_bet": False, "id_player": 42}, (
+        "each action's boolean value must be bound, not interpolated into the query string"
+    )

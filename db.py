@@ -55,6 +55,38 @@ def run_filter_query(where_clause, params, id_player=10, limit=None, since_date=
     df = pd.read_sql(query, engine, params=params)
     return df
 
+def run_distribution_query(where_clause, params, flag_column, actions, id_player=10, since_date=None):
+
+    select_columns = []
+    action_params = {}
+    for flag_value, action_name in actions.items():
+        param_name = f"is_{action_name}"
+        select_columns.append(
+            f"COUNT(*) FILTER (WHERE chps.{flag_column} = %({param_name})s) AS {action_name}"
+        )
+        action_params[param_name] = flag_value
+
+    query = f"""
+        WITH hand_raise_totals AS (
+            SELECT id_hand, SUM(cnt_p_raise) AS total_p_raises
+            FROM cash_hand_player_statistics
+            GROUP BY id_hand
+        )
+        SELECT {", ".join(select_columns)}
+        FROM cash_hand_player_statistics chps
+            JOIN hand_raise_totals hrt ON chps.id_hand = hrt.id_hand
+            JOIN cash_hand_summary chs ON chps.id_hand = chs.id_hand
+        WHERE chps.id_player = %(id_player)s
+            """ + where_clause
+
+    params = params | action_params | {"id_player": id_player}
+    if since_date is not None:
+        query += " AND chps.date_played >= %(since_date)s"
+        params["since_date"] = since_date
+
+    df = pd.read_sql(query, engine, params=params)
+    return df
+
 def get_hand_details(id_hands, id_player=10):
 
     query = """
