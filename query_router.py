@@ -8,11 +8,14 @@ from db import (
     run_filter_query,
     get_hand_details,
 )
-from filter_recipes import FILTER_RECIPES
-
+from filter_recipes import (
+    FILTER_RECIPES,
+    build_where_clause, 
+    assemble_where,
+)
 from queries import AVAILABLE_QUERIES
 
-def run_query(query_name, group_by=None, limit=None, since_date=None):
+def run_query(query_name, group_by=None, limit=None, since_date=None, active_filters=None):
     if query_name in METRIC_CONFIGS:
         if limit is not None:
             raise ValueError(f"Limit is not applicable for metric queries: {query_name}")
@@ -25,7 +28,11 @@ def run_query(query_name, group_by=None, limit=None, since_date=None):
     if query_name in FILTER_RECIPES:
         if group_by is not None:
             raise ValueError(f"Group by is not applicable for filter queries: {query_name}")
-        matching_hands = run_filter_query(query_name, limit=limit, since_date=since_date)
+        if active_filters is not None:
+            where_clause, params = assemble_where(active_filters)
+        else:
+            where_clause, params = build_where_clause(query_name)
+        matching_hands = run_filter_query(where_clause, params, limit=limit, since_date=since_date)
         return get_hand_details(matching_hands["id_hand"])
     raise ValueError(f"Unknown query: {query_name}")
 

@@ -3,7 +3,6 @@ import pandas as pd
 from dotenv import load_dotenv
 from sqlalchemy import create_engine
 from poker_cards import decode_card_id
-from filter_recipes import build_where_clause
 
 load_dotenv()
 engine = create_engine(f'postgresql+psycopg2://{os.getenv("POSTGRES_USER")}:{os.getenv("POSTGRES_PASSWORD")}@{os.getenv("POSTGRES_HOST")}:{os.getenv("POSTGRES_PORT")}/{os.getenv("POSTGRES_DB")}')
@@ -27,9 +26,7 @@ def get_hero_hands():
     df = pd.read_sql(query, engine)
     return df
 
-def run_filter_query(filter_name, id_player=10, limit=None, since_date=None):
-
-    where_clause, params = build_where_clause(filter_name)
+def run_filter_query(where_clause, params, id_player=10, limit=None, since_date=None):
 
     query = """
         WITH hand_raise_totals AS (
