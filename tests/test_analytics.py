@@ -1,6 +1,6 @@
 import pandas as pd
 import pytest
-from analytics import analyze_metric, since_date_filter
+from analytics import analyze_metric, since_date_filter, compute_distribution
 
 def test_analyze_metrics():
    # Test case 1: Basic functionality
@@ -32,3 +32,15 @@ def test_since_date_filter():
 
    filtered_df = since_date_filter(df, since_date='2023-02-01')
    assert list(filtered_df['amt_won']) == [2, 3], "Filtered DataFrame should have 2 rows and its 'amt_won' values should be [2, 3]"
+
+
+def test_compute_distribution_returns_counts_and_percentages(monkeypatch):
+   fake_df = pd.DataFrame({"check": [60], "bet": [40]})
+   monkeypatch.setattr("analytics.run_distribution_query", lambda *args, **kwargs: fake_df)
+
+   result = compute_distribution(" AND flg_x = true", {}, "turn_bet_check", id_player=42)
+
+   assert result == {
+       "check": {"count": 60, "pct": 60.0},
+       "bet": {"count": 40, "pct": 40.0},
+   }, "each action must report its own count and its share of the total as a percentage"

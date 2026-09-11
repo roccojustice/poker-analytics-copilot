@@ -1,5 +1,6 @@
 import pandas as pd
-from db import get_hero_hands
+from db import get_hero_hands, run_distribution_query
+from hero_responses import get_hero_response
 
 
 _cached_df = None
@@ -52,6 +53,25 @@ METRIC_CONFIGS = {
         "sort_by": "vpip_pct",
     }
 }
+
+
+def compute_distribution(where_clause, params, hero_response_name, id_player=10, since_date=None):
+    hero_response = get_hero_response(hero_response_name)
+    counts_df = run_distribution_query(
+        where_clause,
+        params,
+        hero_response["flag_column"],
+        hero_response["actions"],
+        id_player=id_player,
+        since_date=since_date,
+    )
+
+    counts = counts_df.iloc[0].to_dict()
+    total = sum(counts.values())
+    return {
+        action_name: {"count": count, "pct": count / total * 100}
+        for action_name, count in counts.items()
+    }
 
 
 def analyze_metric(df, group_by, metric):

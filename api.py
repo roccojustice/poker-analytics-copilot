@@ -4,6 +4,9 @@ from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 from llm_parser import parse_user_query
 from query_router import run_query, is_filter_query
+from filter_recipes import build_where_clause
+from analytics import compute_distribution
+from db import run_filter_query
 
 app = FastAPI()
 
@@ -35,3 +38,16 @@ def query(request: QueryRequest):
         result = run_query(query_name, group_by=parsed_query.get("group_by"))
 
     return {"result": result.reset_index().to_dict(orient="records")}
+
+
+@app.get("/distribution/2bp_ip_pfr_turn_cbet_opp")
+def distribution_2bp_ip_pfr_turn_cbet_opp():
+    where_clause, params = build_where_clause("2bp_ip_pfr_turn_cbet_opp")
+    distribution = compute_distribution(where_clause, params, "turn_bet_check")
+    hand_ids = run_filter_query(where_clause, params)["id_hand"].tolist()
+
+    return {
+        "interpreted_filter": "2bp_ip_pfr_turn_cbet_opp",
+        "distribution": distribution,
+        "hand_ids": hand_ids,
+    }
