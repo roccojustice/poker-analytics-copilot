@@ -54,6 +54,25 @@ Rejected branch-per-slice — with no reviewer, the extra PR granularity is
 overhead without a payoff; a milestone (weeks, not hours) is the smallest unit
 he actually benefits from isolating.
 
+## 2026-09-11 (Session 50) — hero-response as its own registry, SQL-aggregation over pandas
+
+The `hero-response` layer (SPEC's action-frequency-at-decision-point) is its own module
+(`hero_responses.py`), parallel to `filter_recipes.py`, not folded into `METRIC_CONFIGS`.
+Distribution counts are computed via SQL aggregation (`db.run_distribution_query`) reusing
+a recipe's already-validated `WHERE` clause, not by re-deriving the filter in pandas over
+`get_hero_df()` — avoids two independently-maintained (and possibly diverging) filter
+implementations for the same spot.
+
+## 2026-09-11 (Session 50) — TDD required for functional changes
+
+Any code change that modifies functionality/behavior — a new function, changed logic —
+follows red→green TDD (`superpowers:test-driven-development` skill): write the test,
+watch it fail against a real implementation (not just a missing-symbol import error), then
+write minimal code to pass. Small edits that don't change behavior (a few-line tweak,
+formatting) are exempt. Also settled during M2: a collection-time `ImportError` alone is
+NOT sufficient RED — it never reaches the assertion, so it doesn't prove the test checks
+the right thing; a minimal stub must exist first so RED is a real `AssertionError`.
+
 ## Earlier decisions (pre-pivot, still in force)
 
 - **Position lives inside the `preflop-context` prefix**, not in `situation`
