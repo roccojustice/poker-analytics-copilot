@@ -6,59 +6,34 @@
 
 ## Current milestone
 
-**M3 — Minimal usable UI: routing decided and implemented, frontend not started.**
-Resolved the open design question from Session 50 (how `llm_parser`/`query_router` route
-to a distribution query) — decided **not** to add a third dispatch family. Instead:
+**M3 — Minimal usable UI, in progress.** Distribution-query routing designed and built
+on branch `m3-ui` (not merged — milestone isn't closed): `lines.py` (`LINES` registry,
+recipe→hero-response), `query_router.has_distribution()`, the *filter* branch of
+`run_query()` now returns `{interpreted_filter, distribution, hands}` for recipes in
+`LINES`. `api.py`'s generic `/query` serves this shape; M2's pilot endpoint retired.
+Verified end-to-end against real Postgres + real OpenAI — matches M2's validated numbers
+(4113 hands, 1818 bet / 2295 check). Full suite green (33 tests), test-first throughout.
 
-- New `lines.py`: `LINES` registry, `recipe_name -> hero_response_name` (the SPEC's "line"
-  concept made concrete — currently one entry, `2bp_ip_pfr_turn_cbet_opp -> turn_bet_check`).
-- `query_router.has_distribution(query_name)` checks `LINES` membership.
-- The existing *filter* branch of `run_query()` now returns
-  `{interpreted_filter, distribution, hands}` (full `get_hand_details()` table, not bare
-  ids — renamed `hand_ids` -> `hands`) when the recipe is in `LINES`; unchanged
-  hand-list-only behavior otherwise (the 3 pre-pivot outcome recipes — `check_river_2bp_ip_pfr`,
-  `fold_to_3bet_preflop`, `fold_vs_small_cbet_2bp_oop_pfc` — stay hand-list-only: their
-  filters already fix the flag that would be "distributed", so a distribution there would
-  be tautological, not a real line. See design rationale in Session 51 conversation if
-  revisited.)
-- `api.py`'s generic `POST /query` now serializes both shapes. The M2 pilot endpoint
-  (`GET /distribution/2bp_ip_pfr_turn_cbet_opp`) is retired — fully superseded.
-- Built test-first (`superpowers:test-driven-development`); full suite green (33 tests).
-- **Verified end-to-end against the real stack** (real Postgres, real OpenAI call, no
-  mocks): a natural-language question routed correctly to `2bp_ip_pfr_turn_cbet_opp` and
-  returned the same validated numbers as M2 (4113 hands, 1818 bet / 2295 check).
-- Committed: `55d4fdb`.
+## Next: finish M3
 
-**Known non-blocking gap:** `main.py` (CLI, pre-pivot pipeline, not the target per SPEC)
-still assumes filter-family results are always a flat hand table — for a `LINES` recipe
-`len(result)` prints 3 (dict keys) instead of a hand count. Not fixed; CLI isn't in scope.
-
-## Next: M3 — Minimal usable UI
-
-Closes when 3–4 real NL questions each produce interpreted filter + distribution (numbers)
-+ hand list, through an actual UI (not just the API).
-
-## First steps (next session)
-
-1. Choose a frontend stack (still undecided — the one item M3's first-steps list didn't
-   resolve this session).
-2. Build the minimal UI against the now-working `/query` endpoint.
+1. Choose a frontend stack (still undecided).
+2. Build the minimal UI against `/query`.
+3. Close condition: 3–4 real NL questions producing filter + distribution + hand list
+   through the UI.
 
 ## Open questions
 
-- Frontend stack for M3.
-- M4/M5 overlap: M5 can begin once M4 covers the pre-river lines — exact handoff point TBD.
-- Whether/how M5's dynamic filter-chaining (LLM adding atomics turn-by-turn, no static
-  `query_name` to look up in `LINES`) resolves which hero-response applies — raised but not
-  designed in Session 51; needs the M4 `situation` registry to exist first.
+- Frontend stack.
+- M4/M5 handoff: M5 needs M4's `situation` registry before it can resolve which
+  hero-response applies when the LLM extends a filter turn-by-turn (no static `query_name`
+  to look up in `LINES` in that path).
 
-## Process note
+## Known gap (not blocking)
 
-Session 51: user requested "vibe coding" going forward — less multi-turn design
-negotiation, more direct execution with a concise after-the-fact explanation. See
-`feedback_mentorship_style.md` in the assistant's memory.
+`main.py` (CLI, not the target) still assumes filter results are a flat table — for a
+`LINES` recipe it misreports the hand count. Out of scope.
 
 ## Uncommitted work in the tree
 
-None — working tree clean, `main` is 1 commit ahead of `origin/main` (not pushed;
-push wasn't requested).
+None. `main` is clean, matches `origin/main`. All M3 work is on `m3-ui` (2 commits, local
+only — left unpushed by choice; merge to `main` when M3 closes).
