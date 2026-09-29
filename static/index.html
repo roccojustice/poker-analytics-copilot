@@ -4,10 +4,18 @@
   <meta charset="UTF-8">
   <title>Poker Analytics Copilot</title>
   <style>
-    body { font-family: sans-serif; max-width: 700px; margin: 2rem auto; padding: 0 1rem; }
+    body { font-family: sans-serif; max-width: 900px; margin: 2rem auto; padding: 0 1rem; }
     textarea { width: 100%; height: 4rem; font-size: 1rem; }
     button { margin-top: 0.5rem; padding: 0.5rem 1rem; font-size: 1rem; }
-    pre { background: #f4f4f4; padding: 1rem; white-space: pre-wrap; word-break: break-word; }
+    #output { margin-top: 1rem; }
+    table { border-collapse: collapse; width: 100%; margin-bottom: 1rem; font-size: 0.85rem; }
+    th, td { border: 1px solid #ddd; padding: 0.3rem 0.5rem; text-align: left; white-space: nowrap; }
+    th { background: #f4f4f4; }
+    tr:nth-child(even) { background: #fafafa; }
+    .table-scroll { overflow-x: auto; }
+    .error { background: #fdecea; border: 1px solid #f5c2c0; padding: 0.75rem; border-radius: 4px; }
+    .clarifying { background: #eaf2fd; border: 1px solid #b6d4f7; padding: 0.75rem; border-radius: 4px; }
+    h2 { text-transform: capitalize; margin-bottom: 0.25rem; }
   </style>
 </head>
 <body>
@@ -15,19 +23,75 @@
   <textarea id="question" placeholder="e.g. frecuencias de bet en 3bp ip pfr, bb opp"></textarea>
   <br>
   <button id="ask">Preguntar</button>
-  <pre id="output"></pre>
+  <div id="output"></div>
 
   <script>
     const questionEl = document.getElementById("question");
     const outputEl = document.getElementById("output");
     const askButton = document.getElementById("ask");
 
+    function escapeHtml(str) {
+      const div = document.createElement("div");
+      div.textContent = str;
+      return div.innerHTML;
+    }
+
+    function formatCell(value) {
+      if (value === null || value === undefined || value === "") return "—";
+      if (typeof value === "number" && !Number.isInteger(value)) return value.toFixed(2);
+      return escapeHtml(String(value));
+    }
+
+    function renderTable(rows) {
+      if (!rows || rows.length === 0) return "<p>No matching hands.</p>";
+      const columns = Object.keys(rows[0]);
+      let html = '<div class="table-scroll"><table><thead><tr>';
+      columns.forEach(col => html += `<th>${escapeHtml(col)}</th>`);
+      html += "</tr></thead><tbody>";
+      rows.forEach(row => {
+        html += "<tr>";
+        columns.forEach(col => html += `<td>${formatCell(row[col])}</td>`);
+        html += "</tr>";
+      });
+      html += "</tbody></table></div>";
+      return html;
+    }
+
+    function renderDistribution(distribution) {
+      let html = "<table><thead><tr><th>Action</th><th>Count</th><th>%</th></tr></thead><tbody>";
+      for (const [action, stats] of Object.entries(distribution)) {
+        html += `<tr><td>${escapeHtml(action)}</td><td>${stats.count}</td><td>${stats.pct.toFixed(1)}%</td></tr>`;
+      }
+      html += "</tbody></table>";
+      return html;
+    }
+
+    function render(data) {
+      if (data.error) {
+        return `<div class="error">${escapeHtml(data.error)}</div>`;
+      }
+      if (data.clarifying_question) {
+        return `<div class="clarifying">${escapeHtml(data.clarifying_question)}</div>`;
+      }
+
+      const result = data.result;
+      if (Array.isArray(result)) {
+        return renderTable(result);
+      }
+
+      let html = `<h2>${escapeHtml(result.interpreted_filter.replace(/_/g, " "))}</h2>`;
+      html += renderDistribution(result.distribution);
+      html += "<h3>Matching hands</h3>";
+      html += renderTable(result.hands);
+      return html;
+    }
+
     async function ask() {
       const question = questionEl.value.trim();
       if (!question) return;
 
       askButton.disabled = true;
-      outputEl.textContent = "Consultando...";
+      outputEl.innerHTML = "Consultando...";
 
       try {
         const response = await fetch("/query", {
@@ -36,9 +100,9 @@
           body: JSON.stringify({ question }),
         });
         const data = await response.json();
-        outputEl.textContent = JSON.stringify(data, null, 2);
+        outputEl.innerHTML = render(data);
       } catch (err) {
-        outputEl.textContent = "Error: " + err;
+        outputEl.innerHTML = `<div class="error">Error: ${escapeHtml(String(err))}</div>`;
       } finally {
         askButton.disabled = false;
       }
