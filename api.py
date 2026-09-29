@@ -1,6 +1,7 @@
 import traceback
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 from llm_parser import parse_user_query
 from query_router import run_query, is_filter_query, has_distribution
@@ -29,6 +30,9 @@ def query(request: QueryRequest):
     if query_name == "unknown":
         return {"error": "Sorry, I couldn't understand your question."}
 
+    if query_name == "ask_clarifying_question":
+        return {"clarifying_question": parsed_query["question"]}
+
     if is_filter_query(query_name):
         result = run_query(query_name, limit=parsed_query.get("limit"))
     else:
@@ -44,3 +48,6 @@ def query(request: QueryRequest):
         }
 
     return {"result": result.reset_index().to_dict(orient="records")}
+
+
+app.mount("/", StaticFiles(directory="static", html=True), name="static")

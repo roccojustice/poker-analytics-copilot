@@ -49,6 +49,19 @@ def test_query_endpoint_returns_distribution_shape_for_line_query(monkeypatch):
         }
     }, "distribution-backed queries must serialize the hands DataFrame, passing distribution/interpreted_filter through as-is"
 
+def test_query_endpoint_returns_clarifying_question(monkeypatch):
+    fake_parsed = {
+        "query_name": "ask_clarifying_question",
+        "question": "Do you mean 2bp or 3bp?",
+    }
+
+    monkeypatch.setattr("api.parse_user_query", lambda question: fake_parsed)
+
+    response = client.post("/query", json={"question": "frecuencias de bet, bb opp"})
+
+    assert response.status_code == 200
+    assert response.json() == {"clarifying_question": "Do you mean 2bp or 3bp?"}
+
 def test_handle_unexpected_exception(monkeypatch):
     client_no_raise = TestClient(app, raise_server_exceptions=False)
 
