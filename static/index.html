@@ -4,25 +4,32 @@
   <meta charset="UTF-8">
   <title>Poker Analytics Copilot</title>
   <style>
-    body { font-family: sans-serif; max-width: 900px; margin: 2rem auto; padding: 0 1rem; }
+    body { font-family: sans-serif; margin: 2rem auto; padding: 0 1.5rem; max-width: 1800px; }
+    .controls { max-width: 700px; }
     textarea { width: 100%; height: 4rem; font-size: 1rem; }
     button { margin-top: 0.5rem; padding: 0.5rem 1rem; font-size: 1rem; }
     #output { margin-top: 1rem; }
-    table { border-collapse: collapse; width: 100%; margin-bottom: 1rem; font-size: 0.85rem; }
-    th, td { border: 1px solid #ddd; padding: 0.3rem 0.5rem; text-align: left; white-space: nowrap; }
+    table { border-collapse: collapse; width: 100%; margin-bottom: 1rem; font-size: 0.78rem; }
+    th, td { border: 1px solid #ddd; padding: 0.25rem 0.4rem; text-align: left; white-space: nowrap; }
     th { background: #f4f4f4; }
     tr:nth-child(even) { background: #fafafa; }
     .table-scroll { overflow-x: auto; }
+    .wrap { white-space: normal; max-width: 14rem; }
     .error { background: #fdecea; border: 1px solid #f5c2c0; padding: 0.75rem; border-radius: 4px; }
     .clarifying { background: #eaf2fd; border: 1px solid #b6d4f7; padding: 0.75rem; border-radius: 4px; }
     h2 { text-transform: capitalize; margin-bottom: 0.25rem; }
+    .card { display: inline-block; padding: 0 4px; margin: 0 1px; border: 1px solid #ccc; border-radius: 3px; background: #fff; font-weight: bold; }
+    .card-red { color: #d32f2f; }
+    .card-black { color: #222; }
   </style>
 </head>
 <body>
   <h1>Poker Analytics Copilot</h1>
-  <textarea id="question" placeholder="e.g. frecuencias de bet en 3bp ip pfr, bb opp"></textarea>
-  <br>
-  <button id="ask">Preguntar</button>
+  <div class="controls">
+    <textarea id="question" placeholder="e.g. frecuencias de bet en 3bp ip pfr, bb opp"></textarea>
+    <br>
+    <button id="ask">Preguntar</button>
+  </div>
   <div id="output"></div>
 
   <script>
@@ -36,6 +43,35 @@
       return div.innerHTML;
     }
 
+    const CARD_COLUMNS = new Set(["hole_cards", "flop", "turn", "river"]);
+    const WRAP_COLUMNS = new Set(["final_hand", "winning_hand"]);
+    const SUIT_SYMBOLS = { c: "♣", d: "♦", h: "♥", s: "♠" };
+    const RED_SUITS = new Set(["d", "h"]);
+
+    const COLUMN_PRIORITY = [
+      "date_played", "position", "final_hand", "hole_cards", "flop",
+      "f_act", "amt_bet_f", "turn", "t_act", "amt_bet_t", "river", "r_act", "amt_bet_r",
+      "winner", "winning_hand",
+      "amt_pot", "amt_bb", "amt_won",
+      "id_hand",
+    ];
+
+    function orderColumns(columns) {
+      const known = COLUMN_PRIORITY.filter(col => columns.includes(col));
+      const unknown = columns.filter(col => !COLUMN_PRIORITY.includes(col));
+      return [...known, ...unknown];
+    }
+
+    function renderCards(cardStr) {
+      if (!cardStr) return "—";
+      return cardStr.trim().split(/\s+/).map(card => {
+        const rank = card[0];
+        const suit = card[1];
+        const colorClass = RED_SUITS.has(suit) ? "card-red" : "card-black";
+        return `<span class="card ${colorClass}">${escapeHtml(rank)}${SUIT_SYMBOLS[suit] || suit}</span>`;
+      }).join(" ");
+    }
+
     function formatCell(value) {
       if (value === null || value === undefined || value === "") return "—";
       if (typeof value === "number" && !Number.isInteger(value)) return value.toFixed(2);
@@ -44,13 +80,17 @@
 
     function renderTable(rows) {
       if (!rows || rows.length === 0) return "<p>No matching hands.</p>";
-      const columns = Object.keys(rows[0]);
+      const columns = orderColumns(Object.keys(rows[0]));
       let html = '<div class="table-scroll"><table><thead><tr>';
       columns.forEach(col => html += `<th>${escapeHtml(col)}</th>`);
       html += "</tr></thead><tbody>";
       rows.forEach(row => {
         html += "<tr>";
-        columns.forEach(col => html += `<td>${formatCell(row[col])}</td>`);
+        columns.forEach(col => {
+          const cell = CARD_COLUMNS.has(col) ? renderCards(row[col]) : formatCell(row[col]);
+          const cellClass = WRAP_COLUMNS.has(col) ? ' class="wrap"' : "";
+          html += `<td${cellClass}>${cell}</td>`;
+        });
         html += "</tr>";
       });
       html += "</tbody></table></div>";
