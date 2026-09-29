@@ -133,7 +133,7 @@ def get_hand_details(id_hands, id_player=10):
             player p ON chs.id_winner = p.id_player
         WHERE chps.id_hand = ANY(%(id_hands)s)
           AND chps.id_player = %(id_player)s
-        ORDER BY chps.date_played"""
+        ORDER BY chps.date_played DESC"""
 
     params = {"id_hands": list(id_hands), "id_player": id_player}
     df = pd.read_sql(query, engine, params=params)

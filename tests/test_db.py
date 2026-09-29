@@ -1,7 +1,9 @@
+import pandas as pd
 import pytest
 from db import (
     run_filter_query,
     run_distribution_query,
+    get_hand_details,
 )
 
 def fake_read_sql(query, engine, params=None):
@@ -37,6 +39,45 @@ def test_run_filter_query_clause_order_with_since_date_and_limit(monkeypatch):
     limit_pos = query.index("LIMIT")
     assert since_date_pos < order_by_pos < limit_pos, "SQL clauses must appear in order: WHERE conditions, then ORDER BY, then LIMIT"
     assert result["params"] == {"id_player": 42, "since_date": "2023-01-01", "limit": 10}
+
+def test_get_hand_details_orders_newest_first(monkeypatch):
+    captured = {}
+
+    def fake_read_sql(query, engine, params=None):
+        captured["query"] = query
+        return pd.DataFrame([{
+            "id_hand": 1,
+            "date_played": "2025-01-01",
+            "position": "BTN",
+            "final_hand_group": "One Pair",
+            "final_hand_details": "Aces",
+            "holecard_1": 1,
+            "holecard_2": 2,
+            "card_1": 0,
+            "card_2": 0,
+            "card_3": 0,
+            "card_4": 0,
+            "card_5": 0,
+            "f_act": "B",
+            "t_act": "X",
+            "r_act": "F",
+            "amt_bet_f": 0.32,
+            "amt_bet_t": 0,
+            "amt_bet_r": 0,
+            "amt_pot": 1.98,
+            "amt_bb": 0.25,
+            "amt_won": -0.94,
+            "winner": "villain",
+            "winning_hand_group": "One Pair",
+            "winning_hand_details": "Kings",
+        }])
+
+    monkeypatch.setattr("db.pd.read_sql", fake_read_sql)
+    get_hand_details([1])
+
+    assert "ORDER BY chps.date_played DESC" in captured["query"], (
+        "hand list must show the most recently played hands first"
+    )
 
 def test_run_distribution_query_builds_count_filter_per_action(monkeypatch):
     monkeypatch.setattr("db.pd.read_sql", fake_read_sql)
