@@ -73,6 +73,38 @@ formatting) are exempt. Also settled during M2: a collection-time `ImportError` 
 NOT sufficient RED — it never reaches the assertion, so it doesn't prove the test checks
 the right thing; a minimal stub must exist first so RED is a real `AssertionError`.
 
+## 2026-09-16 (Session 51) — Distribution queries fold into the filter family, not a third branch
+
+Decided against adding a third `query_router` dispatch family for distribution queries.
+Instead: a new registry `LINES` (`recipe_name -> hero_response_name`, in `lines.py`) marks
+which filter recipes already have a validated distribution; `query_router.has_distribution()`
+checks membership. The existing `filter` branch of `run_query()` returns the enriched shape
+`{interpreted_filter, distribution, hands}` for those recipes, and the plain hand-details
+table for the rest. Rejected embedding the recipe→hero-response link inside
+`FILTER_RECIPES` itself — would have broken the uniform list shape `assemble_where()`/M5's
+filter-chaining already depend on, and mixed a routing concern into a module whose job is
+SQL-fragment assembly only. The 3 pre-pivot outcome recipes (`check_river_2bp_ip_pfr`,
+`fold_to_3bet_preflop`, `fold_vs_small_cbet_2bp_oop_pfc`) stay out of `LINES` — their own
+filter already fixes the flag a distribution would measure, so it'd be tautological
+(100/0%), not a real line. M2's pilot endpoint (`GET /distribution/2bp_ip_pfr_turn_cbet_opp`)
+retired in favor of the generic `/query`.
+
+## 2026-09-28 (Session 52) — PT4 screenshot as the presentation target, split across M3/M4 and M6
+
+User shared a PT4 screenshot as a rough prototype/sketch (not pixel-perfect spec — info can
+be added/removed) for where the UI's presentation should land. It has two distinct parts
+that map to different milestones:
+- **"Hands For Stake" grid** (position, hole cards, flop/turn/river actions, winner, pot,
+  BB won, rendered with colored position badges and graphical cards, not text) — this is
+  the same hand-list rendering already being built into the query-flow UI (M3/M4), just
+  more polished. Next concrete step when picked back up: a small JS/CSS component that
+  renders `poker_cards.decode_card_id()`'s output as colored rank+suit tiles instead of
+  plain text, plus position badges, on top of the existing table.
+- **Aggregate stats-by-stake summary table** (top of the screenshot) — this is dashboard
+  content (aggregated across the whole dataset, no single-spot filter), already parked at
+  M6 by the `SPEC.md` rule "charts live only in dashboards, not the query flow." Not part
+  of the current UI-polish work.
+
 ## Earlier decisions (pre-pivot, still in force)
 
 - **Position lives inside the `preflop-context` prefix**, not in `situation`

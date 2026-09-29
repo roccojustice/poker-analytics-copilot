@@ -3,6 +3,7 @@ from analytics import (
     METRIC_CONFIGS,
     get_hero_df,
     since_date_filter,
+    compute_distribution,
 )
 from db import (
     run_filter_query,
@@ -10,9 +11,10 @@ from db import (
 )
 from filter_recipes import (
     FILTER_RECIPES,
-    build_where_clause, 
+    build_where_clause,
     assemble_where,
 )
+from lines import LINES
 from queries import AVAILABLE_QUERIES
 
 def run_query(query_name, group_by=None, limit=None, since_date=None, active_filters=None):
@@ -33,8 +35,18 @@ def run_query(query_name, group_by=None, limit=None, since_date=None, active_fil
         else:
             where_clause, params = build_where_clause(query_name)
         matching_hands = run_filter_query(where_clause, params, limit=limit, since_date=since_date)
+        if has_distribution(query_name):
+            distribution = compute_distribution(where_clause, params, LINES[query_name])
+            return {
+                "interpreted_filter": query_name,
+                "distribution": distribution,
+                "hands": get_hand_details(matching_hands["id_hand"]),
+            }
         return get_hand_details(matching_hands["id_hand"])
     raise ValueError(f"Unknown query: {query_name}")
 
 def is_filter_query(query_name):
     return query_name in FILTER_RECIPES
+
+def has_distribution(query_name):
+    return query_name in LINES

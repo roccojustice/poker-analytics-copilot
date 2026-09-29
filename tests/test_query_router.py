@@ -1,6 +1,6 @@
 import pytest
 import pandas as pd
-from query_router import run_query
+from query_router import run_query, has_distribution
 from filter_recipes import build_where_clause, assemble_where
 
 def test_run_query_with_limit():
@@ -41,6 +41,12 @@ def test_run_query_with_since_date(monkeypatch):
     assert result.loc["BB", "hands"] == 2, "Only hands from 2023-02-01 onward should count"
     assert result.loc["BB", "bb_per_100"] == 500, "bb_per_100 should reflect only the filtered hands"
 
+def test_has_distribution_true_for_recipe_in_lines():
+    assert has_distribution("2bp_ip_pfr_turn_cbet_opp") is True
+
+def test_has_distribution_false_for_recipe_not_in_lines():
+    assert has_distribution("check_river_2bp_ip_pfr") is False
+
 def test_run_query_filter_branch_builds_where_from_recipe_name(monkeypatch):
     captured = {}
 
@@ -79,3 +85,31 @@ def test_run_query_filter_branch_uses_active_filters_when_given(monkeypatch):
 
     recipe_where, _ = build_where_clause("check_river_2bp_ip_pfr")
     assert captured["where_clause"] != recipe_where, "the recipe's own WHERE must be ignored when active_filters is passed"
+
+def test_run_query_returns_distribution_for_recipe_in_lines(monkeypatch):
+    expected_where, expected_params = build_where_clause("2bp_ip_pfr_turn_cbet_opp")
+
+    def fake_run_filter_query(where_clause, params, limit=None, since_date=None):
+        assert where_clause == expected_where
+        assert params == expected_params
+        return pd.DataFrame({"id_hand": [1, 2, 3]})
+
+    def fake_compute_distribution(where_clause, params, hero_response_name):
+        assert where_clause == expected_where
+        assert params == expected_params
+        assert hero_response_name == "turn_bet_check"
+        return {"check": {"count": 2, "pct": 66.7}, "bet": {"count": 1, "pct": 33.3}}
+
+    def fake_get_hand_details(id_hands):
+        assert list(id_hands) == [1, 2, 3]
+        return pd.DataFrame({"id_hand": [1, 2, 3], "cards": ["AhKh", "2c3d", "9s9h"]})
+
+    monkeypatch.setattr("query_router.run_filter_query", fake_run_filter_query)
+    monkeypatch.setattr("query_router.compute_distribution", fake_compute_distribution)
+    monkeypatch.setattr("query_router.get_hand_details", fake_get_hand_details)
+
+    result = run_query("2bp_ip_pfr_turn_cbet_opp")
+
+    assert result["interpreted_filter"] == "2bp_ip_pfr_turn_cbet_opp"
+    assert result["distribution"] == {"check": {"count": 2, "pct": 66.7}, "bet": {"count": 1, "pct": 33.3}}
+    assert list(result["hands"]["id_hand"]) == [1, 2, 3], "hands must be the full get_hand_details() table, not bare ids"

@@ -73,9 +73,10 @@ AVAILABLE_QUERIES = {
     },
     "2bp_ip_pfr_turn_cbet_opp": {
         "description": (
-            "Retrieve individual hand histories where Hero reached the turn with a continuation-bet opportunity, "
+            "Retrieve Hero's bet/check frequency on the turn continuation-bet opportunity, "
             "as the preflop raiser (PFR), in position (IP), in a 2-bet pot (2bp), heads-up, having not faced "
-            "a raise on the flop. Returns a structured table of matching hands (position, cards, actions per street, pot, winner), not an aggregated stat."
+            "a raise on the flop. Returns the interpreted filter, the bet/check distribution, "
+            "and the structured table of matching hands (position, cards, actions per street, pot, winner)."
         ),
         "examples": [
             "Show me hands where I had a turn cbet opportunity as 2bp ip pfr",
