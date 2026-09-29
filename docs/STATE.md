@@ -2,28 +2,32 @@
 
 *Overwritten every session. Single source of truth for "where are we / what's next."*
 
-**Last updated:** 2026-09-16, Session 51
+**Last updated:** 2026-09-28, Session 52
 
 ## Current milestone
 
-**M3 — Minimal usable UI, in progress.** Distribution-query routing designed and built
-on branch `m3-ui` (not merged — milestone isn't closed): `lines.py` (`LINES` registry,
-recipe→hero-response), `query_router.has_distribution()`, the *filter* branch of
-`run_query()` now returns `{interpreted_filter, distribution, hands}` for recipes in
-`LINES`. `api.py`'s generic `/query` serves this shape; M2's pilot endpoint retired.
-Verified end-to-end against real Postgres + real OpenAI — matches M2's validated numbers
-(4113 hands, 1818 bet / 2295 check). Full suite green (33 tests), test-first throughout.
+**M3 closed this session.** Backend contract (Session 51) + a polished frontend
+(Session 52) merged to `main` (`9c2afd8`). `static/index.html` (plain HTML/JS, no build
+step, served via FastAPI `StaticFiles`) renders structured tables instead of raw JSON:
+graphical cards, columns ordered chronologically per street (matching PT4's own hand
+grid), hands newest first, full column set fits with no horizontal scroll. Fixed along
+the way: `api.py` didn't handle the LLM's `ask_clarifying_question` tool call (500
+instead of showing the question). Verified live in a real browser against Postgres +
+OpenAI across all three `/query` response shapes. Full suite green (35 tests).
 
-## Next: finish M3
+**M4 — next.** Build `situation` + `hero-response` registries for the remaining 20 lines
+in `SPEC.md` (only the 4-recipe subset exists today), each validated by exact set
+membership against PT4, same discipline as the existing `2BP`/`3BP` formulas in
+`SCHEMA_NOTES.md`.
 
-1. Choose a frontend stack (still undecided).
-2. Build the minimal UI against `/query`.
-3. Close condition: 3–4 real NL questions producing filter + distribution + hand list
-   through the UI.
+## Next
+
+1. Start a new branch for M4 (`m4-...`), per the branch-per-milestone workflow.
+2. Pick the first uncovered line from `SPEC.md`'s 20-line table and build its
+   `situation`/`hero-response` pair, validated 0/0 against PT4.
 
 ## Open questions
 
-- Frontend stack.
 - M4/M5 handoff: M5 needs M4's `situation` registry before it can resolve which
   hero-response applies when the LLM extends a filter turn-by-turn (no static `query_name`
   to look up in `LINES` in that path).
@@ -35,5 +39,4 @@ Verified end-to-end against real Postgres + real OpenAI — matches M2's validat
 
 ## Uncommitted work in the tree
 
-None. `main` is clean, matches `origin/main`. All M3 work is on `m3-ui` (2 commits, local
-only — left unpushed by choice; merge to `main` when M3 closes).
+None. `main` clean, `m3-ui` merged and can be deleted whenever convenient (not done yet).

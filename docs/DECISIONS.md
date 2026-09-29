@@ -105,6 +105,14 @@ that map to different milestones:
   M6 by the `SPEC.md` rule "charts live only in dashboards, not the query flow." Not part
   of the current UI-polish work.
 
+## 2026-09-28 (Session 52) — Frontend: plain HTML/JS, no framework
+
+M3's UI needs no components, routing, or state management — a textarea, a button, and
+structured tables rendered from `/query`'s JSON. Chose plain HTML/JS served by FastAPI
+(`StaticFiles`, no build step) over a framework: JS/frontend is the user's known friction
+point (`user_profile.md`), and M3 doesn't need what a framework buys. Framework choice
+deferred to M6 (dashboards) if that milestone's needs actually require one.
+
 ## Earlier decisions (pre-pivot, still in force)
 
 - **Position lives inside the `preflop-context` prefix**, not in `situation`

@@ -21,6 +21,9 @@ Empirical findings about PokerTracker 4's Postgres schema — none of this is do
 ## Stakes
 - `cash_limit.amt_bb` = the real stake big blind (e.g. `0.25` for 25NL). `amt_blind` was tried and rejected — it does not represent stake size.
 
+## Bet/pot amounts
+- `amt_bet_f` / `amt_bet_t` / `amt_bet_r` (on `chps`) and `amt_pot` (on `chs`) are raw dollar amounts, same unit as `amt_bb` and `amt_won` — **not** a percentage of pot and **not** pre-converted to big blinds. Confirmed via `analytics.py`'s `bb_won = amt_won / amt_bb`: if `amt_won` were already in BB terms that division wouldn't make sense. Contrast with `val_f_bet_facing_pct`, which genuinely is a 0–100 percentage (see Flags — flop, below) — the naming convention isn't consistent across columns, so check before assuming.
+
 ## Position
 - `lookup_positions` needs `DISTINCT ON` for position dedup across different game types (same position can appear more than once per game type otherwise).
 - Position is tracked **per street**, not once per hand: `flg_f_has_position` (flop), `flg_r_has_position` (river), `flg_t_has_position` (turn) — confirmed to exist (Session 39), resolving what had been an open schema gap in `BACKLOG.md`.
