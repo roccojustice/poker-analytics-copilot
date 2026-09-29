@@ -89,6 +89,22 @@ filter already fixes the flag a distribution would measure, so it'd be tautologi
 (100/0%), not a real line. M2's pilot endpoint (`GET /distribution/2bp_ip_pfr_turn_cbet_opp`)
 retired in favor of the generic `/query`.
 
+## 2026-09-28 (Session 52) — PT4 screenshot as the presentation target, split across M3/M4 and M6
+
+User shared a PT4 screenshot as a rough prototype/sketch (not pixel-perfect spec — info can
+be added/removed) for where the UI's presentation should land. It has two distinct parts
+that map to different milestones:
+- **"Hands For Stake" grid** (position, hole cards, flop/turn/river actions, winner, pot,
+  BB won, rendered with colored position badges and graphical cards, not text) — this is
+  the same hand-list rendering already being built into the query-flow UI (M3/M4), just
+  more polished. Next concrete step when picked back up: a small JS/CSS component that
+  renders `poker_cards.decode_card_id()`'s output as colored rank+suit tiles instead of
+  plain text, plus position badges, on top of the existing table.
+- **Aggregate stats-by-stake summary table** (top of the screenshot) — this is dashboard
+  content (aggregated across the whole dataset, no single-spot filter), already parked at
+  M6 by the `SPEC.md` rule "charts live only in dashboards, not the query flow." Not part
+  of the current UI-polish work.
+
 ## Earlier decisions (pre-pivot, still in force)
 
 - **Position lives inside the `preflop-context` prefix**, not in `situation`
