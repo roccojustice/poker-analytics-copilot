@@ -71,6 +71,11 @@ FILTER_RECIPES = {
     ],
     # Validated 3bp_ip_pfc formula (SCHEMA_NOTES.md, Session 47, 1557 hands,
     # exact hand_no match) + faced_cbet_flop as the situation layer.
+    # no_limpers_faced added Session 53 after a live PT4 cross-check: unlike
+    # the 3bp_*_pfc case Session 47 dismissed this atomic for (there, Hero was
+    # the 3-bettor and cnt_p_face_limpers reflects the *opener's* row, not
+    # Hero's), here Hero IS the opener (first_raise), so cnt_p_face_limpers is
+    # genuinely Hero's own "did I open over a limper" state.
     "3bp_ip_pfc_faced_cbet_flop": [
         "heads_up_flop",
         "ip_flop",
@@ -81,6 +86,7 @@ FILTER_RECIPES = {
         "no_fold_preflop",
         "no_squeeze_def_faced",
         "first_raise",
+        "no_limpers_faced",
         "faced_cbet_flop",
     ],
 }
