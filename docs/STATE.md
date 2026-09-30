@@ -2,35 +2,39 @@
 
 *Overwritten every session. Single source of truth for "where are we / what's next."*
 
-**Last updated:** 2026-09-28, Session 52
+**Last updated:** 2026-09-29, Session 53
 
 ## Current milestone
 
-**M3 closed this session.** Backend contract (Session 51) + a polished frontend
-(Session 52) merged to `main` (`9c2afd8`). `static/index.html` (plain HTML/JS, no build
-step, served via FastAPI `StaticFiles`) renders structured tables instead of raw JSON:
-graphical cards, columns ordered chronologically per street (matching PT4's own hand
-grid), hands newest first, full column set fits with no horizontal scroll. Fixed along
-the way: `api.py` didn't handle the LLM's `ask_clarifying_question` tool call (500
-instead of showing the question). Verified live in a real browser against Postgres +
-OpenAI across all three `/query` response shapes. Full suite green (35 tests).
+**M4 in progress** (branch `m4-situations`, local only, 2 commits ahead of `main`, not
+pushed/merged — expected, M4 has 19 of 20 lines left). First `situation`/`hero-response`
+line built and validated: `3bp_ip_pfc_faced_cbet_flop` (SPEC.md pre-river line #1),
+raise/call/fold distribution, ships with 1065 hands (deliberate superset of PT4's 1063 —
+see `DECISIONS.md` and `SCHEMA_NOTES.md` for the root-caused edge case).
 
-**M4 — next.** Build `situation` + `hero-response` registries for the remaining 20 lines
-in `SPEC.md` (only the 4-recipe subset exists today), each validated by exact set
-membership against PT4, same discipline as the existing `2BP`/`3BP` formulas in
-`SCHEMA_NOTES.md`.
+Along the way, generalized `hero_responses.py` from a binary `{flag_column, actions}`
+shape to ordered `{conditions: [(action_name, sql_condition), ...]}` — needed for any
+raise/call/fold line, not just bet/check. `db.run_distribution_query` and
+`analytics.compute_distribution` updated to match. Full suite green (37 tests).
 
 ## Next
 
-1. Start a new branch for M4 (`m4-...`), per the branch-per-milestone workflow.
-2. Pick the first uncovered line from `SPEC.md`'s 20-line table and build its
-   `situation`/`hero-response` pair, validated 0/0 against PT4.
+1. Pick the next uncovered line from `SPEC.md`'s 20-line table. Easiest next pick:
+   `2bp_oop_pfr` bet flop → bet/check turn — reuses the existing `turn_bet_check`
+   hero-response as-is, no new distribution logic needed.
+2. Same discipline each time: build the recipe, validate by exact `hand_no` set
+   membership against a live PT4 filter export (not just `COUNT(*)`), root-cause any gap
+   before accepting or deliberately overriding it.
 
 ## Open questions
 
 - M4/M5 handoff: M5 needs M4's `situation` registry before it can resolve which
   hero-response applies when the LLM extends a filter turn-by-turn (no static `query_name`
   to look up in `LINES` in that path).
+- The `flg_f_cbet_def_opp`-based `faced_cbet_flop` atomic is now known to disagree with
+  PT4's own "faced cbet" UI filter on overbet-shove-direct-folds (by design, see
+  `DECISIONS.md`) — worth a quick gut-check the first time this shows up on a different
+  line, in case the pattern looks different there.
 
 ## Known gap (not blocking)
 
@@ -39,4 +43,4 @@ membership against PT4, same discipline as the existing `2BP`/`3BP` formulas in
 
 ## Uncommitted work in the tree
 
-None. `main` clean, `m3-ui` merged and can be deleted whenever convenient (not done yet).
+None. `m4-situations` clean, 2 commits ahead of `main`, not merged (M4 isn't done).

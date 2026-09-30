@@ -113,6 +113,26 @@ structured tables rendered from `/query`'s JSON. Chose plain HTML/JS served by F
 point (`user_profile.md`), and M3 doesn't need what a framework buys. Framework choice
 deferred to M6 (dashboards) if that milestone's needs actually require one.
 
+## 2026-09-29 (Session 53) — hero-response generalized to N-way conditions
+
+Moved `hero_responses.py` from `{flag_column, actions: {bool: name}}` (binary
+only) to `{conditions: [(action_name, sql_condition), ...]}` (ordered,
+first-match-wins priority). Needed for M4's raise/call/fold lines, which
+don't fit a single boolean column. Same trust model as `ATOMIC_FILTERS`:
+literal SQL fragments from an internal dict, never interpolated user data.
+Priority matters: a raise that later folds/calls a re-raise still counts
+as raise — Hero's actual decision at the original bet-facing point.
+
+## 2026-09-29 (Session 53) — `3bp_ip_pfc_faced_cbet_flop` ships as a deliberate superset of PT4 (1065 vs PT4's 1063)
+
+Live PT4 cross-check found PT4's own "faced cbet" filter silently excludes
+a direct fold to an opponent's flop shove when that shove exceeds Hero's
+effective stack (root-caused via a self-join, see `SCHEMA_NOTES.md`). User
+decision after visually confirming both edge-case hands in PT4's replayer:
+keep them visible in this tool — they're a real, if uncommon, spot he wants
+to review, and PT4 hides them from him too. Not a bug to fix; expect the
+same category on the other `faced_cbet_flop` lines in `SPEC.md`.
+
 ## Earlier decisions (pre-pivot, still in force)
 
 - **Position lives inside the `preflop-context` prefix**, not in `situation`
