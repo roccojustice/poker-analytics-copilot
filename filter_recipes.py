@@ -5,11 +5,17 @@ ATOMIC_FILTERS = {
     "faced_raise_preflop": "chps.flg_p_face_raise = true",
     "no_4bet_faced": "chps.flg_p_4bet_def_opp = false",
     "fold_preflop": "chps.flg_p_fold = true",
+    "no_fold_preflop": "chps.flg_p_fold = false",
     "no_limpers_faced": "chps.cnt_p_face_limpers = 0",
     "total_raises": lambda op, param_name: f"hrt.total_p_raises {op} %({param_name})s",
+    "own_raises": lambda op, param_name: f"chps.cnt_p_raise {op} %({param_name})s",
+    "faced_3bet_preflop": "chps.flg_p_3bet_def_opp = true",
+    "no_4bet_made": "chps.flg_p_4bet = false",
+    "no_squeeze_def_faced": "chps.flg_p_squeeze_def_opp = false",
 
     # Flop filters
     "heads_up_flop": "chs.cnt_players_f = 2",
+    "ip_flop": "chps.flg_f_has_position = true",
     "oop_flop": "chps.flg_f_has_position = false",
     "faced_cbet_flop": "chps.flg_f_cbet_def_opp = true",
     "small_cbet_facing_pct": "chps.val_f_bet_facing_pct BETWEEN 20 AND 33",
@@ -62,7 +68,21 @@ FILTER_RECIPES = {
         "ip_turn",
         "no_faced_raise_flop",
         "turn_cbet_opp",
-    ]
+    ],
+    # Validated 3bp_ip_pfc formula (SCHEMA_NOTES.md, Session 47, 1557 hands,
+    # exact hand_no match) + faced_cbet_flop as the situation layer.
+    "3bp_ip_pfc_faced_cbet_flop": [
+        "heads_up_flop",
+        "ip_flop",
+        ("own_raises", "<=", 1),
+        "faced_3bet_preflop",
+        "no_4bet_made",
+        "no_4bet_faced",
+        "no_fold_preflop",
+        "no_squeeze_def_faced",
+        "first_raise",
+        "faced_cbet_flop",
+    ],
 }
 
 def build_where_clause(recipe_name):

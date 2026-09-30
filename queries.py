@@ -84,4 +84,17 @@ AVAILABLE_QUERIES = {
             "Give me the top 10 hands where I had a turn cbet chance as pfr ip in a 2bet pot",
         ],
     },
+    "3bp_ip_pfc_faced_cbet_flop": {
+        "description": (
+            "Retrieve Hero's raise/call/fold frequency facing a continuation bet on the flop, "
+            "as the preflop caller (PFC) of a 3-bet (3bp), in position (IP), heads-up. "
+            "Returns the interpreted filter, the raise/call/fold distribution, "
+            "and the structured table of matching hands (position, cards, actions per street, pot, winner)."
+        ),
+        "examples": [
+            "Show me my raise/call/fold frequency facing a cbet as 3bp ip pfc",
+            "Show my hands where I faced a continuation bet as the 3bet caller in position",
+            "Give me the top 10 hands where I faced a flop cbet as pfc ip in a 3bet pot",
+        ],
+    },
 }

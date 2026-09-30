@@ -55,16 +55,12 @@ def run_filter_query(where_clause, params, id_player=10, limit=None, since_date=
     df = pd.read_sql(query, engine, params=params)
     return df
 
-def run_distribution_query(where_clause, params, flag_column, actions, id_player=10, since_date=None):
+def run_distribution_query(where_clause, params, conditions, id_player=10, since_date=None):
 
-    select_columns = []
-    action_params = {}
-    for flag_value, action_name in actions.items():
-        param_name = f"is_{action_name}"
-        select_columns.append(
-            f"COUNT(*) FILTER (WHERE chps.{flag_column} = %({param_name})s) AS {action_name}"
-        )
-        action_params[param_name] = flag_value
+    select_columns = [
+        f"COUNT(*) FILTER (WHERE {condition}) AS {action_name}"
+        for action_name, condition in conditions
+    ]
 
     query = f"""
         WITH hand_raise_totals AS (
@@ -79,7 +75,7 @@ def run_distribution_query(where_clause, params, flag_column, actions, id_player
         WHERE chps.id_player = %(id_player)s
             """ + where_clause
 
-    params = params | action_params | {"id_player": id_player}
+    params = params | {"id_player": id_player}
     if since_date is not None:
         query += " AND chps.date_played >= %(since_date)s"
         params["since_date"] = since_date

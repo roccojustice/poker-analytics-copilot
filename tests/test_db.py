@@ -81,15 +81,29 @@ def test_get_hand_details_orders_newest_first(monkeypatch):
 
 def test_run_distribution_query_builds_count_filter_per_action(monkeypatch):
     monkeypatch.setattr("db.pd.read_sql", fake_read_sql)
+    conditions = [("check", "chps.flg_t_check = true"), ("bet", "chps.flg_t_check = false")]
     result = run_distribution_query(
-        " AND flg_x = true", {}, "flg_t_check", {True: "check", False: "bet"}, id_player=42
+        " AND flg_x = true", {}, conditions, id_player=42
     )
     query = result["query"]
-    assert "COUNT(*) FILTER (WHERE chps.flg_t_check = %(is_check)s) AS check" in query, (
+    assert "COUNT(*) FILTER (WHERE chps.flg_t_check = true) AS check" in query, (
         "one COUNT(*) FILTER column per action, named after the action"
     )
-    assert "COUNT(*) FILTER (WHERE chps.flg_t_check = %(is_bet)s) AS bet" in query
+    assert "COUNT(*) FILTER (WHERE chps.flg_t_check = false) AS bet" in query
     assert " AND flg_x = true" in query, "the recipe's where_clause must still gate the filtered hand set"
-    assert result["params"] == {"is_check": True, "is_bet": False, "id_player": 42}, (
-        "each action's boolean value must be bound, not interpolated into the query string"
+    assert result["params"] == {"id_player": 42}, (
+        "condition SQL is a trusted static fragment (like ATOMIC_FILTERS), not a bound value"
     )
+
+def test_run_distribution_query_supports_more_than_two_actions(monkeypatch):
+    monkeypatch.setattr("db.pd.read_sql", fake_read_sql)
+    conditions = [
+        ("raise", "chps.cnt_f_raise >= 1"),
+        ("fold", "chps.cnt_f_raise = 0 AND chps.flg_f_fold = true"),
+        ("call", "chps.cnt_f_raise = 0 AND chps.flg_f_fold = false"),
+    ]
+    result = run_distribution_query(" AND flg_x = true", {}, conditions, id_player=42)
+    query = result["query"]
+    assert "COUNT(*) FILTER (WHERE chps.cnt_f_raise >= 1) AS raise" in query
+    assert "COUNT(*) FILTER (WHERE chps.cnt_f_raise = 0 AND chps.flg_f_fold = true) AS fold" in query
+    assert "COUNT(*) FILTER (WHERE chps.cnt_f_raise = 0 AND chps.flg_f_fold = false) AS call" in query

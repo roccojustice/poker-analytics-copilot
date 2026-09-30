@@ -60,8 +60,7 @@ def compute_distribution(where_clause, params, hero_response_name, id_player=10,
     counts_df = run_distribution_query(
         where_clause,
         params,
-        hero_response["flag_column"],
-        hero_response["actions"],
+        hero_response["conditions"],
         id_player=id_player,
         since_date=since_date,
     )
