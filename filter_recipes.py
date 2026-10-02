@@ -3,6 +3,7 @@ ATOMIC_FILTERS = {
     "first_raise": "chps.flg_p_first_raise = true",
     "ccall": "chps.flg_p_first_raise = false",
     "faced_raise_preflop": "chps.flg_p_face_raise = true",
+    "no_face_raise_preflop": "chps.flg_p_face_raise = false",
     "no_4bet_faced": "chps.flg_p_4bet_def_opp = false",
     "fold_preflop": "chps.flg_p_fold = true",
     "no_fold_preflop": "chps.flg_p_fold = false",
@@ -12,6 +13,13 @@ ATOMIC_FILTERS = {
     "faced_3bet_preflop": "chps.flg_p_3bet_def_opp = true",
     "no_4bet_made": "chps.flg_p_4bet = false",
     "no_squeeze_def_faced": "chps.flg_p_squeeze_def_opp = false",
+    "made_3bet": "chps.flg_p_3bet = true",
+    "had_3bet_opp": "chps.flg_p_3bet_opp = true",
+    "no_squeeze_made": "chps.flg_p_squeeze = false",
+    "vpip": "chps.flg_vpip = true",
+    "no_first_raise": "chps.flg_p_first_raise = false",
+    "no_3bet_made": "chps.flg_p_3bet = false",
+    "no_3bet_def_faced": "chps.flg_p_3bet_def_opp = false",
 
     # Flop filters
     "heads_up_flop": "chs.cnt_players_f = 2",
@@ -25,6 +33,7 @@ ATOMIC_FILTERS = {
 
     # Turn filters
     "ip_turn": "chps.flg_t_has_position = true",
+    "oop_turn": "chps.flg_t_has_position = false",
     "turn_cbet_opp": "chps.flg_t_cbet_opp = true",
 
     # River filters
@@ -60,10 +69,46 @@ FILTER_RECIPES = {
         "no_check_raise_flop",
         "fold_flop",
     ],
+    # Simplified 2bp_*_pfr formula, no total_raises=1 (see SCHEMA_NOTES.md).
     "2bp_ip_pfr_turn_cbet_opp": [
         "first_raise",
-        ("total_raises", "=", 1),
         "no_limpers_faced",
+        "no_face_raise_preflop",
+        "heads_up_flop",
+        "ip_turn",
+        "no_faced_raise_flop",
+        "turn_cbet_opp",
+    ],
+    "2bp_oop_pfr_turn_cbet_opp": [
+        "first_raise",
+        "no_limpers_faced",
+        "no_face_raise_preflop",
+        "heads_up_flop",
+        "oop_turn",
+        "no_faced_raise_flop",
+        "turn_cbet_opp",
+    ],
+    # Validated 3bp_oop_pfr formula (SCHEMA_NOTES.md, Session 47, 1687 hands).
+    "3bp_oop_pfr_turn_cbet_opp": [
+        "made_3bet",
+        "had_3bet_opp",
+        ("own_raises", "=", 1),
+        "faced_raise_preflop",
+        "no_4bet_faced",
+        "no_squeeze_made",
+        "heads_up_flop",
+        "oop_turn",
+        "no_faced_raise_flop",
+        "turn_cbet_opp",
+    ],
+    # Validated 3bp_ip_pfr formula (SCHEMA_NOTES.md, Session 47, 2067 hands).
+    "3bp_ip_pfr_turn_cbet_opp": [
+        "made_3bet",
+        "had_3bet_opp",
+        ("own_raises", "=", 1),
+        "faced_raise_preflop",
+        "no_4bet_faced",
+        "no_squeeze_made",
         "heads_up_flop",
         "ip_turn",
         "no_faced_raise_flop",
@@ -76,6 +121,19 @@ FILTER_RECIPES = {
     # the 3-bettor and cnt_p_face_limpers reflects the *opener's* row, not
     # Hero's), here Hero IS the opener (first_raise), so cnt_p_face_limpers is
     # genuinely Hero's own "did I open over a limper" state.
+    # Validated 2bp_ip_pfc formula (SCHEMA_NOTES.md, Session 46, 2569 hands).
+    "2bp_ip_pfc_faced_cbet_flop": [
+        "heads_up_flop",
+        "ip_flop",
+        "vpip",
+        "no_first_raise",
+        "no_3bet_made",
+        ("own_raises", "=", 0),
+        "faced_raise_preflop",
+        "no_fold_preflop",
+        "no_3bet_def_faced",
+        "faced_cbet_flop",
+    ],
     "3bp_ip_pfc_faced_cbet_flop": [
         "heads_up_flop",
         "ip_flop",

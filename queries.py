@@ -84,6 +84,58 @@ AVAILABLE_QUERIES = {
             "Give me the top 10 hands where I had a turn cbet chance as pfr ip in a 2bet pot",
         ],
     },
+    "2bp_oop_pfr_turn_cbet_opp": {
+        "description": (
+            "Retrieve Hero's bet/check frequency on the turn continuation-bet opportunity, "
+            "as the preflop raiser (PFR), out of position (OOP), in a 2-bet pot (2bp), heads-up, having not faced "
+            "a raise on the flop. Returns the interpreted filter, the bet/check distribution, "
+            "and the structured table of matching hands (position, cards, actions per street, pot, winner)."
+        ),
+        "examples": [
+            "Show me hands where I had a turn cbet opportunity as 2bp oop pfr",
+            "Show my hands where I reached the turn with a bet opportunity as preflop raiser out of position",
+            "Give me the top 10 hands where I had a turn cbet chance as pfr oop in a 2bet pot",
+        ],
+    },
+    "3bp_oop_pfr_turn_cbet_opp": {
+        "description": (
+            "Retrieve Hero's bet/check frequency on the turn continuation-bet opportunity, "
+            "as the preflop raiser (PFR) of a 3-bet (3bp), out of position (OOP), heads-up, "
+            "having not faced a raise on the flop. Returns the interpreted filter, the bet/check "
+            "distribution, and the structured table of matching hands (position, cards, actions per street, pot, winner)."
+        ),
+        "examples": [
+            "Show me hands where I had a turn cbet opportunity as 3bp oop pfr",
+            "Show my hands where I reached the turn with a bet opportunity as the 3bettor out of position",
+            "Give me the top 10 hands where I had a turn cbet chance as pfr oop in a 3bet pot",
+        ],
+    },
+    "3bp_ip_pfr_turn_cbet_opp": {
+        "description": (
+            "Retrieve Hero's bet/check frequency on the turn continuation-bet opportunity, "
+            "as the preflop raiser (PFR) of a 3-bet (3bp), in position (IP), heads-up, "
+            "having not faced a raise on the flop. Returns the interpreted filter, the bet/check "
+            "distribution, and the structured table of matching hands (position, cards, actions per street, pot, winner)."
+        ),
+        "examples": [
+            "Show me hands where I had a turn cbet opportunity as 3bp ip pfr",
+            "Show my hands where I reached the turn with a bet opportunity as the 3bettor in position",
+            "Give me the top 10 hands where I had a turn cbet chance as pfr ip in a 3bet pot",
+        ],
+    },
+    "2bp_ip_pfc_faced_cbet_flop": {
+        "description": (
+            "Retrieve Hero's raise/call/fold frequency facing a continuation bet on the flop, "
+            "as the preflop caller (PFC), in position (IP), in a 2-bet pot (2bp), heads-up. "
+            "Returns the interpreted filter, the raise/call/fold distribution, "
+            "and the structured table of matching hands (position, cards, actions per street, pot, winner)."
+        ),
+        "examples": [
+            "Show me my raise/call/fold frequency facing a cbet as 2bp ip pfc",
+            "Show my hands where I faced a continuation bet as the preflop caller in position",
+            "Give me the top 10 hands where I faced a flop cbet as pfc ip in a 2bet pot",
+        ],
+    },
     "3bp_ip_pfc_faced_cbet_flop": {
         "description": (
             "Retrieve Hero's raise/call/fold frequency facing a continuation bet on the flop, "
