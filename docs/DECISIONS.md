@@ -133,6 +133,24 @@ keep them visible in this tool — they're a real, if uncommon, spot he wants
 to review, and PT4 hides them from him too. Not a bug to fix; expect the
 same category on the other `faced_cbet_flop` lines in `SPEC.md`.
 
+## 2026-10-01 (Session 54) — Two PT4-discrepancy categories confirmed as settled patterns, not case-by-case
+
+Extends the Session 53 decision (`3bp_ip_pfc_faced_cbet_flop` as a deliberate superset). This
+session confirmed two more categories, each seen across multiple lines, user-confirmed each
+time after direct hand inspection:
+- **Flop-3bet-into-turn** (`turn_cbet_opp` lines): Hero cbets the flop, faces a raise,
+  3bets it, and reaches the turn with a cbet opportunity. PT4's export sometimes includes
+  these, our query excludes them via `no_faced_raise_flop`. Confirmed on 2 lines
+  (`2bp_oop_pfr_turn_cbet_opp`: 2 hands; `3bp_ip_pfr_turn_cbet_opp`: 1 hand).
+- **Preflop-allin-runout** (`faced_cbet_flop` lines): Hero calls an all-in preflop, the hand
+  runs out with zero flop action. PT4's export includes these under "faced cbet," our query
+  excludes them because `flg_f_cbet_def_opp=false` (no real flop decision exists). Confirmed
+  on `2bp_ip_pfc_faced_cbet_flop` (11 hands).
+
+Both patterns are now settled: future lines of the same shape (`turn_cbet_opp` or
+`faced_cbet_flop`) can expect the same kind of discrepancy without needing to re-litigate it
+hand-by-hand with the user — unless a genuinely new pattern shows up.
+
 ## Earlier decisions (pre-pivot, still in force)
 
 - **Position lives inside the `preflop-context` prefix**, not in `situation`
