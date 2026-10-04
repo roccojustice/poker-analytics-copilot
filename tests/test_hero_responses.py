@@ -27,3 +27,13 @@ def test_flop_raise_call_fold_conditions_are_priority_ordered():
         "raise must be checked first so a raise-then-fold-to-a-reraise hand still counts as raise, "
         "matching Hero's actual decision at the original bet-facing point"
     )
+
+
+def test_turn_raise_call_fold_conditions_are_priority_ordered():
+    response = get_hero_response("turn_raise_call_fold")
+
+    assert response["conditions"] == [
+        ("raise", "chps.cnt_t_raise >= 1"),
+        ("fold", "chps.cnt_t_raise = 0 AND chps.flg_t_fold = true"),
+        ("call", "chps.cnt_t_raise = 0 AND chps.flg_t_fold = false"),
+    ], "same raise-first priority as flop_raise_call_fold, on turn columns"

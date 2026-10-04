@@ -65,6 +65,9 @@ def test_has_distribution_true_for_2bp_oop_pfc_faced_cbet_flop():
 def test_has_distribution_true_for_3bp_oop_pfc_faced_cbet_flop():
     assert has_distribution("3bp_oop_pfc_faced_cbet_flop") is True
 
+def test_has_distribution_true_for_3bp_ip_pfc_faced_barrel_turn():
+    assert has_distribution("3bp_ip_pfc_faced_barrel_turn") is True
+
 def test_run_query_filter_branch_builds_where_from_recipe_name(monkeypatch):
     captured = {}
 

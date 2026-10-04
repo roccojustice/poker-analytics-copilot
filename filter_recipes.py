@@ -35,6 +35,7 @@ ATOMIC_FILTERS = {
     "ip_turn": "chps.flg_t_has_position = true",
     "oop_turn": "chps.flg_t_has_position = false",
     "turn_cbet_opp": "chps.flg_t_cbet_opp = true",
+    "faced_cbet_turn": "chps.flg_t_cbet_def_opp = true",
 
     # River filters
     "heads_up_river": "chs.cnt_players_r = 2",
@@ -172,6 +173,21 @@ FILTER_RECIPES = {
         "first_raise",
         "no_limpers_faced",
         "faced_cbet_flop",
+    ],
+    # faced_cbet_flop is implied by faced_cbet_turn, kept so this reads as line #1 + one atom.
+    "3bp_ip_pfc_faced_barrel_turn": [
+        "heads_up_flop",
+        "ip_flop",
+        ("own_raises", "<=", 1),
+        "faced_3bet_preflop",
+        "no_4bet_made",
+        "no_4bet_faced",
+        "no_fold_preflop",
+        "no_squeeze_def_faced",
+        "first_raise",
+        "no_limpers_faced",
+        "faced_cbet_flop",
+        "faced_cbet_turn",
     ],
 }
 

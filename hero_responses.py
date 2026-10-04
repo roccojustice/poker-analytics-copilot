@@ -21,6 +21,13 @@ HERO_RESPONSES = {
             ("call", "chps.cnt_f_raise = 0 AND chps.flg_f_fold = false"),
         ],
     },
+    "turn_raise_call_fold": {
+        "conditions": [
+            ("raise", "chps.cnt_t_raise >= 1"),
+            ("fold", "chps.cnt_t_raise = 0 AND chps.flg_t_fold = true"),
+            ("call", "chps.cnt_t_raise = 0 AND chps.flg_t_fold = false"),
+        ],
+    },
 }
 
 

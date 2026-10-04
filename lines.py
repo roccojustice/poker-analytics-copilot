@@ -7,4 +7,5 @@ LINES = {
     "2bp_ip_pfc_faced_cbet_flop": "flop_raise_call_fold",
     "2bp_oop_pfc_faced_cbet_flop": "flop_raise_call_fold",
     "3bp_oop_pfc_faced_cbet_flop": "flop_raise_call_fold",
+    "3bp_ip_pfc_faced_barrel_turn": "turn_raise_call_fold",
 }
