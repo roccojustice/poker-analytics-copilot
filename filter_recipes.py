@@ -147,6 +147,32 @@ FILTER_RECIPES = {
         "no_limpers_faced",
         "faced_cbet_flop",
     ],
+    "2bp_oop_pfc_faced_cbet_flop": [
+        "heads_up_flop",
+        "oop_flop",
+        "vpip",
+        "no_first_raise",
+        "no_3bet_made",
+        ("own_raises", "=", 0),
+        "faced_raise_preflop",
+        "no_fold_preflop",
+        "no_3bet_def_faced",
+        "faced_cbet_flop",
+    ],
+    # no_4bet_faced is redundant OOP (SCHEMA_NOTES.md), kept to mirror the IP recipe.
+    "3bp_oop_pfc_faced_cbet_flop": [
+        "heads_up_flop",
+        "oop_flop",
+        ("own_raises", "<=", 1),
+        "faced_3bet_preflop",
+        "no_4bet_made",
+        "no_4bet_faced",
+        "no_fold_preflop",
+        "no_squeeze_def_faced",
+        "first_raise",
+        "no_limpers_faced",
+        "faced_cbet_flop",
+    ],
 }
 
 def build_where_clause(recipe_name):

@@ -117,3 +117,40 @@ def test_build_where_clause_2bp_oop_pfr_turn_cbet_opp():
         " AND chps.flg_t_cbet_opp = true"
     ), "preflop-context via the Session 46 simplified 2bp_*_pfr formula (first_raise + no_limpers_faced + no_face_raise_preflop), oop via flg_t_has_position"
     assert params == {}
+
+
+def test_build_where_clause_2bp_oop_pfc_faced_cbet_flop():
+    where_sql, params = build_where_clause("2bp_oop_pfc_faced_cbet_flop")
+
+    assert where_sql == (
+        " AND chs.cnt_players_f = 2"
+        " AND chps.flg_f_has_position = false"
+        " AND chps.flg_vpip = true"
+        " AND chps.flg_p_first_raise = false"
+        " AND chps.flg_p_3bet = false"
+        " AND chps.cnt_p_raise = %(own_raises_5)s"
+        " AND chps.flg_p_face_raise = true"
+        " AND chps.flg_p_fold = false"
+        " AND chps.flg_p_3bet_def_opp = false"
+        " AND chps.flg_f_cbet_def_opp = true"
+    ), "validated Session 46 2bp_oop_pfc formula (SCHEMA_NOTES.md, 6731 hands) + faced_cbet_flop situation atom"
+    assert params == {"own_raises_5": 0}
+
+
+def test_build_where_clause_3bp_oop_pfc_faced_cbet_flop():
+    where_sql, params = build_where_clause("3bp_oop_pfc_faced_cbet_flop")
+
+    assert where_sql == (
+        " AND chs.cnt_players_f = 2"
+        " AND chps.flg_f_has_position = false"
+        " AND chps.cnt_p_raise <= %(own_raises_2)s"
+        " AND chps.flg_p_3bet_def_opp = true"
+        " AND chps.flg_p_4bet = false"
+        " AND chps.flg_p_4bet_def_opp = false"
+        " AND chps.flg_p_fold = false"
+        " AND chps.flg_p_squeeze_def_opp = false"
+        " AND chps.flg_p_first_raise = true"
+        " AND chps.cnt_p_face_limpers = 0"
+        " AND chps.flg_f_cbet_def_opp = true"
+    ), "validated Session 47 3bp_oop_pfc formula (SCHEMA_NOTES.md, 1374 hands) + faced_cbet_flop situation atom"
+    assert params == {"own_raises_2": 1}
