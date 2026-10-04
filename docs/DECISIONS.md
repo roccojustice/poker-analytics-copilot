@@ -151,6 +151,20 @@ Both patterns are now settled: future lines of the same shape (`turn_cbet_opp` o
 `faced_cbet_flop`) can expect the same kind of discrepancy without needing to re-litigate it
 hand-by-hand with the user — unless a genuinely new pattern shows up.
 
+## 2026-10-03 (Session 55) — Third settled PT4-discrepancy pattern; redundant atoms kept for layer readability
+
+- **Turn-check-raise** (turn-facing-bet lines): PFR checks the turn, Hero bets, PFR
+  check-raises (all-in). PT4's export includes these under its turn-facing filter; ours
+  excludes them because `flg_t_cbet_def_opp=false`, Hero never faced a barrel. Confirmed on
+  `3bp_ip_pfc_faced_barrel_turn` (8 hands, reviewed by user). Settled for future
+  turn-facing-bet lines, same as the two Session 54 patterns.
+- **Redundant atoms may stay when they make a recipe read as "previous line + one atom"**
+  (e.g. `faced_cbet_flop` in `3bp_ip_pfc_faced_barrel_turn`, implied by `faced_cbet_turn`;
+  `no_4bet_faced` in `3bp_oop_pfc_faced_cbet_flop`, mirroring the IP recipe). Redundancy is
+  verified first (0 hands moved), so it's free; it matches how M5 composes extensions.
+  Contrast: `total_raises=1` was removed from `2bp_*_pfr` because it added nothing to
+  readability.
+
 ## Earlier decisions (pre-pivot, still in force)
 
 - **Position lives inside the `preflop-context` prefix**, not in `situation`
