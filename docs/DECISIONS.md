@@ -165,6 +165,20 @@ hand-by-hand with the user — unless a genuinely new pattern shows up.
   Contrast: `total_raises=1` was removed from `2bp_*_pfr` because it added nothing to
   readability.
 
+## 2026-10-04 (Session 56) — Routing changes are measured by a fixed eval, one variable per run
+
+`routing_eval.py` holds the user's real study-session questions per line (never copied into
+`examples`, which would make the eval measure memorization). Each prompt/description change is
+a separate eval run. Two plausible `threebet` rewrites regressed or didn't help (70→66→65%) and
+were reverted; without the eval they would have shipped.
+
+## 2026-10-04 (Session 56) — No negation with the other tools' jargon in a tool description
+
+"Never use for … cbet, barrel, B-B" in `threebet` pulled those questions *toward* `threebet`
+and broke unrelated 2bp lines (B-B → `unknown`). Distinguish tools by strengthening the right
+tool's description (identifier-first, decision street, its own synonyms), not by listing other
+tools' keywords in the wrong one.
+
 ## Earlier decisions (pre-pivot, still in force)
 
 - **Position lives inside the `preflop-context` prefix**, not in `situation`
