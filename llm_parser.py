@@ -17,7 +17,7 @@ def build_tool_schemas(include_clarifying: bool = True):
             "type": "function",
             "function": {
                 "name": name,
-                "description": info["description"] + ", ".join(info["examples"]),
+                "description": info["description"] + " Examples: " + "; ".join(info["examples"]),
                 "parameters": {
                     "type": "object",
                     "properties": {
