@@ -69,3 +69,26 @@ def test_parse_user_query_no_since_date(monkeypatch):
     parsed_query = parse_user_query(user_question)
 
     assert parsed_query == {"query_name": "winrate", "group_by": "position"}, "The JSON should not contain a since_date key when the user does not specify a date"
+
+def capture_tool_names(monkeypatch):
+    captured = {}
+    def fake(**kwargs):
+        captured["tool_names"] = [t["function"]["name"] for t in kwargs["tools"]]
+        return FakeResponse(None)
+    monkeypatch.setattr("llm_parser.client.chat.completions.create", fake)
+    return captured
+
+def test_clarifying_tool_not_offered_without_active_filter(monkeypatch):
+    captured = capture_tool_names(monkeypatch)
+
+    parse_user_query("3bp ip pfc vs cbet")
+
+    assert "ask_clarifying_question" not in captured["tool_names"], "with no active filter there is nothing to clarify an extension of"
+    assert "3bp_ip_pfc_faced_cbet_flop" in captured["tool_names"], "the line tools must still be offered"
+
+def test_clarifying_tool_offered_with_active_filter(monkeypatch):
+    captured = capture_tool_names(monkeypatch)
+
+    parse_user_query("y solo las que llegué al river", active_filter_description="3bp ip pfc vs cbet")
+
+    assert "ask_clarifying_question" in captured["tool_names"], "M5 extensions still need the clarifying tool"

@@ -9,7 +9,7 @@ load_dotenv()
 
 client = OpenAI()
 
-def build_tool_schemas():
+def build_tool_schemas(include_clarifying: bool = True):
     tool_schemas = []
 
     for name, info in AVAILABLE_QUERIES.items():
@@ -63,6 +63,9 @@ def build_tool_schemas():
 
         tool_schemas.append(schema)
 
+    if not include_clarifying:
+        return tool_schemas
+
     tool_schemas.append({
         "type": "function",
         "function": {
@@ -87,7 +90,8 @@ def build_tool_schemas():
     return tool_schemas
 
 def parse_user_query(user_question: str, active_filter_description: str = None) -> dict:
-    tool_schemas = build_tool_schemas()
+    # clarifying only makes sense when there is an active filter to extend
+    tool_schemas = build_tool_schemas(include_clarifying=active_filter_description is not None)
 
     active_filter_section = ""
     if active_filter_description is not None:
@@ -110,7 +114,7 @@ Available tools:
             {"role": "system", "content": system_prompt},
             {"role": "user", "content": user_question},
         ],
-        tools=build_tool_schemas(),
+        tools=tool_schemas,
         tool_choice="auto",
         temperature=0,
     )
