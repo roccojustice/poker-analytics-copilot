@@ -6,8 +6,8 @@
 
 ## Current milestone
 
-**M4 in progress, paused for LLM routing** (branch `m4-situations`, 10 commits ahead of `main`,
-local by choice). 9 of 20 lines validated against PT4; #10 not started.
+**M4 in progress, paused for LLM routing** (branch `m4-situations`, 11 commits ahead of `main`,
+pushed to `origin/m4-situations` S56). 9 of 20 lines validated against PT4; #10 not started.
 Session 56 built `routing_eval.py` (user's real study-session questions per line, N=2, reports
 hit % + misroutes) and moved routing **55% → 70%** (62/88): clarifying tool gated on an active
 filter (`0a5b49a`), line descriptions rewritten identifier-first (`6bf8edb`). Two `threebet`
