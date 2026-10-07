@@ -177,15 +177,15 @@ AVAILABLE_QUERIES = {
     },
     "3bp_ip_pfc_faced_barrel_turn": {
         "description": (
-            "3bp ip pfc vs B-B (TURN decision). 3-bet pot (3bp); "
-            "Hero called the 3bet preflop (PFC), is in position (IP), called the flop cbet, "
-            "and faces a second bet on the TURN. Measures Hero's TURN raise/call/fold. "
-            "Also called: vs 2nd barrel, vs double barrel, vs turn cbet / cbet en el turn."
+            "3bp ip pfc vs B-B (TURN decision). 3-bet pot (3bp), heads-up; "
+            "Hero called the 3bet preflop (PFC), is in position (IP), called the 3bettor's flop cbet, "
+            "and now faces the 3bettor's second bet on the TURN. Measures Hero's TURN raise/call/fold. "
+            "Also called: vs turn cbet, vs 2nd barrel, vs double barrel."
         ),
         "examples": [
-            "frecuencias 3bp ip pfc vs double barrel",
-            "3bp ip pfc vs turn barrel",
-            "3bp ip pfc: me apuestan flop y turn, qué hago en el turn?",
+            "3bp ip pfc vs turn cbet frequencies",
+            "what are my raise, call and fold frequencies as 3bp ip pfc facing a double barrel?",
+            "show me hands as 3bp ip pfc where I called the flop cbet and the 3bettor bet again on the turn",
         ],
     },
 }
