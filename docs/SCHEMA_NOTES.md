@@ -69,6 +69,15 @@ Empirical findings about PokerTracker 4's Postgres schema — none of this is do
 - `date_played` exists on **both** `cash_hand_player_statistics` (chps) and `cash_hand_summary` (chs) — referencing it unqualified in a query that joins both tables raises Postgres `AmbiguousColumn`. Must qualify (`chps.date_played`), same as any other column present on more than one joined table.
 - Read into pandas via `pd.read_sql`, `date_played` comes back as `datetime64[us]` — confirmed empirically (predicted correctly before running).
 
+## Per-player action strings & sequence replay (Session 57 spike)
+- `chps.id_action_p/f/t/r` → `lookup_actions.action`: one string per player per street, one letter per time that player acted, e.g. `R`, `XC`, `BRC`, `CF`. Letters: `F` fold, `X` check, `C` call, `B` bet, `R` raise; `S` seen once (straddle). `''`/`id=0` = didn't act on that street.
+- Every player at the table has a `chps` row, not just Hero — so the whole hand is in the DB, not only Hero's flags.
+- Position codes (`chps.position`): `0` BTN, `1` CO, `2` MP+2 (HJ), `3` MP+1, `4`/`5` UTG+1, `6`/`7` UTG, `8` BB, `9` SB. Preflop turn order = non-blinds by position **descending**, then SB, BB; postflop = SB, BB, then non-blinds descending.
+- `chs.str_aggressors_<street>`: positions of the aggressors in order, one digit each. Preflop always starts with `8` (the BB's blind counts as the first aggression), e.g. `80` = BB blind, then BTN raised. `chs.str_actors_<street>` lists positions with a non-fold action, in order.
+- `chps.enum_allin`: street that player went all-in (`P`/`F`/`T`/`R`), `N` = never. (There is no `flg_*_allin` column.)
+- **Replay:** walk the street's turn order; a player who is still in and owes an action consumes the next letter of their string; `B`/`R` reopen the action for everyone else still in; a player with an empty string who owes an action is skipped only if all-in. Self-check: all strings fully consumed + the replayed aggressor order equals `str_aggressors_<street>`. **99.90% of 150k hands pass**; failures seen were straddles and 2-handed tables (postflop order differs there).
+- **Path vs flags:** "folds to BTN, BTN R, SB F, BB C, flop BB X" with Hero on BTN, on 100k Hero hands: 967 by path vs 976 by a flag query (`flg_f_cbet_opp`, `flg_p_first_raise`, HU flop, BB vpip, one raise). 0 path-only; all 9 flag-only hands had a limper (`CF`/`XF` preflop) the flag query didn't exclude — the path is the stricter, correct one.
+
 ## Tables joined across the project
 `cash_hand_player_statistics` (chps), `cash_hand_summary` (chs), `lookup_positions`, `lookup_sites`, `cash_limit`, `lookup_hand_ranks` (joined twice: Hero's final hand + the winning hand), `lookup_actions` (joined three times: one per street), `player` (winner's display name).
 
