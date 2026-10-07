@@ -129,50 +129,50 @@ AVAILABLE_QUERIES = {
     },
     "2bp_ip_pfc_faced_cbet_flop": {
         "description": (
-            "2bp ip pfc vs cbet (FLOP decision). Single-raised pot (2bp, also called srp); "
-            "Hero called the open preflop (PFC), is in position (IP), and faces the opener's cbet on the FLOP. "
-            "Measures Hero's FLOP raise/call/fold. Also called: vs b, vs flop cbet."
+            "2bp ip pfc vs cbet (FLOP decision). Single-raised pot (2bp, also called srp), heads-up; "
+            "Hero called the open preflop (PFC), is in position (IP), and faces the opener's cbet "
+            "on the FLOP. Measures Hero's FLOP raise/call/fold. Also called: vs b, vs flop cbet."
         ),
         "examples": [
-            "frecuencias 2bp ip pfc vs cbet",
-            "srp ip pfc facing a flop bet",
-            "2bp ip pfc: how do I respond to a flop cbet?",
+            "srp ip pfc vs cbet frequencies",
+            "what are my raise, call and fold frequencies as 2bp ip pfc facing a flop cbet?",
+            "show me hands as 2bp ip pfc where the preflop raiser cbet the flop and I had to respond",
         ],
     },
     "3bp_ip_pfc_faced_cbet_flop": {
         "description": (
-            "3bp ip pfc vs cbet (FLOP decision). 3-bet pot (3bp); "
-            "Hero called the 3bet preflop (PFC), is in position (IP), and faces the 3bettor's cbet on the FLOP. "
-            "Measures Hero's FLOP raise/call/fold. Also called: vs b, vs flop cbet."
+            "3bp ip pfc vs cbet (FLOP decision). 3-bet pot (3bp), heads-up; "
+            "Hero called the 3bet preflop (PFC), is in position (IP), and faces the 3bettor's cbet "
+            "on the FLOP. Measures Hero's FLOP raise/call/fold. Also called: vs b, vs flop cbet."
         ),
         "examples": [
-            "frecuencias 3bp ip pfc vs cbet",
-            "3bp ip pfc facing a flop bet",
-            "3bp ip pfc: how do I respond to a flop cbet?",
+            "3bp ip pfc vs b frequencies",
+            "what are my raise, call and fold frequencies as 3bp ip pfc facing a flop cbet?",
+            "show me hands as 3bp ip pfc where the 3bettor cbet the flop and I had to respond",
         ],
     },
     "2bp_oop_pfc_faced_cbet_flop": {
         "description": (
-            "2bp oop pfc vs cbet (FLOP decision). Single-raised pot (2bp, also called srp); "
-            "Hero called the open preflop (PFC), is out of position (OOP), checked, and faces the opener's "
-            "cbet on the FLOP. Measures Hero's FLOP raise/call/fold. Also called: vs b, vs flop cbet."
+            "2bp oop pfc vs cbet (FLOP decision). Single-raised pot (2bp, also called srp), heads-up; "
+            "Hero called the open preflop (PFC), is out of position (OOP), checked, and faces the "
+            "opener's cbet on the FLOP. Measures Hero's FLOP raise/call/fold. Also called: vs b, vs flop cbet."
         ),
         "examples": [
-            "frecuencias 2bp oop pfc vs cbet",
-            "srp oop pfc facing a flop bet",
-            "2bp oop pfc: how do I respond to a flop cbet?",
+            "srp oop pfc vs cbet frequencies",
+            "what are my check-raise, call and fold frequencies as 2bp oop pfc facing a flop cbet?",
+            "show me hands as 2bp oop pfc where I checked, the preflop raiser cbet the flop, and I had to respond",
         ],
     },
     "3bp_oop_pfc_faced_cbet_flop": {
         "description": (
-            "3bp oop pfc vs cbet (FLOP decision). 3-bet pot (3bp); "
-            "Hero called the 3bet preflop (PFC), is out of position (OOP), checked, and faces the 3bettor's "
-            "cbet on the FLOP. Measures Hero's FLOP raise/call/fold. Also called: vs b, vs flop cbet."
+            "3bp oop pfc vs cbet (FLOP decision). 3-bet pot (3bp), heads-up; "
+            "Hero called the 3bet preflop (PFC), is out of position (OOP), checked, and faces the "
+            "3bettor's cbet on the FLOP. Measures Hero's FLOP raise/call/fold. Also called: vs b, vs flop cbet."
         ),
         "examples": [
-            "frecuencias 3bp oop pfc vs cbet",
-            "3bp oop pfc facing a flop bet",
-            "3bp oop pfc: how do I respond to a flop cbet?",
+            "3bp oop pfc vs cbet frequencies",
+            "what are my check-raise, call and fold frequencies as 3bp oop pfc facing a flop cbet?",
+            "show me hands as 3bp oop pfc where I checked, the 3bettor cbet the flop, and I had to respond",
         ],
     },
     "3bp_ip_pfc_faced_barrel_turn": {
