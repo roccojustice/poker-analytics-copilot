@@ -9,82 +9,81 @@ from llm_parser import parse_user_query
 
 N_RUNS = 2  # temperature=0: repeats barely vary, phrasing coverage is what matters
 
-# expected query_name -> real questions, as typed in a study session
+# expected query_name -> real questions, as typed in a study session (translated to English S57)
 CASES = {
     "3bp_ip_pfc_faced_cbet_flop": [
         "3BP IP PFC vs Cbet",
-        "Quiero ver manos donde me hicieron un cbet en el flop estando as 3bp ip pfc",
-        "Últimas 50 manos de 3bp ip pfc vs cbet",
+        "I want to see hands where I faced a cbet on the flop as 3bp ip pfc",
+        "Last 50 hands of 3bp ip pfc vs cbet",
     ],
     "2bp_oop_pfc_faced_cbet_flop": [
         "2bp oop pfc vs cbet",
         "2bp oop pfc vs b",
-        "Muéstrame manos donde enfrenté una cbet en el flop as 2bp oop pfc",
-        "Últimas 50 manos en 2bp oop pfc vs cbet. Siento que ayer que estaba jugando jugué muy mal "
-        "este spot y quiero reafirmar que no cometí muchos errores.",
+        "Show me hands where I faced a cbet on the flop as 2bp oop pfc",
+        "Last 50 hands in 2bp oop pfc vs cbet. I feel like yesterday I played this spot really "
+        "badly and I want to confirm I didn't make many mistakes.",
     ],
     "2bp_ip_pfr_turn_cbet_opp": [
         "2bp ip pfr - turn cbet opportunity",
         "2bp ip pfr - B-B opportunity",
-        "Quiero ver manos de 2bp ip pfr cuando tengo la oportunidad de hacer cbet en el turn",
+        "I want to see 2bp ip pfr hands where I have the opportunity to cbet the turn",
         "srp ip pfr - turn cbet opportunity",
         "2bp ip pfr - 2nd barrel opportunity",
-        "Dame las últimas 50 manos de 2bp ip pfr - b-b opportunity",
+        "Give me the last 50 hands of 2bp ip pfr - b-b opportunity",
     ],
     "3bp_oop_pfr_turn_cbet_opp": [
         "3bp oop pfr - turn cbet opportunity",
         "3bp oop pfr - B-B opportunity",
-        "Quiero ver manos de 3bp oop pfr cuando tengo la oportunidad de hacer cbet en el turn",
+        "I want to see 3bp oop pfr hands where I have the opportunity to cbet the turn",
         "3bp oop pfr - 2nd barrel opportunity",
-        "Dame las últimas 50 manos de 3bp oop pfr - b-b opportunity",
+        "Give me the last 50 hands of 3bp oop pfr - b-b opportunity",
     ],
     "2bp_oop_pfr_turn_cbet_opp": [
         "2bp oop pfr - turn cbet opportunity",
         "2bp oop pfr - B-B opportunity",
-        "Quiero ver manos de 2bp oop pfr cuando tengo la oportunidad de hacer cbet en el turn",
+        "I want to see 2bp oop pfr hands where I have the opportunity to cbet the turn",
         "2bp oop pfr - 2nd barrel opportunity",
-        "Dame las últimas 50 manos de 2bp oop pfr - b-b opportunity",
+        "Give me the last 50 hands of 2bp oop pfr - b-b opportunity",
     ],
     "3bp_ip_pfc_faced_barrel_turn": [
         "3bp ip pfc vs B-B",
         "3bp ip pfc vs 2nd barrel",
-        "Quiero ver manos donde enfrento un 2nd barrel en el turn as 3bp ip pfc",
-        "Muéstrame las últimas 50 manos donde enfrento una cbet en el turn as 3bp ip pfc",
+        "I want to see hands where I face a 2nd barrel on the turn as 3bp ip pfc",
+        "Show me the last 50 hands where I face a cbet on the turn as 3bp ip pfc",
     ],
     "3bp_ip_pfr_turn_cbet_opp": [
         "3bp ip pfr - turn cbet opportunity",
         "3bp ip pfr - B-B opportunity",
-        "Quiero ver manos de 3bp ip pfr cuando tengo la oportunidad de hacer cbet en el turn",
+        "I want to see 3bp ip pfr hands where I have the opportunity to cbet the turn",
         "3bp ip pfr - 2nd barrel opportunity",
-        "Dame las últimas 50 manos de 3bp ip pfr - b-b opportunity",
+        "Give me the last 50 hands of 3bp ip pfr - b-b opportunity",
     ],
     "3bp_oop_pfc_faced_cbet_flop": [
         "3bp oop pfc vs cbet",
         "3bp oop pfc vs b",
-        "Muéstrame manos donde enfrenté una cbet en el flop as 3bp oop pfc",
-        "Últimas 50 manos en 3bp oop pfc vs cbet. Siento que últimamente estuve jugando muy mal "
-        "este spot y quiero reafirmar que no he cometido muchos errores.",
+        "Show me hands where I faced a cbet on the flop as 3bp oop pfc",
+        "Last 50 hands in 3bp oop pfc vs cbet. I feel like I've been playing this spot really "
+        "badly lately and I want to confirm I haven't made many mistakes.",
     ],
     "2bp_ip_pfc_faced_cbet_flop": [
         "2BP IP PFC vs Cbet",
-        "Muestrame manos donde enfrenté una cbet ip as 2bp ip pfc",
-        "Quiero ver manos donde me hicieron un cbet en el flop estando as 2bp ip pfc",
-        "Últimas 50 manos de 2bp ip pfc vs cbet",
+        "Show me hands where I faced a cbet ip as 2bp ip pfc",
+        "I want to see hands where I faced a cbet on the flop as 2bp ip pfc",
+        "Last 50 hands of 2bp ip pfc vs cbet",
         "srp ip pfc vs flop cbet",
     ],
     # regression guards (assistant-written): must still win after threebet is narrowed
     "threebet": [
-        "Cuál es mi 3bet % por posición",
-        "3bet por posición",
-        "Con qué frecuencia hago 3bet vs open del CO",
+        "What is my 3bet % by position",
+        "3bet by position",
+        "How often do I 3bet vs a CO open",
     ],
 }
 
 # underspecified on purpose (missing pot type / role): not scored, kept for the clarify design
 AMBIGUOUS = [
-    "Muestrame manos donde enfrenté una cbet ip",
+    "Show me hands where I faced a cbet ip",
 ]
-
 
 def run(names):
     total_hits = total_runs = 0
