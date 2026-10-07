@@ -73,54 +73,58 @@ AVAILABLE_QUERIES = {
     },
     "2bp_ip_pfr_turn_cbet_opp": {
         "description": (
-            "2bp ip pfr B-B opportunity (TURN decision). Single-raised pot (2bp, also called srp); "
-            "Hero opened preflop (PFR), is in position (IP), cbet the flop and got called. "
+            "2bp ip pfr - B-B opportunity (TURN decision). Single-raised pot (2bp, also called srp), "
+            "heads-up; Hero opened preflop (PFR), is in position (IP), cbet the flop (first barrel), "
+            "got called, and now has the chance to bet the turn again. "
             "Measures Hero's TURN bet/check. Also called: turn cbet opportunity, "
             "2nd barrel / double barrel opportunity."
         ),
         "examples": [
-            "frecuencia de bet en el turn 2bp ip pfr",
-            "srp ip pfr double barrel opp",
-            "2bp ip pfr: did I barrel the turn after cbetting flop?",
+            "srp ip pfr - B-B frequencies",
+            "how often do I double barrel the turn as 2bp ip pfr?",
+            "show me hands as 2bp ip pfr where I cbet flop, got called, and had the chance to bet the turn",
         ],
     },
     "2bp_oop_pfr_turn_cbet_opp": {
         "description": (
-            "2bp oop pfr B-B opportunity (TURN decision). Single-raised pot (2bp, also called srp); "
-            "Hero opened preflop (PFR), is out of position (OOP), cbet the flop and got called. "
+            "2bp oop pfr - B-B opportunity (TURN decision). Single-raised pot (2bp, also called srp), "
+            "heads-up; Hero opened preflop (PFR), is out of position (OOP), cbet the flop (first barrel), "
+            "got called, and now has the chance to bet the turn again. "
             "Measures Hero's TURN bet/check. Also called: turn cbet opportunity, "
             "2nd barrel / double barrel opportunity."
         ),
         "examples": [
-            "frecuencia de bet en el turn 2bp oop pfr",
-            "srp oop pfr double barrel opp",
-            "2bp oop pfr: did I barrel the turn after cbetting flop?",
+            "srp oop pfr - B-B frequencies",
+            "how often do I double barrel the turn as 2bp oop pfr?",
+            "show me hands as 2bp oop pfr where I cbet flop, got called, and had the chance to bet the turn",
         ],
     },
     "3bp_oop_pfr_turn_cbet_opp": {
         "description": (
-            "3bp oop pfr B-B opportunity (TURN decision). 3-bet pot (3bp); "
-            "Hero made the 3bet preflop (PFR), is out of position (OOP), cbet the flop and got called. "
+            "3bp oop pfr - B-B opportunity (TURN decision). 3-bet pot (3bp), heads-up; "
+            "Hero made the 3bet preflop (PFR), is out of position (OOP), cbet the flop (first barrel), "
+            "got called, and now has the chance to bet the turn again. "
             "Measures Hero's TURN bet/check. Also called: turn cbet opportunity, "
             "2nd barrel / double barrel opportunity."
         ),
         "examples": [
-            "frecuencia de bet en el turn 3bp oop pfr",
-            "3bp oop pfr double barrel opp",
-            "3bp oop pfr: did I barrel the turn after cbetting flop?",
+            "3bp oop pfr - B-B frequencies",
+            "how often do I double barrel the turn as 3bp oop pfr?",
+            "show me hands as 3bp oop pfr where I cbet flop, got called, and had the chance to bet the turn",
         ],
     },
     "3bp_ip_pfr_turn_cbet_opp": {
         "description": (
-            "3bp ip pfr B-B opportunity (TURN decision). 3-bet pot (3bp); "
-            "Hero made the 3bet preflop (PFR), is in position (IP), cbet the flop and got called. "
+            "3bp ip pfr - B-B opportunity (TURN decision). 3-bet pot (3bp), heads-up; "
+            "Hero made the 3bet preflop (PFR), is in position (IP), cbet the flop (first barrel), "
+            "got called, and now has the chance to bet the turn again. "
             "Measures Hero's TURN bet/check. Also called: turn cbet opportunity, "
             "2nd barrel / double barrel opportunity."
         ),
         "examples": [
-            "frecuencia de bet en el turn 3bp ip pfr",
-            "3bp ip pfr double barrel opp",
-            "3bp ip pfr: did I barrel the turn after cbetting flop?",
+            "3bp ip pfr - B-B frequencies",
+            "how often do I double barrel the turn as 3bp ip pfr?",
+            "show me hands as 3bp ip pfr where I cbet flop, got called, and had the chance to bet the turn",
         ],
     },
     "2bp_ip_pfc_faced_cbet_flop": {
