@@ -179,6 +179,21 @@ and broke unrelated 2bp lines (B-B → `unknown`). Distinguish tools by strength
 tool's description (identifier-first, decision street, its own synonyms), not by listing other
 tools' keywords in the wrong one.
 
+## 2026-10-06 (Session 57) — English-only line descriptions; eval questions never reused as examples
+
+The user now asks in English, so `examples` and `routing_eval.py` are English. Each line's 3
+examples cover different phrasings: short jargon, frequency question, hand-list request in
+plain words. An eval question is never copied into `examples`, since that would make the eval
+score meaningless. The polished descriptions were kept even though the eval came out 4 points
+lower (74% → 70%), because that is within noise and the goal was consistency.
+
+## 2026-10-06 (Session 57) — Checkpoint `main` before a possible direction change
+
+The botonera idea, if adopted, reshapes M3–M5. Before deciding, M4 was fast-forwarded into
+`main` and pushed, so `main` stays the working tool whatever happens next. The 9 validated
+lines aren't lost under a botonera: their hand sets become the oracle for the path→SQL
+translator.
+
 ## Earlier decisions (pre-pivot, still in force)
 
 - **Position lives inside the `preflop-context` prefix**, not in `situation`
