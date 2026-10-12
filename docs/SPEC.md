@@ -96,7 +96,7 @@ Ordered by the user's review priority. They are also the Line combobox presets.
 | M1 | Spec written + doc-system switch | ✅ Session 49 |
 | M2 | Backend contract: one validated distribution via FastAPI | ✅ Session 50 |
 | M3 | Minimal usable UI (NL text query) | ✅ Session 52. Failed in real use (Session 58); superseded by M5 |
-| M4 | **Spotlight core:** `line_parser.py` + `spot_sql.py` + `POST /spot` | The parser handles the 20 Lines; the oracle matches the 9 validated recipes exactly (or every diff is justified) |
+| M4 | **Spotlight core:** `line_parser.py` + `spot_sql.py` + `POST /spot` | ✅ Session 58. Oracle 9/9 exact (hand sets + distributions), no exceptions |
 | M5 | **Spotlight UI:** bar, Line combobox, Formations, result view | 3 river Lines + `BB vs BTN` clean against PT4 exports; the user's three failed questions return hands + distribution |
 | M6 | v1 study session | The "v1 done" test above |
 | M7 | Dashboards: one per line, 20 total. Each design defined by the user when reached | Each line has its dashboard |

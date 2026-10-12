@@ -11,6 +11,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - Run all tests: `pytest` (verbose by default — see `addopts = "-v"` in `pyproject.toml`)
 - Run a single test file: `pytest tests/test_db.py`
 - Run a single test: `pytest tests/test_query_router.py::<test_name>`
+- Run the DB oracle tests (need Postgres): `pytest -m db` (excluded from the default run)
 - Lint: `ruff check .` (no `[tool.ruff]` config yet — runs on the 88-char default)
 - Required env vars (`.env`, gitignored, never commit): `OPENAI_API_KEY`, `POSTGRES_HOST`, `POSTGRES_PORT`, `POSTGRES_DB`, `POSTGRES_USER`, `POSTGRES_PASSWORD`
 
@@ -22,7 +23,14 @@ The target (see `docs/SPEC.md`) is **Spotlight**: a local web app with a selecti
 
 ## Architecture
 
-Data flow (current, frozen): `api.py POST /query` (or `main.py` CLI) `→ llm_parser.py (LLM) → query_router.py → analytics.py / db.py + filter_recipes.py → pandas → result`. `static/index.html` is the single-file vanilla-JS frontend served by `api.py`.
+Data flow (Spotlight, active): `api.py POST /spot → spotlight.run_spot → line_parser.parse_line → spot_sql.build_spot_query → db.run_spot_query → db.get_hand_details → {interpreted_filter, distribution, hands}`
+
+- **`line_parser.py`**: pure, no DB. `parse_line(line, role, position) -> LineSpec`. Letters belong to the preflop raiser (`-` = Hero PFR, `vs` = villain PFR); `?` marks the decision. Each heads-up street is resolved by matching the PFR's letters against every legal street sequence (`SEQUENCES`), giving exact Hero/villain PT4 action strings. Bad input raises `SpotInputError` (a `ValueError`), which `/spot` turns into a 400.
+- **`spot_sql.py`**: `build_spot_query(pot, position, role, spec, formation=None) -> (where_sql, params, measured_sql)`. `PREFLOP_CONTEXTS` (pot × role) reuses validated `ATOMIC_FILTERS`; `FORMATIONS` are OOP-first seat pairs over `SEATS` (6-max codes).
+- **`spotlight.py`**: `run_spot(...)` orchestrates and builds the distribution (measured-set order, zero rows included) and the interpreted-filter text (`describe`). Empty results skip `get_hand_details`; NaN → `None`.
+- **`db.run_spot_query()`**: Hero row + the villain row (the other `flg_f_saw` player) + six `lookup_actions` joins (`h_f/t/r`, `v_f/t/r`); returns `id_hand` + `measured_action`.
+
+Data flow (NL, frozen): `api.py POST /query` (or `main.py` CLI) `→ llm_parser.py (LLM) → query_router.py → analytics.py / db.py + filter_recipes.py → pandas → result`. `static/index.html` is the single-file vanilla-JS frontend served by `api.py`.
 
 - **`api.py`** — FastAPI app. `POST /query` parses the question, routes it, and for lines in `lines.py` returns `{interpreted_filter, distribution, hands}`; a generic exception handler turns unexpected errors into a 500 with a fixed message.
 - **`lines.py` / `hero_responses.py`** — `LINES` maps each validated recipe to a hero-response; `HERO_RESPONSES` holds the ordered, mutually exclusive SQL conditions (e.g. raise / fold / call) that `analytics.compute_distribution()` counts via `db.run_distribution_query()`.
@@ -47,4 +55,5 @@ Data flow (current, frozen): `api.py POST /query` (or `main.py` CLI) `→ llm_pa
 - All SQL uses parameter binding (`%(name)s` + a `params` dict) for values; never interpolate user- or LLM-derived values into a query string. Recipe/query names are dict-key lookups, checked before use, so they never reach raw SQL.
 - Validation of a new filter formula is by **exact set membership** against PT4's own count for that spot (`hand_no` set diff, both directions) — never a bare `COUNT(*)` match, which can hide +N/−N.
 - Hero is hardcoded as `id_player IN (10, 9580)` — single-user by design, not built for multi-user access.
+- The 9 validated recipes are Spotlight's regression oracle (`tests/test_spotlight_oracle.py`, marker `db`): exact hand-set and distribution equality.
 - Tests that touch `db.py` mock the DB layer (`monkeypatch.setattr("db.pd.read_sql", ...)`) instead of hitting Postgres — see `tests/test_db.py`.

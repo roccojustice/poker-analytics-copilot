@@ -6,19 +6,23 @@
 
 ## Current milestone
 
-**Direction changed: Spotlight replaces the NL router.** The user ran a real study session
-on the NL app and it failed: no hands, some questions routed to `preflop_stats`. Session 58
-brainstormed Spotlight end to end. Design approved section by section and written to
-`docs/superpowers/specs/2026-10-11-spotlight-design.md`; `SPEC.md` rewritten (new ladder:
-M4 = Spotlight core, M5 = Spotlight UI). Work lives on branch **`spotlight`**. `main` is
-still the old working NL app.
+**M4 (Spotlight core) closed in Session 58; next is M5 (Spotlight UI).** The NL app failed in
+real use, so Session 58 replaced it with Spotlight: design in
+`docs/superpowers/specs/2026-10-11-spotlight-design.md`, plan in
+`docs/superpowers/plans/2026-10-11-spotlight-core.md`. `POST /spot` works end to end. The
+oracle matches all 9 validated recipes exactly (hand sets and distributions) on the first run.
+The user's three failed questions now return hands and distribution live. Work is on branch
+**`spotlight`**, not yet merged; `main` still has the old NL app.
 
 ## Next
 
-1. User reviews the written spec (and the rewritten `SPEC.md`).
-2. Once approved: `superpowers:writing-plans` → implementation plan for M4; the user reviews
-   the plan and picks how to execute it.
-3. M4 starts with `line_parser.py` under strict TDD (pure, no DB).
+1. Finish the branch: final whole-branch review, then decide on merging `spotlight` → `main`.
+2. **M5:** replace `static/index.html` with the Spotlight bar (spec, "Frontend" section):
+   toggles, Line combobox with the 20 presets filtered by role, Formation dropdown, result
+   view, click-a-row hand filter.
+3. M5 validation: 3 river Lines + `BB vs BTN` against PT4 exports by `hand_no`. The user
+   exports, the assistant diffs. Live numbers to compare against: `2bp oop pfc vs B-X-?` →
+   1,006 hands (B 594 / X 412); `2bp oop pfc vs B?` + `BB vs BTN` → 1,639 hands.
 
 ## Open questions
 
@@ -26,5 +30,5 @@ still the old working NL app.
 
 ## Uncommitted work in the tree
 
-None. Run the (old NL) app: `venv\Scripts\python -m uvicorn api:app --port 8000` →
-http://localhost:8000
+None. Run the app: `venv\Scripts\python -m uvicorn api:app --port 8000` →
+http://localhost:8000 (the page is still the NL UI; `/spot` is API-only until M5).
