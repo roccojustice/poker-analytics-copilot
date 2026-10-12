@@ -29,7 +29,6 @@ the old NL UI; `/spot` is API-only until M5.
 - Other deferred minors: a street with more than 8 actions is reported "impossible" instead of
   "unsupported"; `measured_sql` crosses modules as a raw SQL fragment (safe today).
 - `README.md` still describes the LLM architecture. User wants it rewritten for Spotlight (deferred, not yet scheduled).
-- `origin/m4-situations` is stale at `06c30ff`. Delete or leave it.
 
 ## Uncommitted work in the tree
 
