@@ -235,6 +235,15 @@ NL refinement (board texture, sizing) is out until real use shows which refineme
 since that's the layer where the LLM failed. Donks (`D`) were designed, then cut by the user
 for v1. The click-a-distribution-row filter covers "only the folds" without a backend.
 
+## 2026-10-11 (Session 58) — Lines describing donks/leads are accepted, not rejected
+
+"Donks out of v1" means no `D` notation, not that the parser rejects such sequences. A Line
+like `- C-?` (pfr ip: the villain led the flop, Hero called) or `vs ?` (pfc oop: Hero leads
+the flop) resolves to correct, exact action strings, and the interpreted filter shows them.
+Rejecting them would also block legitimate PFC leads such as `vs X-C-?` (R5). The only
+place a donk is filtered is the ambiguous case: pfr + Hero IP + `-?`, where `?` means "no
+bet before Hero".
+
 ## Earlier decisions (pre-pivot, still in force)
 
 - **Position lives inside the `preflop-context` prefix**, not in `situation`

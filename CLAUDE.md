@@ -8,7 +8,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 - Activate the venv first if not already active (VS Code's integrated terminal does this automatically, but a plain terminal or an agent running shell commands directly does not): `venv\Scripts\activate` (PowerShell)
 - Run the web app: `python -m uvicorn api:app --port 8000` → http://localhost:8000 (`python main.py` is the older CLI loop)
-- Run all tests: `pytest` (verbose by default — see `addopts = "-v"` in `pyproject.toml`)
+- Run all tests: `pytest` (verbose, and skips `db`-marked tests by default — see `addopts` in `pyproject.toml`)
 - Run a single test file: `pytest tests/test_db.py`
 - Run a single test: `pytest tests/test_query_router.py::<test_name>`
 - Run the DB oracle tests (need Postgres): `pytest -m db` (excluded from the default run)
@@ -54,6 +54,6 @@ Data flow (NL, frozen): `api.py POST /query` (or `main.py` CLI) `→ llm_parser.
 - Config-driven registries (`AVAILABLE_QUERIES` in `queries.py`, `METRIC_CONFIGS` in `analytics.py`, `FILTER_RECIPES` / `ATOMIC_FILTERS` in `filter_recipes.py`) over `if/elif` chains — extend behavior by adding a dict entry.
 - All SQL uses parameter binding (`%(name)s` + a `params` dict) for values; never interpolate user- or LLM-derived values into a query string. Recipe/query names are dict-key lookups, checked before use, so they never reach raw SQL.
 - Validation of a new filter formula is by **exact set membership** against PT4's own count for that spot (`hand_no` set diff, both directions) — never a bare `COUNT(*)` match, which can hide +N/−N.
-- Hero is hardcoded as `id_player IN (10, 9580)` — single-user by design, not built for multi-user access.
+- Hero is hardcoded — single-user by design. The query functions use `id_player = 10` (the metrics path still lists `IN (10, 9580)`; id 9580 has 0 hands).
 - The 9 validated recipes are Spotlight's regression oracle (`tests/test_spotlight_oracle.py`, marker `db`): exact hand-set and distribution equality.
 - Tests that touch `db.py` mock the DB layer (`monkeypatch.setattr("db.pd.read_sql", ...)`) instead of hitting Postgres — see `tests/test_db.py`.
