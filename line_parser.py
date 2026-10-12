@@ -1,4 +1,5 @@
 import re
+from dataclasses import dataclass
 
 STREETS = ("f", "t", "r")
 STREET_NAMES = {"f": "flop", "t": "turn", "r": "river"}
@@ -48,6 +49,92 @@ def _split_tokens(line, role, position):
     return tokens
 
 
+@dataclass(frozen=True)
+class StreetSpec:
+    street: str
+    hero: str
+    villain: str
+
+
+@dataclass(frozen=True)
+class LineSpec:
+    completed: tuple
+    decision: StreetSpec
+    measured: tuple
+
+
+MAX_ACTIONS = 8
+
+
+def _all_sequences():
+    """Every heads-up street sequence as (actions, closed); seat 0 (OOP) acts first."""
+    found = []
+
+    def walk(seq, facing, checks):
+        found.append((tuple(seq), False))
+        if len(seq) >= MAX_ACTIONS:
+            return
+        for action in (("F", "C", "R") if facing else ("X", "B")):
+            if action == "F":
+                continue  # a fold ends the hand, so it is never part of a Line
+            nxt = seq + [action]
+            if action == "C" or (action == "X" and checks == 1):
+                found.append((tuple(nxt), True))
+            else:
+                walk(nxt, action in "BR", checks + (action == "X"))
+
+    walk([], False, 0)
+    return found
+
+
+SEQUENCES = _all_sequences()
+
+
+def _seat_strings(seq):
+    return "".join(seq[0::2]), "".join(seq[1::2])
+
+
+def _is_facing(seq):
+    return bool(seq) and seq[-1] in "BR"
+
+
+def _resolve(street, letters, is_decision, hero_seat, pfr_seat, role):
+    matches = []
+    for seq, closed in SEQUENCES:
+        if closed == is_decision:
+            continue
+        if _seat_strings(seq)[pfr_seat] != letters:
+            continue
+        if is_decision and len(seq) % 2 != hero_seat:
+            continue
+        matches.append(seq)
+    if is_decision and role == "pfr" and letters == "":
+        matches = [seq for seq in matches if not _is_facing(seq)]  # no donks in v1
+    if len(matches) != 1:
+        problem = "is impossible" if not matches else "is ambiguous"
+        raise SpotInputError(f"{STREET_NAMES[street]}: '{letters}' {problem} heads-up")
+    return matches[0]
+
+
 def parse_line(line, role, position):
-    _split_tokens(line, role, position)
-    return None
+    tokens = _split_tokens(line, role, position)
+    hero_seat = 0 if position == "oop" else 1
+    pfr_seat = hero_seat if role == "pfr" else 1 - hero_seat
+
+    decision_street = STREETS[len(tokens) - 1]
+    if role == "pfc" and hero_seat == 1 and tokens[-1] == "":
+        raise SpotInputError(
+            f"Hero is IP: the villain acts first on the {STREET_NAMES[decision_street]}; "
+            "write his action before '?'"
+        )
+
+    completed = []
+    for street, letters in zip(STREETS, tokens):
+        is_decision = street == decision_street
+        seq = _resolve(street, letters, is_decision, hero_seat, pfr_seat, role)
+        strings = _seat_strings(seq)
+        spec = StreetSpec(street, strings[hero_seat], strings[1 - hero_seat])
+        if is_decision:
+            measured = ("F", "C", "R") if _is_facing(seq) else ("B", "X")
+            return LineSpec(tuple(completed), spec, measured)
+        completed.append(spec)
