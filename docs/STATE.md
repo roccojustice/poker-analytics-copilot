@@ -6,30 +6,31 @@
 
 ## Current milestone
 
-**M4 (Spotlight core) closed in Session 58; next is M5 (Spotlight UI).** The NL app failed in
-real use, so Session 58 replaced it with Spotlight: design in
-`docs/superpowers/specs/2026-10-11-spotlight-design.md`, plan in
-`docs/superpowers/plans/2026-10-11-spotlight-core.md`. `POST /spot` works end to end. The
-oracle matches all 9 validated recipes exactly (hand sets and distributions) on the first run.
-The user's three failed questions now return hands and distribution live. Merged into `main`
-(local, not pushed). The page is still the old NL UI; `/spot` is API-only until M5.
+**M4 (Spotlight core) ✅ closed; next is M5 (Spotlight UI).** Session 58 replaced the NL
+router, which failed in real use, with Spotlight: a deterministic Line parser plus `POST /spot`.
+The oracle matches all 9 validated recipes exactly (hand sets and distributions). Merged into
+`main`. Design: `docs/superpowers/specs/2026-10-11-spotlight-design.md`. M4 plan:
+`docs/superpowers/plans/2026-10-11-spotlight-core.md`. The page at `localhost:8000` is still
+the old NL UI; `/spot` is API-only until M5.
 
 ## Next
 
-1. Push `main` to `origin` when the user decides (13 commits ahead).
-2. **M5, first:** make `formation` tolerant: `""`/`"Any"` → `None`, case-insensitive, and say "write the OOP seat first" only for a reversed pair (deferred review minor). Also lowercase pot/role/position.
-3. **M5:** replace `static/index.html` with the Spotlight bar (spec, "Frontend" section):
-   toggles, Line combobox with the 20 presets filtered by role, Formation dropdown, result
-   view, click-a-row hand filter.
-4. M5 validation: 3 river Lines + `BB vs BTN` against PT4 exports by `hand_no`. The user
-   exports, the assistant diffs. Live numbers to compare against: `2bp oop pfc vs B-X-?` →
-   1,006 hands (B 594 / X 412); `2bp oop pfc vs B?` + `BB vs BTN` → 1,639 hands.
+1. **M5 starts with brainstorming → plan.** The UI design is already in the spec ("Frontend").
+2. First code step of M5 (deferred review minor): make `formation` tolerant (`""`/`"Any"` →
+   `None`, case-insensitive), give a "write the OOP seat first" message only for a reversed pair,
+   and lowercase pot/role/position.
+3. Then replace `static/index.html` with the Spotlight bar: toggles, Line combobox with the 20
+   presets filtered by role, Formation dropdown, result view, click-a-row hand filter.
+4. M5 validation: 3 river Lines + `BB vs BTN` against PT4 exports by `hand_no`. Live numbers:
+   `2bp oop pfc vs B-X-?` → 1,006 (B 594 / X 412); `2bp oop pfc vs B?` + `BB vs BTN` → 1,639.
 
 ## Open questions
 
-- `origin/m4-situations` is stale at `06c30ff` (all of it is in `main`). Delete or leave it.
+- Other deferred minors: a street with more than 8 actions is reported "impossible" instead of
+  "unsupported"; `measured_sql` crosses modules as a raw SQL fragment (safe today).
+- `README.md` still describes the LLM architecture. Rewrite it for Spotlight?
+- `origin/m4-situations` is stale at `06c30ff`. Delete or leave it.
 
 ## Uncommitted work in the tree
 
-None. Run the app: `venv\Scripts\python -m uvicorn api:app --port 8000` →
-http://localhost:8000 (the page is still the NL UI; `/spot` is API-only until M5).
+None. Run the app: `venv\Scripts\python -m uvicorn api:app --port 8000`.

@@ -17,7 +17,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project scope
 
-A natural-language analytics agent over a PokerTracker 4 (PT4) Postgres database — **not** a hand-history parser (it relies on PT4's already-parsed schema) and **not** a strategy/coaching tool. It answers data questions about Hero's own play (frequencies by spot, hands matching a specific spot); it does not recommend how to play.
+An analytics tool over a PokerTracker 4 (PT4) Postgres database — **not** a hand-history parser (it relies on PT4's already-parsed schema) and **not** a strategy/coaching tool. It answers data questions about Hero's own play (frequencies by spot, hands matching a specific spot); it does not recommend how to play.
 
 The target (see `docs/SPEC.md`) is **Spotlight**: a local web app with a selection bar (pot / position / role / formation) plus a typed Line in poker shorthand, compiled deterministically to SQL, returning the interpreted filter, the action-frequency distribution, and the matching hands. The code today is the earlier NL pipeline (LLM router behind `POST /query`), now **frozen** — kept working, not extended.
 
