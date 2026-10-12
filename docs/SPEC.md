@@ -1,135 +1,129 @@
 # Poker Analytics Copilot — SPEC (North Star)
 
-*Written 2026-09-10 (Session 49). Milestone M1 output. Changes rarely — update the ladder when a milestone closes.*
+*Written 2026-09-10 (Session 49). Rewritten 2026-10-11 (Session 58) for the Spotlight
+direction. Changes rarely; update the ladder when a milestone closes.*
 
 ## What this is
 
 A **local web app** that replaces PokerTracker 4's *analysis* role in the user's poker
 study routine. It runs alongside a solver as core study infrastructure.
 
-Interaction: the user types a spot in poker jargon (e.g. *"frecuencias de bet en 3bp ip
-pfr, bb opp"*) and gets back:
+Interaction is **Spotlight**, a selection bar modeled on SnapMDA's. The user picks pot type,
+position, role and an optional seat formation, then types a **Line** in poker shorthand
+(e.g. `3bp ip pfc vs B?`). The app returns:
 
-1. the **interpreted filter**, shown for confirmation
+1. the **interpreted filter**, in one readable line
 2. the **action-frequency distribution** as numbers (not charts)
 3. the **list of matching hands** to inspect
 
-It reads from PT4's Postgres DB. **PT4 stays as the importer/parser** — parsing hand
-histories is out of scope. Every filter is validated by exact set membership against PT4
-before it is trusted.
+It reads from PT4's Postgres DB. **PT4 stays as the importer/parser.** Parsing hand
+histories is out of scope. Every filter mechanism is validated by exact set membership
+against PT4 before it is trusted.
 
-**Charts live only in dashboards (M6), not in the query flow.**
+**Charts live only in dashboards, not in the query flow.**
 
 **"v1 done" test:** the user runs a real study session on this tool instead of PT4 and
 does not fall back to PT4 for the questions it covers.
 
+Full design: `docs/superpowers/specs/2026-10-11-spotlight-design.md`.
+
 ## Architecture decisions
 
-1. **LLM selects, does not compose freely.** The LLM picks from a closed set of verified
-   recipes and composes *at the layer level* — `situation` atoms that are each
-   individually validated, AND-combined. Never free composition from raw atomics. The
-   interpreted filter is always shown to the user.
-2. **Web app over CLI** — displayed numbers + dashboards with charts are the point.
-3. **PT4 is the importer.** No hand-history parsing in this project.
+1. **Deterministic selection, no LLM in the v1 query flow.** The bar plus a parsed Line
+   map to SQL through fixed rules. The free-text LLM router failed in real use (Session 58).
+   It is frozen, not deleted; NL may come back later as a *refinement* over a Spotlight
+   result.
+2. **The Line compiles to PT4's per-player action strings** (`chps.id_action_f/t/r`).
+   The preflop part reuses the preflop-context formulas validated 0/0 against PT4.
+3. **Web app over CLI.** Displayed numbers and dashboards are the point.
+4. **PT4 is the importer.** No hand-history parsing in this project.
 
-(Full rationale in `DECISIONS.md`.)
+(Rationale in `DECISIONS.md`.)
 
 ## The domain model
 
 A **line** = a filter (`preflop-context` + `situation`) + the **full frequency
-distribution** over the actions available at that decision point (`{bet, check}` or
-`{raise, call, fold}`). Labels like *"Raise opportunity"* / *"Fold"* are views of one
-distribution, not separate lines.
+distribution** of Hero's next action at the decision point (`{B, X}` or `{F, C, R}`).
 
-Three layers:
+Three layers, mapped onto the Spotlight bar:
 
-- **preflop-context** — `{2bp, 3bp} × {ip, oop} × {pfr, pfc}`. Formulas built and
-  validated 0/0 against PT4 (Sessions 44/46/47), recorded in `SCHEMA_NOTES.md`.
-- **situation** — the action sequence up to the decision point (`B-B`, `B-B-B`, `B-X-B`,
-  `X-B-B`, `XC-X-B`, `C-B-B`, `vs Cbet`, `vs B-B`, `Flop Stab`, …). Only the subset from
-  the 4 original recipes exists — building the rest is M4.
-- **hero-response** — the distribution measured at the decision point.
+- **preflop-context**: `{2bp, 3bp} × {ip, oop} × {pfr, pfc}`, from the bar's toggles.
+  Formulas are in `SCHEMA_NOTES.md`.
+- **situation**: the Line. Letters always belong to the preflop raiser: PFR lines start with
+  `-` (Hero's letters), PFC lines with `vs` (the villain's letters). `?` marks the decision.
+- **hero-response**: Hero's next action at the `?`, measured from his action string.
 
-Notation: each letter = one street. B = bet, X = check, C = call, XC = check-call.
+Plus an optional **formation** (seat pair, OOP seat first, e.g. `BB vs BTN`).
 
-## v1 scope — 20 lines
+## v1 scope: 20 lines
 
-Ordered by the user's review priority.
+Ordered by the user's review priority. They are also the Line combobox presets.
 
 ### Pre-river (10)
 
-| # | preflop-context | situation | distribution |
+| # | preflop-context | Line | Measured |
 |---|---|---|---|
-| 1 | 3bp ip pfc | faced cbet flop | raise / call / fold |
-| 2 | 2bp oop pfc | faced cbet flop | raise / call / fold |
-| 3 | 2bp ip pfr | bet flop | bet / check (turn) |
-| 4 | 3bp oop pfr | bet flop | bet / check (turn) |
-| 5 | 2bp oop pfr | bet flop | bet / check (turn) |
-| 6 | 3bp ip pfc | faced cbet flop + faced barrel turn | raise / call / fold |
-| 7 | 3bp ip pfr | bet flop | bet / check (turn) |
-| 8 | 3bp oop pfc | faced cbet flop | raise / call / fold |
-| 9 | 2bp ip pfc | faced cbet flop | raise / call / fold |
-| 10 | 2bp ip pfc | IP, PFR checked flop (stab) | bet / check |
+| 1 | 3bp ip pfc | `vs B?` | F / C / R |
+| 2 | 2bp oop pfc | `vs B?` | F / C / R |
+| 3 | 2bp ip pfr | `- B-?` | B / X |
+| 4 | 3bp oop pfr | `- B-?` | B / X |
+| 5 | 2bp oop pfr | `- B-?` | B / X |
+| 6 | 3bp ip pfc | `vs B-B?` | F / C / R |
+| 7 | 3bp ip pfr | `- B-?` | B / X |
+| 8 | 3bp oop pfc | `vs B?` | F / C / R |
+| 9 | 2bp ip pfc | `vs B?` | F / C / R |
+| 10 | 2bp ip pfc | `vs X?` | B / X |
 
 ### River (10)
 
-All measure Hero's river action: bet / check.
-
-| # | line |
-|---|---|
-| 1 | 3bp oop pfr — B-B-B opportunity |
-| 2 | 2bp ip pfr — B-B-B opportunity |
-| 3 | 3bp oop pfr — B-X-B opportunity |
-| 4 | 2bp oop pfc — XC-X-B opportunity |
-| 5 | 2bp oop pfc — X-B-B opportunity |
-| 6 | 2bp oop pfr — X-B-B opportunity |
-| 7 | 3bp ip pfr — B-B-B opportunity |
-| 8 | 3bp oop pfc — XC-X-B opportunity |
-| 9 | 2bp ip pfr — X-B-B opportunity |
-| 10 | 3bp ip pfc — C-B-B opportunity |
+| # | preflop-context | Line | Measured |
+|---|---|---|---|
+| 1 | 3bp oop pfr | `- B-B-?` | B / X |
+| 2 | 2bp ip pfr | `- B-B-?` | B / X |
+| 3 | 3bp oop pfr | `- B-X-?` | B / X |
+| 4 | 2bp oop pfc | `vs B-X-?` | B / X |
+| 5 | 2bp oop pfc | `vs X-C-?` | B / X |
+| 6 | 2bp oop pfr | `- X-B-?` | B / X |
+| 7 | 3bp ip pfr | `- B-B-?` | B / X |
+| 8 | 3bp oop pfc | `vs B-X-?` | B / X |
+| 9 | 2bp ip pfr | `- X-B-?` | B / X |
+| 10 | 3bp ip pfc | `vs B-XC-X?` | B / X |
 
 ## Milestone ladder
 
-| # | Milestone | Closes when |
+| # | Milestone | Status / closes when |
 |---|---|---|
-| M1 | Spec written + doc-system switch | This doc exists; `STATE.md`/`DECISIONS.md` live; dead docs archived |
-| M2 | Backend contract: `2bp ip pfr` B-B → validated distribution via a FastAPI endpoint, no UI | Endpoint returns `{interpreted_filter, distribution, hand_ids}` and the numbers match PT4 for that spot |
-| M3 | Minimal usable UI: single-shot text query → interpreted filter + distribution (numbers) + hand list | 3–4 real questions produce usable output. **Tool is minimally usable here.** |
-| M4 | Coverage: `situation` + `hero-response` registries for all 20 lines, each validated by exact set membership | The 20 lines each resolve to a verified filter |
-| M5 | Conversational re-filtering: follow-up turns that extend/replace the active filter. Can start once M4 covers the pre-river lines. Session 48 already built ~80% of the plumbing. | Extend/replace by conversation works over the covered lines |
-| M6 | Dashboards: one per line, 20 total. Each design defined by the user when reached. | Each line has its dashboard |
-| M7 | Packaging: one command to launch, no dev shell | Runs as an app |
+| M1 | Spec written + doc-system switch | ✅ Session 49 |
+| M2 | Backend contract: one validated distribution via FastAPI | ✅ Session 50 |
+| M3 | Minimal usable UI (NL text query) | ✅ Session 52. Failed in real use (Session 58); superseded by M5 |
+| M4 | **Spotlight core:** `line_parser.py` + `spot_sql.py` + `POST /spot` | ✅ Session 58. Oracle 9/9 exact (hand sets + distributions), no exceptions |
+| M5 | **Spotlight UI:** bar, Line combobox, Formations, result view | 3 river Lines + `BB vs BTN` clean against PT4 exports; the user's three failed questions return hands + distribution |
+| M6 | v1 study session | The "v1 done" test above |
+| M7 | Dashboards: one per line, 20 total. Each design defined by the user when reached | Each line has its dashboard |
+| M8 | Packaging: one command to launch, no dev shell | Runs as an app |
 
-## Conserved from the pre-pivot codebase
+## Conserved from earlier work
 
 - `preflop-context` formulas validated 0/0 against PT4 (`SCHEMA_NOTES.md`)
 - The 3-layer grammar
 - PT4 schema knowledge, `poker_cards.py`
-- `db.py` (engine, `get_hand_details()`, parameter binding), `filter_recipes.py`
-  (atomics + assembly, incl. `assemble_where`)
+- `db.py` (engine, `get_hand_details()`, parameter binding), `filter_recipes.py` atomics
+- The 9 validated recipes, now the **regression oracle** for Spotlight
 - The validation discipline (exact set membership, never count-only)
 
-## Rebuilt / new
+## Frozen (kept, not extended)
 
-- **Frontend** — none exists today (CLI `while` loop). New: FastAPI backend (`api.py`
-  started) + web frontend.
-- **Aggregation layer** (`analytics.py`) — today only winrate/threebet/preflop_stats;
-  must grow to action-frequency-by-spot.
-- **`llm_parser.py` role** — from "parse and route" to "select recipe + layer, expose
-  interpreted filter".
-- **`situation` / `hero-response` registries** — only the 4-recipe subset exists. The
-  `situation` vocabulary doubles as the poker-shorthand glossary the LLM prompt needs
-  (Session 17 gap).
+- `llm_parser.py`, `queries.py`, `query_router.py`, `POST /query`, `routing_eval.py`,
+  `lines.py` / `hero_responses.py`, and the metric queries in `analytics.py`
 
 ## Deferred / out of scope for v1
 
-- Multiway pots (all 20 lines are HU) — parked until MW analysis is real
-- `since_date` weekday-relative support (scoped, Session 32)
-- `json.JSONDecodeError` safety-net decision (Session 36–37, monitoring)
-- `gpt-4o-mini` non-determinism (Session 32/35) — mitigated by "interpreted filter always
-  shown"; revisit model choice at M2/M3
+- NL refinement over a Spotlight result (board texture, bet sizing, "only the folds" beyond
+  the client-side click filter)
+- Donk notation (`D`); PT4 has `flg_<street>_donk*` flags to validate it against
+- Multiway, `LIMP` / `4BP`, and a precomputed replayed-sequence table (needed for multiway;
+  feasibility shown in the Session 57 spike, `spikes/`)
+- Date-range filtering
+- Stake/`cash_limit` filtering, board-texture analysis (schema gaps, Session 17)
 - PEP 8 `E501` pass (needs a `[tool.ruff]` line-length decision first)
-- Stake/`cash_limit` filtering, turn-position flag verification, barrel flag,
-  board-texture analysis (schema gaps, Session 17)
-- LLM-assisted offline recipe drafting (Session 42 option b)
 - Auth, cloud, multi-user (single-user tool by design)

@@ -194,6 +194,56 @@ The botonera idea, if adopted, reshapes M3–M5. Before deciding, M4 was fast-fo
 lines aren't lost under a botonera: their hand sets become the oracle for the path→SQL
 translator.
 
+## 2026-10-11 (Session 58) — Spotlight replaces the NL router as the query flow
+
+The user ran a real study session on the NL app and called it "un desastre". Three of the 20
+v1 lines asked in his own shorthand returned no hands, and some were routed to
+`preflop_stats`. Decision: a SnapMDA-style selection bar (pot / position / role / formation)
+plus a typed Line, compiled by a deterministic parser. No LLM in the v1 query flow. This
+supersedes "LLM selects, never composes freely" (Session 49) for the query flow. The LLM
+code is frozen, not deleted; NL may return as a refinement layer over a Spotlight result.
+
+## 2026-10-11 (Session 58) — Compile Lines to action strings, not to flags or a replay table
+
+Of three approaches, the Line compiles to `chps.id_action_f/t/r` conditions on Hero and
+villain. Composing flag atoms (`flg_t_cbet_opp`…) would mean validating every new line
+one by one again, which is the M4 bottleneck. A precomputed replayed-sequence table (the
+Session 57 spike) only pays off for multiway. Heads-up, the action strings already determine
+each street, so it's an ordinary indexed query with no load step. The 9 validated recipes
+become the regression oracle (exact hand-set and distribution equality).
+
+## 2026-10-11 (Session 58) — Line notation: letters belong to the preflop raiser
+
+The user's design. PFR lines start with `-` and carry Hero's letters; PFC lines start with
+`vs` and carry the villain's letters. `?` marks the decision, and Hero's *next* action there
+is measured. An early draft measured the last written letter, and the user corrected it:
+`XC-X-B` means Hero already bet, so what's measured is his response to a raise. A
+counter-proposal (always Hero's letters plus a `vsB?` decision marker) was rejected as less
+natural. The old SPEC shorthand (`C-B-B`, `XC-X-B`) mixed perspectives; e.g. `C-B-B` is now
+`vs B-XC-X?`. For PFC + IP Hero, the villain's action on the decision street must be written,
+because he acts first and `-?` would mix two distributions.
+
+## 2026-10-11 (Session 58) — Formation = seat pair, OOP seat first
+
+`BB vs BTN`, with Hero's seat implied by the IP/OOP toggle. A first draft ("Hero vs Villain")
+was rejected by the user because it duplicated the toggle and broke down for common spots
+where he is the BB. OOP-first matches SnapMDA, so there is one list for every combination.
+
+## 2026-10-11 (Session 58) — v1 cuts: no NL refinement, no donks
+
+NL refinement (board texture, sizing) is out until real use shows which refinements matter,
+since that's the layer where the LLM failed. Donks (`D`) were designed, then cut by the user
+for v1. The click-a-distribution-row filter covers "only the folds" without a backend.
+
+## 2026-10-11 (Session 58) — Lines describing donks/leads are accepted, not rejected
+
+"Donks out of v1" means no `D` notation, not that the parser rejects such sequences. A Line
+like `- C-?` (pfr ip: the villain led the flop, Hero called) or `vs ?` (pfc oop: Hero leads
+the flop) resolves to correct, exact action strings, and the interpreted filter shows them.
+Rejecting them would also block legitimate PFC leads such as `vs X-C-?` (R5). The only
+place a donk is filtered is the ambiguous case: pfr + Hero IP + `-?`, where `?` means "no
+bet before Hero".
+
 ## Earlier decisions (pre-pivot, still in force)
 
 - **Position lives inside the `preflop-context` prefix**, not in `situation`

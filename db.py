@@ -83,6 +83,27 @@ def run_distribution_query(where_clause, params, conditions, id_player=10, since
     df = pd.read_sql(query, engine, params=params)
     return df
 
+def run_spot_query(where_clause, params, measured_sql, id_player=10):
+
+    query = f"""
+        SELECT chps.id_hand, {measured_sql} AS measured_action
+        FROM cash_hand_player_statistics chps
+            JOIN cash_hand_summary chs ON chps.id_hand = chs.id_hand
+            JOIN cash_hand_player_statistics v
+                ON v.id_hand = chps.id_hand AND v.id_player <> chps.id_player AND v.flg_f_saw = true
+            JOIN lookup_actions h_f ON chps.id_action_f = h_f.id_action
+            JOIN lookup_actions h_t ON chps.id_action_t = h_t.id_action
+            JOIN lookup_actions h_r ON chps.id_action_r = h_r.id_action
+            JOIN lookup_actions v_f ON v.id_action_f = v_f.id_action
+            JOIN lookup_actions v_t ON v.id_action_t = v_t.id_action
+            JOIN lookup_actions v_r ON v.id_action_r = v_r.id_action
+        WHERE chps.id_player = %(id_player)s
+            """ + where_clause + """
+        ORDER BY chps.id_hand"""
+
+    params = params | {"id_player": id_player}
+    return pd.read_sql(query, engine, params=params)
+
 def get_hand_details(id_hands, id_player=10):
 
     query = """

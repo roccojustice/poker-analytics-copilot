@@ -4,6 +4,7 @@ from db import (
     run_filter_query,
     run_distribution_query,
     get_hand_details,
+    run_spot_query,
 )
 
 def fake_read_sql(query, engine, params=None):
@@ -107,3 +108,17 @@ def test_run_distribution_query_supports_more_than_two_actions(monkeypatch):
     assert "COUNT(*) FILTER (WHERE chps.cnt_f_raise >= 1) AS raise" in query
     assert "COUNT(*) FILTER (WHERE chps.cnt_f_raise = 0 AND chps.flg_f_fold = true) AS fold" in query
     assert "COUNT(*) FILTER (WHERE chps.cnt_f_raise = 0 AND chps.flg_f_fold = false) AS call" in query
+
+
+def test_run_spot_query_builds_skeleton_and_binds_params(monkeypatch):
+    monkeypatch.setattr("db.pd.read_sql", fake_read_sql)
+    result = run_spot_query(" AND h_f.action = %(h_f)s", {"h_f": "B"},
+                            "substr(h_t.action, %(measure_pos)s, 1)", id_player=42)
+    query = result["query"]
+    assert "substr(h_t.action, %(measure_pos)s, 1) AS measured_action" in query
+    assert "v.id_player <> chps.id_player AND v.flg_f_saw = true" in query
+    for alias in ("h_f", "h_t", "h_r", "v_f", "v_t", "v_r"):
+        assert f"lookup_actions {alias} ON" in query
+    assert query.rstrip().endswith("ORDER BY chps.id_hand")
+    assert " AND h_f.action = %(h_f)s" in query
+    assert result["params"] == {"h_f": "B", "id_player": 42}

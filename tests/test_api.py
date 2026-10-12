@@ -1,6 +1,7 @@
 from fastapi.testclient import TestClient
 from api import app
 import pandas as pd
+from line_parser import SpotInputError
 
 client = TestClient(app)
 
@@ -74,3 +75,45 @@ def test_handle_unexpected_exception(monkeypatch):
 
     assert response.status_code == 500
     assert response.json() == {"error": "Something went wrong processing your question. Please try again."}
+
+
+SPOT_BODY = {"pot": "2bp", "position": "ip", "role": "pfr", "line": "- B-?", "formation": None}
+
+
+def test_spot_returns_result_shape(monkeypatch):
+    fake = {
+        "interpreted_filter": "2BP · IP · PFR · Any · ...",
+        "distribution": [{"action": "B", "name": "Bet", "hands": 1, "pct": 100.0}],
+        "hands": pd.DataFrame({"id_hand": [1], "measured_action": ["B"]}),
+    }
+    calls = []
+
+    def fake_run_spot(pot, position, role, line, formation=None):
+        calls.append((pot, position, role, line, formation))
+        return fake
+
+    monkeypatch.setattr("api.run_spot", fake_run_spot)
+    response = client.post("/spot", json=SPOT_BODY)
+    assert response.status_code == 200
+    assert response.json() == {
+        "interpreted_filter": "2BP · IP · PFR · Any · ...",
+        "distribution": [{"action": "B", "name": "Bet", "hands": 1, "pct": 100.0}],
+        "hands": [{"id_hand": 1, "measured_action": "B"}],
+    }
+    assert calls == [("2bp", "ip", "pfr", "- B-?", None)]
+
+
+def test_spot_input_error_is_400_with_message(monkeypatch):
+    def fake_run_spot(*args, **kwargs):
+        raise SpotInputError("Unknown formation: BTN vs BB (write the OOP seat first)")
+
+    monkeypatch.setattr("api.run_spot", fake_run_spot)
+    response = client.post("/spot", json=SPOT_BODY | {"formation": "BTN vs BB"})
+    assert response.status_code == 400
+    assert response.json() == {"error": "Unknown formation: BTN vs BB (write the OOP seat first)"}
+
+
+def test_spot_real_parser_error_is_400():
+    response = client.post("/spot", json=SPOT_BODY | {"line": "- B-"})
+    assert response.status_code == 400
+    assert "Missing '?'" in response.json()["error"]
