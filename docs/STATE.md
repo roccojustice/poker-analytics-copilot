@@ -17,10 +17,11 @@ The user's three failed questions now return hands and distribution live. Work i
 ## Next
 
 1. Finish the branch: final whole-branch review, then decide on merging `spotlight` → `main`.
-2. **M5:** replace `static/index.html` with the Spotlight bar (spec, "Frontend" section):
+2. **M5, first:** make `formation` tolerant: `""`/`"Any"` → `None`, case-insensitive, and say "write the OOP seat first" only for a reversed pair (deferred review minor). Also lowercase pot/role/position.
+3. **M5:** replace `static/index.html` with the Spotlight bar (spec, "Frontend" section):
    toggles, Line combobox with the 20 presets filtered by role, Formation dropdown, result
    view, click-a-row hand filter.
-3. M5 validation: 3 river Lines + `BB vs BTN` against PT4 exports by `hand_no`. The user
+4. M5 validation: 3 river Lines + `BB vs BTN` against PT4 exports by `hand_no`. The user
    exports, the assistant diffs. Live numbers to compare against: `2bp oop pfc vs B-X-?` →
    1,006 hands (B 594 / X 412); `2bp oop pfc vs B?` + `BB vs BTN` → 1,639 hands.
 
