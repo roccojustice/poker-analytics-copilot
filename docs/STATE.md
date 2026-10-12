@@ -2,43 +2,31 @@
 
 *Overwritten every session. Single source of truth for "where are we / what's next."*
 
-**Last updated:** 2026-10-06, Session 57
+**Last updated:** 2026-10-11, Session 58
 
 ## Current milestone
 
-**M4 checkpoint merged to `main` and pushed (S57); direction under review.** 9 of 20 lines
-validated; #10 not started. S57 polished all 9 line descriptions (English-only examples) and
-translated `routing_eval.py` to English (user now asks in English). English baseline:
-**74%** on pre-polish descriptions, **70%** on current ones (within noise). Remaining misses are
-systematic: short pfc phrasings (`3bp … pfc vs cbet/vs b/vs B-B`) → `threebet`,
-`2bp … pfc vs cbet` → `preflop_stats`, "face a cbet on the turn" → flop sibling.
-
-**Open idea: a "botonera" (button panel) for spot selection.** Works like GTO Wizard: click
-position + action in hand order, and that path is the filter. Then NL refines that hand set
-("boards BWLL", "where I bet small"). **Spike: feasible.** Replaying PT4's per-player action
-strings gives the ordered sequence for 99.90% of 150k hands. The user's example path matched
-PT4 flags exactly (0 extra; 9 missing, all limper hands the flag query wrongly kept). Details in
-`SCHEMA_NOTES.md` → "Per-player action strings"; reproducible scripts in `spikes/`.
+**Direction changed: Spotlight replaces the NL router.** The user ran a real study session
+on the NL app and it failed: no hands, some questions routed to `preflop_stats`. Session 58
+brainstormed Spotlight end to end. Design approved section by section and written to
+`docs/superpowers/specs/2026-10-11-spotlight-design.md`; `SPEC.md` rewritten (new ladder:
+M4 = Spotlight core, M5 = Spotlight UI). Work lives on branch **`spotlight`**. `main` is
+still the old working NL app.
 
 ## Next
 
-1. **User decides: botonera vs the current NL-routing plan.** The user isn't sure yet and is
-   worried about losing what exists. Suggested first: use the current app in a real study
-   session and see whether text is enough.
-2. **If botonera:** full architectural brainstorm → SPEC rewrite → plan, new branch from
-   `main`. Open: replay once into an own sequence table (performance), refresh on PT4 import,
-   "any position" buttons for aggregate presets, M3–M5 reshuffle.
-3. **If NL continues:** parked options, unchanged: pre-router (TDD), `/query` NaN → 500 (TDD),
-   legacy-recipe removal. Then M4 #10.
+1. User reviews the written spec (and the rewritten `SPEC.md`).
+2. Once approved: `superpowers:writing-plans` → implementation plan for M4; the user reviews
+   the plan and picks how to execute it.
+3. M4 starts with `line_parser.py` under strict TDD (pure, no DB).
 
 ## Open questions
 
-- Legacy recipes out of the LLM-routable set? (assistant: yes). Flop cbet opp as PFR (asked
-  again S57; free under the botonera). SPEC "bet flop" wording for #3/#4/#5/#7.
-- Post-M4: hero-response breakdown (bet-fold, check-raise). M5: "only the folds" follow-up.
-- `llm_parser.py` sends the tool list twice (system prompt repr + `tools=`). Untouched.
+- Seat label → `chps.position` code mapping for Formations (UTG/MP codes 2–7): verify
+  against the data during M4/M5.
 - `origin/m4-situations` is stale at `06c30ff` (all of it is in `main`). Delete or leave it.
 
 ## Uncommitted work in the tree
 
-None. Run the app: `venv\Scripts\python -m uvicorn api:app --port 8000` → http://localhost:8000
+None. Run the (old NL) app: `venv\Scripts\python -m uvicorn api:app --port 8000` →
+http://localhost:8000
