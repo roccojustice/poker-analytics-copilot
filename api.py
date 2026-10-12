@@ -5,6 +5,8 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 from llm_parser import parse_user_query
 from query_router import run_query, is_filter_query, has_distribution
+from line_parser import SpotInputError
+from spotlight import run_spot
 
 app = FastAPI()
 
@@ -48,6 +50,27 @@ def query(request: QueryRequest):
         }
 
     return {"result": result.reset_index().to_dict(orient="records")}
+
+
+class SpotRequest(BaseModel):
+    pot: str
+    position: str
+    role: str
+    line: str
+    formation: str | None = None
+
+
+@app.post("/spot")
+def spot(request: SpotRequest):
+    try:
+        result = run_spot(request.pot, request.position, request.role, request.line, request.formation)
+    except SpotInputError as exc:
+        return JSONResponse(status_code=400, content={"error": str(exc)})
+    return {
+        "interpreted_filter": result["interpreted_filter"],
+        "distribution": result["distribution"],
+        "hands": result["hands"].to_dict(orient="records"),
+    }
 
 
 app.mount("/", StaticFiles(directory="static", html=True), name="static")
