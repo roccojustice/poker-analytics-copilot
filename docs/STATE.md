@@ -22,8 +22,6 @@ still the old working NL app.
 
 ## Open questions
 
-- Seat label → `chps.position` code mapping for Formations (UTG/MP codes 2–7): verify
-  against the data during M4/M5.
 - `origin/m4-situations` is stale at `06c30ff` (all of it is in `main`). Delete or leave it.
 
 ## Uncommitted work in the tree

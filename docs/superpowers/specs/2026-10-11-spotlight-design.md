@@ -102,9 +102,10 @@ These 20 strings are also the Line combobox's preset list.
 An optional seat pair, written **OOP seat first** (postflop order: SB, BB, UTG … BTN), e.g.
 `BB vs BTN`, `SB vs CO`. Hero's seat is implied by the `IP`/`OOP` toggle: `OOP` + `BB vs BTN`
 → Hero is BB. There is one list for every pot/role combination. The default is `Any` (no seat
-condition). A pair that cannot occur in the chosen spot returns 0 hands, not an error. The
-mapping from seat labels to `chps.position` codes (UTG/MP codes 2–7 in particular) is checked
-against the data during implementation.
+condition). A pair that cannot occur in the chosen spot returns 0 hands, not an error. Seats use
+PT4's 6-max labels and codes: `SB` 9, `BB` 8, `UTG` 3, `MP` 2, `CO` 1, `BTN` 0 (15 pairs).
+Codes 4–7 only occur at 7+ handed tables (~1% of Hero's hands); they appear under `Any` but in
+no formation.
 
 ## Architecture
 
@@ -114,7 +115,7 @@ static/index.html (Spotlight bar)
   ▼
 api.py  /spot
   ▼
-line_parser.py   pure, no DB: (line, role, position) → LineSpec, or LineError
+line_parser.py   pure, no DB: (line, role, position) → LineSpec, or SpotInputError
   ▼
 spot_sql.py      LineSpec + preflop-context + formation → (where_sql, params)
   ▼
@@ -127,16 +128,18 @@ db.py            new query: Hero row + villain row (the other `flg_f_saw` player
 - **`line_parser.py`**: parses and validates the Line, simulates each heads-up street from
   the PFR's letters, and returns a `LineSpec`. That holds exact Hero/villain strings for
   completed streets; for the decision street, the street plus Hero's and the villain's
-  prefixes; and the measured set. It raises `LineError` with a human-readable message:
+  prefixes; and the measured set. It raises `SpotInputError` (shared with `spot_sql.py` for bad bar values) with a human-readable message:
   missing or misplaced `?`, unknown letter (including `D`), `vs` with PFR or `-` with PFC,
   more than 3 streets, impossible heads-up sequences (`XX`, `BB` within a street), PFC-IP
   without the villain's decision-street action.
-- **`spot_sql.py`**: a `PREFLOP_CONTEXTS` registry with 8 entries (pot × position × role).
+- **`spot_sql.py`**: a `PREFLOP_CONTEXTS` registry keyed by pot × role (4 entries; position is added via `ip_flop`/`oop_flop`).
   Each entry is a list of existing `ATOMIC_FILTERS` names copied from the validated recipes'
   preflop part, plus `heads_up_flop` and position via `flg_f_has_position`. It adds the Line
   conditions and the Formation condition. All values go through parameter binding.
 - **`db.py`**: one new function joining the villain row and the action strings. Hand display
   reuses `get_hand_details()`, plus a `measured_action` column.
+- **`spotlight.py`**: orchestrates parse → SQL → query → distribution → hand details, and
+  builds the interpreted-filter text.
 - **`api.py`**: new `POST /spot`. `/query` stays as it is.
 
 ### API contract
@@ -183,7 +186,7 @@ no framework.
 ## Validation and tests
 
 1. **`line_parser.py`: strict TDD, no DB.** Table-driven: all 20 Lines → expected `LineSpec`;
-   every invalid case listed above → `LineError` with the expected message.
+   every invalid case listed above → `SpotInputError` with the expected message.
 2. **`spot_sql.py`: no DB**, in the style of `test_query_router.py`. Values are bound, never
    interpolated; the right preflop-context per combination; the Formation condition appears only
    when a formation is set.
