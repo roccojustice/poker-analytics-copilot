@@ -33,4 +33,4 @@ the old NL UI; `/spot` is API-only until M5.
 
 ## Uncommitted work in the tree
 
-None uncommitted. **`main` is 16 commits ahead of `origin/main` — push deferred by the user.** Run the app: `venv\Scripts\python -m uvicorn api:app --port 8000`.
+None. `main` is pushed to `origin`. Run the app: `venv\Scripts\python -m uvicorn api:app --port 8000`.
