@@ -2,33 +2,32 @@
 
 *Overwritten every session. Single source of truth for "where are we / what's next."*
 
-**Last updated:** 2026-10-11, Session 58
+**Last updated:** 2026-10-13, Session 59
 
 ## Current milestone
 
-**M4 (Spotlight core) ✅ closed; next is M5 (Spotlight UI).** Session 58 replaced the NL
-router, which failed in real use, with Spotlight: a deterministic Line parser plus `POST /spot`.
-The oracle matches all 9 validated recipes exactly (hand sets and distributions). Merged into
-`main`. Design: `docs/superpowers/specs/2026-10-11-spotlight-design.md`. M4 plan:
-`docs/superpowers/plans/2026-10-11-spotlight-core.md`. The page at `localhost:8000` is still
-the old NL UI; `/spot` is API-only until M5.
+**M5 (Spotlight UI) ✅ closed; next is M6 (v1 study session).** Session 59 shipped the
+Spotlight page (`static/index.html`): toggles, typed Line with context-filtered suggestions,
+`Ctrl+Enter`, multi-select Formations, decision labels (`XF`/`XC`/`XR`), row-click hand filter.
+Built via subagent-driven development (plan: `docs/superpowers/plans/2026-10-13-spotlight-ui.md`).
+Validated: 4 PT4 export diffs 0/0 (`pt4_diff.py`), 10 browser checks, and the three questions
+the NL router failed (2nd barrel = `- B-?`, not `- B-B-?`). Merged and pushed (`bb9d42d`).
 
 ## Next
 
-1. **M5 starts with brainstorming → plan.** The UI design is already in the spec ("Frontend").
-2. First code step of M5 (deferred review minor): make `formation` tolerant (`""`/`"Any"` →
-   `None`, case-insensitive), give a "write the OOP seat first" message only for a reversed pair,
-   and lowercase pot/role/position.
-3. Then replace `static/index.html` with the Spotlight bar: toggles, Line combobox with the 20
-   presets filtered by role, Formation dropdown, result view, click-a-row hand filter.
-4. M5 validation: 3 river Lines + `BB vs BTN` against PT4 exports by `hand_no`. Live numbers:
-   `2bp oop pfc vs B-X-?` → 1,006 (B 594 / X 412); `2bp oop pfc vs B?` + `BB vs BTN` → 1,639.
+1. **Small fix first (TDD):** `get_hand_details` shows 9-max seat names (`MP+2`, `MP+1`,
+   `UTG+1`) on 6-max hands. Join `lookup_positions` on `position` **and** `chs.cnt_players`
+   (`SCHEMA_NOTES.md`, Session 59).
+2. **M6:** the user runs a real study session on Spotlight instead of PT4. Note every question
+   it can't answer or answers awkwardly; that list drives what comes next (M7 dashboards or fixes).
 
-## Open questions
+## Open questions / deferred minors
 
-- Other deferred minors: a street with more than 8 actions is reported "impossible" instead of
-  "unsupported"; `measured_sql` crosses modules as a raw SQL fragment (safe today).
+- Previous result stays visible after a toggle change until Run (filter line says what's shown).
+- "1 hands" singular; a street with >8 actions says "impossible" not "unsupported".
+- `pt4_diff`: whitespace-only CSV cell → spurious "missing"; wrong `--column` is a bare KeyError.
 
 ## Uncommitted work in the tree
 
-None. `main` is pushed to `origin`. Run the app: `venv\Scripts\python -m uvicorn api:app --port 8000`.
+None after this wrap-up commit. Run the app: `venv\Scripts\python -m uvicorn api:app --port 8000`.
+PT4 exports live in `exports/` (gitignored).

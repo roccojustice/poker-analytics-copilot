@@ -71,6 +71,10 @@ every completed street.
 so Hero never acts again) are excluded. The measured action is the next character of Hero's
 action string on the decision street, so the distribution is a single `GROUP BY`.
 
+**The `?` is the opportunity; don't write its bet.** 2nd barrel opportunity (bet flop, now the
+turn) is `- B-?`; triple barrel opportunity is `- B-B-?`. Writing "b-b" for a 2nd-barrel
+opportunity is a common slip (Session 59): it asks about the river instead.
+
 ### The 20 v1 lines in this notation
 
 | # | SPEC line | Spotlight | Measured |
@@ -207,7 +211,7 @@ no framework.
 - Invalid Line, or a notation/role mismatch → 400 with the parser message, never 500.
 - Unknown formation → 400 naming it. The UI can't send one; this guards direct API calls and
   a drifted hardcoded list.
-- 0 hands → 200 with an empty distribution and "0 hands".
+- 0 hands → 200 with every measured row at 0 hands / 0.0% and "0 hands".
 - All-in: an all-in player's later strings are empty, so Lines requiring later actions exclude
   those hands. Facing an all-in raise, `R` simply reads 0%.
 - The spike's replay failures (straddles, 2-handed tables) don't apply. Preflop is resolved by

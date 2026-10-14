@@ -244,6 +244,30 @@ Rejecting them would also block legitimate PFC leads such as `vs X-C-?` (R5). Th
 place a donk is filtered is the ambiguous case: pfr + Hero IP + `-?`, where `?` means "no
 bet before Hero".
 
+## 2026-10-13 (Session 59) — The Line is typed; presets are suggestions
+
+The Line is an `<input>` with a native `<datalist>`, not a dropdown. Suggestions are the v1
+presets for the current pot × position × role (2–3 per context). The user will eventually
+study every Line, and a growing dropdown doesn't scale. `Ctrl+Enter` runs, because plain
+`Enter` picks a datalist suggestion.
+
+## 2026-10-13 (Session 59) — Formations are multi-select (OR, pooled)
+
+None ticked = all hands; several = their hands pooled into one distribution. Pairs stay
+OOP-first (`SB vs BB`) even though SnapMDA writes `BB vs SB` (the Session 58 entry's "matches
+SnapMDA" was wrong on ordering), for consistency with the IP/OOP toggle and the validated
+backend. Grouped buckets like SnapMDA's "HJ/LJ vs IP" are built by ticking their pairs.
+
+## 2026-10-13 (Session 59) — Distribution labels carry Hero's decision-street prefix
+
+`XF`/`XC`/`XR`, not `F`/`C`/`R`. That's how the user thinks about the spot; otherwise the
+implied check is only visible in the filter text. With no prefix the label equals the action.
+
+## 2026-10-13 (Session 59) — `/spot` rejects unknown fields (422)
+
+A stale client sending the old `formation` key would otherwise get unfiltered hands silently.
+A tool the user relies on must fail loud, not lie.
+
 ## Earlier decisions (pre-pivot, still in force)
 
 - **Position lives inside the `preflop-context` prefix**, not in `situation`
