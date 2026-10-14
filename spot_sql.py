@@ -28,7 +28,7 @@ FORMATIONS = [
 ]
 
 
-def build_spot_query(pot, position, role, spec, formation=None):
+def build_spot_query(pot, position, role, spec, formations=()):
     if pot not in ("2bp", "3bp"):
         raise SpotInputError(f"Unknown pot: {pot}")
     items = PREFLOP_CONTEXTS[(pot, role)] + ["heads_up_flop", POSITION_ATOMS[position]]
@@ -50,13 +50,18 @@ def build_spot_query(pot, position, role, spec, formation=None):
     params["measure_pos"] = len(d.hero) + 1
     params["measured"] = list(spec.measured)
 
-    if formation is not None:
-        if formation not in FORMATIONS:
-            raise SpotInputError(f"Unknown formation: {formation} (write the OOP seat first)")
-        oop_seat, ip_seat = formation.split(" vs ")
-        hero_seat, villain_seat = (oop_seat, ip_seat) if position == "oop" else (ip_seat, oop_seat)
-        where += " AND chps.position = %(hero_pos)s AND v.position = %(villain_pos)s"
-        params["hero_pos"] = SEATS[hero_seat]
-        params["villain_pos"] = SEATS[villain_seat]
+    selected = list(dict.fromkeys(formations))  # dedupe, keep order
+    unknown = [f for f in selected if f not in FORMATIONS]
+    if unknown:
+        raise SpotInputError(f"Unknown formation: {unknown[0]}")
+    if selected:
+        pairs = []
+        for i, formation in enumerate(selected):
+            oop_seat, ip_seat = formation.split(" vs ")
+            hero_seat, villain_seat = (oop_seat, ip_seat) if position == "oop" else (ip_seat, oop_seat)
+            pairs.append(f"(%(hero_pos_{i})s, %(villain_pos_{i})s)")
+            params[f"hero_pos_{i}"] = SEATS[hero_seat]
+            params[f"villain_pos_{i}"] = SEATS[villain_seat]
+        where += f" AND (chps.position, v.position) IN ({', '.join(pairs)})"
 
     return where, params, measured_sql
