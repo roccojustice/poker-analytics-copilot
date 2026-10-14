@@ -19,7 +19,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 An analytics tool over a PokerTracker 4 (PT4) Postgres database — **not** a hand-history parser (it relies on PT4's already-parsed schema) and **not** a strategy/coaching tool. It answers data questions about Hero's own play (frequencies by spot, hands matching a specific spot); it does not recommend how to play.
 
-The target (see `docs/SPEC.md`) is **Spotlight**: a local web app with a selection bar (pot / position / role / formation) plus a typed Line in poker shorthand, compiled deterministically to SQL, returning the interpreted filter, the action-frequency distribution, and the matching hands. The code today is the earlier NL pipeline (LLM router behind `POST /query`), now **frozen** — kept working, not extended.
+The target (see `docs/SPEC.md`) is **Spotlight**: a local web app with a selection bar (pot / position / role / formation) plus a typed Line in poker shorthand, compiled deterministically to SQL, returning the interpreted filter, the action-frequency distribution, and the matching hands. `static/index.html` is the Spotlight page (vanilla JS, one file); the earlier NL pipeline (LLM router behind `POST /query`) is **frozen** — kept working, not extended, with no page of its own.
 
 ## Architecture
 
@@ -30,7 +30,7 @@ Data flow (Spotlight, active): `api.py POST /spot → spotlight.run_spot → lin
 - **`spotlight.py`**: `run_spot(...)` lowercases pot/position/role, orchestrates, and builds the distribution (measured-set order, zero rows included) and the interpreted-filter text (`describe`). Each distribution row and each hand's `measured_action` carry a **label**: Hero's decision-street prefix + the measured letter (`XF`/`XC`/`XR`; `B`/`X` with no prefix). Empty results skip `get_hand_details`; NaN → `None`.
 - **`db.run_spot_query()`**: Hero row + the villain row (the other `flg_f_saw` player) + six `lookup_actions` joins (`h_f/t/r`, `v_f/t/r`); returns `id_hand` + `measured_action`.
 
-Data flow (NL, frozen): `api.py POST /query` (or `main.py` CLI) `→ llm_parser.py (LLM) → query_router.py → analytics.py / db.py + filter_recipes.py → pandas → result`. `static/index.html` is the single-file vanilla-JS frontend served by `api.py`.
+Data flow (NL, frozen): `api.py POST /query` (or `main.py` CLI) `→ llm_parser.py (LLM) → query_router.py → analytics.py / db.py + filter_recipes.py → pandas → result`. `static/index.html` is the Spotlight page served by `api.py`; its Line presets and formation list live in a `<script id="spot-config">` JSON block that `tests/test_static_config.py` checks against `spot_sql.FORMATIONS` and `parse_line`.
 
 - **`api.py`** — FastAPI app. `POST /query` parses the question, routes it, and for lines in `lines.py` returns `{interpreted_filter, distribution, hands}`; a generic exception handler turns unexpected errors into a 500 with a fixed message.
 - **`lines.py` / `hero_responses.py`** — `LINES` maps each validated recipe to a hero-response; `HERO_RESPONSES` holds the ordered, mutually exclusive SQL conditions (e.g. raise / fold / call) that `analytics.compute_distribution()` counts via `db.run_distribution_query()`.
