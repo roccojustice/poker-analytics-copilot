@@ -100,10 +100,16 @@ These 20 strings are also the Line input's suggestions.
 
 ## Formations
 
-An optional seat pair, written **OOP seat first** (postflop order: SB, BB, UTG … BTN), e.g.
+A seat pair, written **OOP seat first** (postflop order: SB, BB, UTG … BTN), e.g.
 `BB vs BTN`, `SB vs CO`. Hero's seat is implied by the `IP`/`OOP` toggle: `OOP` + `BB vs BTN`
-→ Hero is BB. There is one list for every pot/role combination. The default is `Any` (no seat
-condition). A pair that cannot occur in the chosen spot returns 0 hands, not an error. Seats use
+→ Hero is BB. There is one list for every pot/role combination.
+
+**Formations are multi-select.** None selected = every hand of the spot (no seat condition).
+One or more selected = the hands of *any* of them (OR), pooled into one distribution. Example,
+`2bp oop pfc vs B?`: `BB vs BTN` 1,639 hands, `BB vs CO` 1,029, both → 2,668. Grouped buckets
+(e.g. SnapMDA's "HJ/LJ vs IP" = `UTG vs MP/CO/BTN` + `MP vs CO/BTN`) are covered by ticking their
+pairs; a one-click group shortcut is out of M5. A pair that cannot occur in the chosen spot
+contributes 0 hands, not an error. Seats use
 PT4's 6-max labels and codes: `SB` 9, `BB` 8, `UTG` 3, `MP` 2, `CO` 1, `BTN` 0 (15 pairs).
 Codes 4–7 only occur at 7+ handed tables (~1% of Hero's hands); they appear under `Any` but in
 no formation.
@@ -112,13 +118,13 @@ no formation.
 
 ```
 static/index.html (Spotlight bar)
-  │  POST /spot {pot, position, role, line, formation}
+  │  POST /spot {pot, position, role, line, formations}
   ▼
 api.py  /spot
   ▼
 line_parser.py   pure, no DB: (line, role, position) → LineSpec, or SpotInputError
   ▼
-spot_sql.py      LineSpec + preflop-context + formation → (where_sql, params)
+spot_sql.py      LineSpec + preflop-context + formations → (where_sql, params)
   ▼
 db.py            new query: Hero row + villain row (the other `flg_f_saw` player, HU flop)
                  + `lookup_actions` per street for both → hands + measured action
@@ -136,7 +142,8 @@ db.py            new query: Hero row + villain row (the other `flg_f_saw` player
 - **`spot_sql.py`**: a `PREFLOP_CONTEXTS` registry keyed by pot × role (4 entries; position is added via `ip_flop`/`oop_flop`).
   Each entry is a list of existing `ATOMIC_FILTERS` names copied from the validated recipes'
   preflop part, plus `heads_up_flop` and position via `flg_f_has_position`. It adds the Line
-  conditions and the Formation condition. All values go through parameter binding.
+  conditions and the Formation condition: `(Hero seat, villain seat) IN (...)` over the selected
+  pairs. All values go through parameter binding.
 - **`db.py`**: one new function joining the villain row and the action strings. Hand display
   reuses `get_hand_details()`, plus a `measured_action` column.
 - **`spotlight.py`**: orchestrates parse → SQL → query → distribution → hand details, and
@@ -146,10 +153,11 @@ db.py            new query: Hero row + villain row (the other `flg_f_saw` player
 ### API contract
 
 Request: `{"pot": "2bp"|"3bp", "position": "ip"|"oop", "role": "pfr"|"pfc", "line": str,
-"formation": str|null}`
+"formations": [str]}`
 
 - `pot`, `position` and `role` are case-insensitive.
-- `formation` is case-insensitive; `null`, `""` and `"Any"` all mean no seat condition.
+- `formations` defaults to `[]` (no seat condition). Each entry must be one of the 15 pairs
+  exactly as listed; duplicates are ignored.
 
 Response 200:
 `{"interpreted_filter": str, "distribution": [{"action", "label", "name", "hands", "pct"}],
@@ -170,18 +178,20 @@ The existing `static/index.html` is replaced. It stays a single file with vanill
 no framework.
 
 - **Bar:** `[2BP|3BP]` (`LIMP`/`4BP` shown disabled) · `[OOP|IP]` · `[PFC|PFR]` ·
-  `Line` input · `Formation` dropdown (`Any` default) · `Run`.
+  `Line` input · `Formations` multi-select · `Run`.
 - **Line input: typing is the primary path.** A plain `<input>` with a native `<datalist>` of
   suggestions. The suggestions are the v1 presets **for the current pot × position × role**
   (2–3 per context), so the list never grows as more Lines get studied. Any Line can be typed.
 - **Run:** the button, or `Ctrl+Enter` in the bar. Plain `Enter` does not run, because the
   browser uses it to pick a datalist suggestion. `Run` is disabled while the Line is empty.
-- **Formation dropdown:** `Any` plus the 15 pairs, OOP seat first.
+- **Formations multi-select:** a dropdown panel with one checkbox per pair (15, OOP seat
+  first, all enabled). Closed, it shows the selected pairs, or `Any` when none is ticked. Picking
+  from a fixed list means a formation can't be mistyped.
 - The 20 presets and the 15 formations are hardcoded in `index.html`. A formation list that
   drifts from `spot_sql.FORMATIONS` fails loud (400), not silently.
 - **Result:**
   1. the interpreted filter in one readable line, e.g.
-     `2BP · OOP · PFC · BB vs BTN · Flop: Hero X, villain B, measuring XF / XC / XR · 1,639 hands`
+     `2BP · OOP · PFC · BB vs BTN, BB vs CO · Flop: Hero X, villain B, measuring XF / XC / XR · 2,668 hands`
   2. a distribution table (label · hands · %)
   3. the hands table (existing card/table renderer, plus the `measured_action` column), with
      every row and no pagination
@@ -195,8 +205,8 @@ no framework.
 ## Errors and edge cases
 
 - Invalid Line, or a notation/role mismatch → 400 with the parser message, never 500.
-- Unknown formation → 400. The "write the OOP seat first" hint is given only when the pair is a
-  valid formation reversed (`BTN vs BB`), not for every unknown value.
+- Unknown formation → 400 naming it. The UI can't send one; this guards direct API calls and
+  a drifted hardcoded list.
 - 0 hands → 200 with an empty distribution and "0 hands".
 - All-in: an all-in player's later strings are empty, so Lines requiring later actions exclude
   those hands. Facing an all-in raise, `R` simply reads 0%.
@@ -212,7 +222,7 @@ no framework.
    every invalid case listed above → `SpotInputError` with the expected message.
 2. **`spot_sql.py`: no DB**, in the style of `test_query_router.py`. Values are bound, never
    interpolated; the right preflop-context per combination; the Formation condition appears only
-   when a formation is set.
+   when at least one formation is selected, and binds every selected pair.
 3. **Oracle: real Postgres, marker `db`** (`pytest -m db`, excluded from the default run). It
    asserts exact hand-set equality *and* the same distribution against the 9 validated recipes:
 

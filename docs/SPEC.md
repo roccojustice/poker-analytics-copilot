@@ -9,7 +9,7 @@ A **local web app** that replaces PokerTracker 4's *analysis* role in the user's
 study routine. It runs alongside a solver as core study infrastructure.
 
 Interaction is **Spotlight**, a selection bar modeled on SnapMDA's. The user picks pot type,
-position, role and an optional seat formation, then types a **Line** in poker shorthand
+position, role and optional seat formations, then types a **Line** in poker shorthand
 (e.g. `3bp ip pfc vs B?`). The app returns:
 
 1. the **interpreted filter**, in one readable line
@@ -53,7 +53,8 @@ Three layers, mapped onto the Spotlight bar:
   `-` (Hero's letters), PFC lines with `vs` (the villain's letters). `?` marks the decision.
 - **hero-response**: Hero's next action at the `?`, measured from his action string.
 
-Plus an optional **formation** (seat pair, OOP seat first, e.g. `BB vs BTN`).
+Plus optional **formations** (seat pairs, OOP seat first, e.g. `BB vs BTN`), multi-select:
+none = all hands, several = their hands pooled.
 
 ## v1 scope: 20 lines
 
