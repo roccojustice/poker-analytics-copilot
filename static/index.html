@@ -1,46 +1,241 @@
 <!DOCTYPE html>
-<html lang="es">
+<html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Poker Analytics Copilot</title>
+  <title>Spotlight</title>
   <style>
     body { font-family: sans-serif; margin: 2rem auto; padding: 0 1.5rem; max-width: 1800px; }
-    .controls { max-width: 700px; }
-    textarea { width: 100%; height: 4rem; font-size: 1rem; }
-    button { margin-top: 0.5rem; padding: 0.5rem 1rem; font-size: 1rem; }
-    #output { margin-top: 1rem; }
+    .bar { display: flex; flex-wrap: wrap; gap: 0.75rem; align-items: flex-start; }
+    .seg { display: inline-flex; }
+    .seg button { padding: 0.4rem 0.8rem; border: 1px solid #bbb; background: #fff; cursor: pointer; font-size: 0.95rem; }
+    .seg button + button { border-left: none; }
+    .seg button.on { background: #2b5fab; color: #fff; border-color: #2b5fab; }
+    .seg button:disabled { color: #aaa; cursor: not-allowed; }
+    .line-box { display: flex; flex-direction: column; }
+    #line { width: 14rem; padding: 0.4rem; font-size: 1rem; font-family: monospace; }
+    #line-error { color: #b3261e; font-size: 0.85rem; margin-top: 0.25rem; min-height: 1rem; max-width: 28rem; }
+    details.formations { position: relative; }
+    details.formations summary { list-style: none; padding: 0.4rem 0.8rem; border: 1px solid #bbb; cursor: pointer; min-width: 9rem; max-width: 22rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    details.formations summary::after { content: " ▾"; }
+    details.formations .panel { position: absolute; z-index: 10; background: #fff; border: 1px solid #bbb; padding: 0.4rem 0.6rem; max-height: 24rem; overflow-y: auto; }
+    details.formations label { display: block; padding: 0.15rem 0; white-space: nowrap; cursor: pointer; }
+    #run { padding: 0.4rem 1rem; font-size: 1rem; }
+    #output { margin-top: 1.25rem; }
+    .filter-line { font-weight: bold; margin-bottom: 0.75rem; }
     table { border-collapse: collapse; width: 100%; margin-bottom: 1rem; font-size: 0.78rem; }
     th, td { border: 1px solid #ddd; padding: 0.25rem 0.4rem; text-align: left; white-space: nowrap; }
     th { background: #f4f4f4; }
     tr:nth-child(even) { background: #fafafa; }
+    table.dist { width: auto; font-size: 0.95rem; }
+    table.dist tbody tr { cursor: pointer; }
+    table.dist tbody tr:hover { background: #eef3fb; }
+    table.dist tbody tr.selected { background: #dbe7f8; font-weight: bold; }
     .table-scroll { overflow-x: auto; }
     .wrap { white-space: normal; max-width: 14rem; }
     .error { background: #fdecea; border: 1px solid #f5c2c0; padding: 0.75rem; border-radius: 4px; }
-    .clarifying { background: #eaf2fd; border: 1px solid #b6d4f7; padding: 0.75rem; border-radius: 4px; }
-    h2 { text-transform: capitalize; margin-bottom: 0.25rem; }
     .card { display: inline-block; padding: 0 4px; margin: 0 1px; border: 1px solid #ccc; border-radius: 3px; background: #fff; font-weight: bold; }
     .card-red { color: #d32f2f; }
     .card-black { color: #222; }
   </style>
 </head>
 <body>
-  <h1>Poker Analytics Copilot</h1>
-  <div class="controls">
-    <textarea id="question" placeholder="e.g. frecuencias de bet en 3bp ip pfr, bb opp"></textarea>
-    <br>
-    <button id="ask">Preguntar</button>
+  <h1>Spotlight</h1>
+  <div class="bar">
+    <div class="seg" data-key="pot">
+      <button data-value="limp" disabled>LIMP</button>
+      <button data-value="2bp" class="on">2BP</button>
+      <button data-value="3bp">3BP</button>
+      <button data-value="4bp" disabled>4BP</button>
+    </div>
+    <div class="seg" data-key="position">
+      <button data-value="oop" class="on">OOP</button>
+      <button data-value="ip">IP</button>
+    </div>
+    <div class="seg" data-key="role">
+      <button data-value="pfc" class="on">PFC</button>
+      <button data-value="pfr">PFR</button>
+    </div>
+    <div class="line-box">
+      <input id="line" list="line-presets" placeholder="Line, e.g. vs B?" autocomplete="off" spellcheck="false">
+      <datalist id="line-presets"></datalist>
+      <div id="line-error"></div>
+    </div>
+    <details class="formations" id="formations">
+      <summary id="formations-summary">Any</summary>
+      <div class="panel" id="formations-panel"></div>
+    </details>
+    <button id="run" disabled>Run</button>
   </div>
   <div id="output"></div>
 
+  <script type="application/json" id="spot-config">
+  {
+    "presets": {
+      "2bp oop pfc": ["vs B?", "vs B-X-?", "vs X-C-?"],
+      "2bp ip pfc": ["vs B?", "vs X?"],
+      "3bp oop pfc": ["vs B?", "vs B-X-?"],
+      "3bp ip pfc": ["vs B?", "vs B-B?", "vs B-XC-X?"],
+      "2bp oop pfr": ["- B-?", "- X-B-?"],
+      "2bp ip pfr": ["- B-?", "- B-B-?", "- X-B-?"],
+      "3bp oop pfr": ["- B-?", "- B-B-?", "- B-X-?"],
+      "3bp ip pfr": ["- B-?", "- B-B-?"]
+    },
+    "formations": [
+      "SB vs BB", "SB vs UTG", "SB vs MP", "SB vs CO", "SB vs BTN",
+      "BB vs UTG", "BB vs MP", "BB vs CO", "BB vs BTN",
+      "UTG vs MP", "UTG vs CO", "UTG vs BTN",
+      "MP vs CO", "MP vs BTN",
+      "CO vs BTN"
+    ]
+  }
+  </script>
+
   <script>
-    const questionEl = document.getElementById("question");
+    const CONFIG = JSON.parse(document.getElementById("spot-config").textContent);
+    const state = { pot: "2bp", position: "oop", role: "pfc" };
+
+    const barEl = document.querySelector(".bar");
+    const lineEl = document.getElementById("line");
+    const lineErrorEl = document.getElementById("line-error");
+    const presetsEl = document.getElementById("line-presets");
+    const formationsEl = document.getElementById("formations");
+    const formationsSummaryEl = document.getElementById("formations-summary");
+    const formationsPanelEl = document.getElementById("formations-panel");
+    const runEl = document.getElementById("run");
     const outputEl = document.getElementById("output");
-    const askButton = document.getElementById("ask");
+
+    let latestRequest = 0;
+    let currentHands = [];
+    let activeLabel = null;
 
     function escapeHtml(str) {
       const div = document.createElement("div");
       div.textContent = str;
       return div.innerHTML;
+    }
+
+    // --- Bar ---
+
+    document.querySelectorAll(".seg").forEach(seg => {
+      seg.addEventListener("click", event => {
+        const button = event.target.closest("button");
+        if (!button || button.disabled) return;
+        state[seg.dataset.key] = button.dataset.value;
+        seg.querySelectorAll("button").forEach(b => b.classList.toggle("on", b === button));
+        refreshPresets();
+      });
+    });
+
+    function refreshPresets() {
+      const lines = CONFIG.presets[`${state.pot} ${state.position} ${state.role}`] || [];
+      presetsEl.replaceChildren(...lines.map(line => {
+        const option = document.createElement("option");
+        option.value = line;
+        return option;
+      }));
+    }
+
+    CONFIG.formations.forEach(formation => {
+      const label = document.createElement("label");
+      const box = document.createElement("input");
+      box.type = "checkbox";
+      box.value = formation;
+      label.append(box, " " + formation);
+      formationsPanelEl.append(label);
+    });
+
+    function selectedFormations() {
+      return [...formationsPanelEl.querySelectorAll("input:checked")].map(box => box.value);
+    }
+
+    formationsPanelEl.addEventListener("change", () => {
+      const selected = selectedFormations();
+      formationsSummaryEl.textContent = selected.length ? selected.join(", ") : "Any";
+    });
+
+    document.addEventListener("click", event => {
+      if (!formationsEl.contains(event.target)) formationsEl.open = false;
+    });
+
+    lineEl.addEventListener("input", () => {
+      runEl.disabled = !lineEl.value.trim();
+    });
+
+    barEl.addEventListener("keydown", event => {
+      if (event.key === "Enter" && (event.ctrlKey || event.metaKey) && !runEl.disabled) {
+        event.preventDefault();
+        run();
+      }
+    });
+
+    runEl.addEventListener("click", run);
+
+    // --- Request ---
+
+    async function run() {
+      const requestId = ++latestRequest;
+      const body = { ...state, line: lineEl.value.trim(), formations: selectedFormations() };
+      lineErrorEl.textContent = "";
+      outputEl.innerHTML = "Loading...";
+
+      try {
+        const response = await fetch("/spot", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(body),
+        });
+        const data = await response.json();
+        if (requestId !== latestRequest) return;  // a newer Run superseded this one
+        if (response.status === 400) {
+          lineErrorEl.textContent = data.error;
+          outputEl.innerHTML = "";
+        } else if (!response.ok) {
+          outputEl.innerHTML = `<div class="error">${escapeHtml(data.error || "Error")}</div>`;
+        } else {
+          showResult(data);
+        }
+      } catch (err) {
+        if (requestId !== latestRequest) return;
+        outputEl.innerHTML = `<div class="error">Error: ${escapeHtml(String(err))}</div>`;
+      }
+    }
+
+    // --- Result ---
+
+    function showResult(data) {
+      currentHands = data.hands;
+      activeLabel = null;
+      outputEl.innerHTML =
+        `<div class="filter-line">${escapeHtml(data.interpreted_filter)}</div>` +
+        renderDistribution(data.distribution) +
+        '<h3>Matching hands</h3><div id="hands"></div>';
+      outputEl.querySelectorAll("table.dist tbody tr").forEach(row => {
+        row.addEventListener("click", () => toggleLabel(row.dataset.label));
+      });
+      renderHands();
+    }
+
+    function toggleLabel(label) {
+      activeLabel = activeLabel === label ? null : label;
+      outputEl.querySelectorAll("table.dist tbody tr").forEach(row => {
+        row.classList.toggle("selected", row.dataset.label === activeLabel);
+      });
+      renderHands();
+    }
+
+    function renderHands() {
+      const rows = activeLabel ? currentHands.filter(hand => hand.measured_action === activeLabel) : currentHands;
+      document.getElementById("hands").innerHTML = renderTable(rows);
+    }
+
+    function renderDistribution(distribution) {
+      let html = '<table class="dist"><thead><tr><th>Action</th><th>Hands</th><th>%</th></tr></thead><tbody>';
+      distribution.forEach(row => {
+        html += `<tr data-label="${escapeHtml(row.label)}"><td>${escapeHtml(row.label)}</td>` +
+          `<td>${row.hands.toLocaleString("en-US")}</td><td>${row.pct.toFixed(1)}%</td></tr>`;
+      });
+      html += "</tbody></table>";
+      return html;
     }
 
     const CARD_COLUMNS = new Set(["hole_cards", "flop", "turn", "river"]);
@@ -49,7 +244,7 @@
     const RED_SUITS = new Set(["d", "h"]);
 
     const COLUMN_PRIORITY = [
-      "date_played", "position", "final_hand", "hole_cards", "flop",
+      "date_played", "position", "measured_action", "final_hand", "hole_cards", "flop",
       "f_act", "amt_bet_f", "turn", "t_act", "amt_bet_t", "river", "r_act", "amt_bet_r",
       "winner", "winning_hand",
       "amt_pot", "amt_bb", "amt_won",
@@ -97,58 +292,7 @@
       return html;
     }
 
-    function renderDistribution(distribution) {
-      let html = "<table><thead><tr><th>Action</th><th>Count</th><th>%</th></tr></thead><tbody>";
-      for (const [action, stats] of Object.entries(distribution)) {
-        html += `<tr><td>${escapeHtml(action)}</td><td>${stats.count}</td><td>${stats.pct.toFixed(1)}%</td></tr>`;
-      }
-      html += "</tbody></table>";
-      return html;
-    }
-
-    function render(data) {
-      if (data.error) {
-        return `<div class="error">${escapeHtml(data.error)}</div>`;
-      }
-      if (data.clarifying_question) {
-        return `<div class="clarifying">${escapeHtml(data.clarifying_question)}</div>`;
-      }
-
-      const result = data.result;
-      if (Array.isArray(result)) {
-        return renderTable(result);
-      }
-
-      let html = `<h2>${escapeHtml(result.interpreted_filter.replace(/_/g, " "))}</h2>`;
-      html += renderDistribution(result.distribution);
-      html += "<h3>Matching hands</h3>";
-      html += renderTable(result.hands);
-      return html;
-    }
-
-    async function ask() {
-      const question = questionEl.value.trim();
-      if (!question) return;
-
-      askButton.disabled = true;
-      outputEl.innerHTML = "Consultando...";
-
-      try {
-        const response = await fetch("/query", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ question }),
-        });
-        const data = await response.json();
-        outputEl.innerHTML = render(data);
-      } catch (err) {
-        outputEl.innerHTML = `<div class="error">Error: ${escapeHtml(String(err))}</div>`;
-      } finally {
-        askButton.disabled = false;
-      }
-    }
-
-    askButton.addEventListener("click", ask);
+    refreshPresets();
   </script>
 </body>
 </html>

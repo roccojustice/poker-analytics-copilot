@@ -24,16 +24,36 @@ def test_distribution_counts_in_measured_order_with_zero_rows(monkeypatch):
     install(monkeypatch, fake_matches([(1, "C"), (2, "C"), (3, "F")]))
     result = spotlight.run_spot("2bp", "oop", "pfc", "vs B?")
     assert result["distribution"] == [
-        {"action": "F", "name": "Fold", "hands": 1, "pct": 33.3},
-        {"action": "C", "name": "Call", "hands": 2, "pct": 66.7},
-        {"action": "R", "name": "Raise", "hands": 0, "pct": 0.0},
+        {"action": "F", "label": "XF", "name": "Fold", "hands": 1, "pct": 33.3},
+        {"action": "C", "label": "XC", "name": "Call", "hands": 2, "pct": 66.7},
+        {"action": "R", "label": "XR", "name": "Raise", "hands": 0, "pct": 0.0},
     ]
+    assert all(type(row["pct"]) is float for row in result["distribution"])
 
 
-def test_hands_carry_measured_action(monkeypatch):
+def test_hands_carry_the_label(monkeypatch):
+    install(monkeypatch, fake_matches([(7, "C"), (8, "F")]))
+    hands = spotlight.run_spot("2bp", "oop", "pfc", "vs B?")["hands"]
+    assert dict(zip(hands["id_hand"], hands["measured_action"])) == {7: "XC", 8: "XF"}
+
+
+def test_label_equals_action_without_prefix(monkeypatch):
     install(monkeypatch, fake_matches([(7, "B"), (8, "X")]))
-    hands = spotlight.run_spot("2bp", "ip", "pfr", "- B-?")["hands"]
-    assert dict(zip(hands["id_hand"], hands["measured_action"])) == {7: "B", 8: "X"}
+    result = spotlight.run_spot("2bp", "ip", "pfr", "- B-?")
+    assert [row["label"] for row in result["distribution"]] == ["B", "X"]
+    assert dict(zip(result["hands"]["id_hand"], result["hands"]["measured_action"])) == {7: "B", 8: "X"}
+
+
+def test_bar_values_are_case_insensitive(monkeypatch):
+    install(monkeypatch, fake_matches([(1, "C")]))
+    result = spotlight.run_spot("2BP", "OOP", "PFC", "vs B?")
+    assert result["interpreted_filter"].startswith("2BP · OOP · PFC · Any · ")
+
+
+def test_duplicate_formations_show_once(monkeypatch):
+    install(monkeypatch, fake_matches([(1, "C")]))
+    text = spotlight.run_spot("2bp", "oop", "pfc", "vs B?", ["BB vs BTN", "BB vs BTN"])["interpreted_filter"]
+    assert "· BB vs BTN · " in text
 
 
 def test_zero_hands_skips_detail_query_and_returns_empty(monkeypatch):
@@ -54,11 +74,17 @@ def test_nan_in_hand_details_becomes_none(monkeypatch):
 
 def test_describe_reads_like_the_bar():
     spec = parse_line("- B-?", "pfr", "ip")
-    text = spotlight.describe("2bp", "ip", "pfr", "BB vs BTN", spec, 1204)
+    text = spotlight.describe("2bp", "ip", "pfr", ["BB vs BTN"], spec, 1204)
     assert text == "2BP · IP · PFR · BB vs BTN · Flop: Hero B, villain XC · Turn: villain X, measuring B / X · 1,204 hands"
 
 
 def test_describe_without_formation_says_any():
     spec = parse_line("vs B?", "pfc", "oop")
-    text = spotlight.describe("3bp", "oop", "pfc", None, spec, 5)
-    assert text == "3BP · OOP · PFC · Any · Flop: Hero X, villain B, measuring F / C / R · 5 hands"
+    text = spotlight.describe("3bp", "oop", "pfc", [], spec, 5)
+    assert text == "3BP · OOP · PFC · Any · Flop: Hero X, villain B, measuring XF / XC / XR · 5 hands"
+
+
+def test_describe_joins_several_formations():
+    spec = parse_line("vs B?", "pfc", "oop")
+    text = spotlight.describe("2bp", "oop", "pfc", ["BB vs BTN", "BB vs CO"], spec, 2668)
+    assert text.startswith("2BP · OOP · PFC · BB vs BTN, BB vs CO · Flop: ")

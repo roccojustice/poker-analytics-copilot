@@ -7,36 +7,43 @@ from spot_sql import build_spot_query
 ACTION_NAMES = {"B": "Bet", "X": "Check", "F": "Fold", "C": "Call", "R": "Raise"}
 
 
-def describe(pot, position, role, formation, spec, n_hands):
-    parts = [pot.upper(), position.upper(), role.upper(), formation or "Any"]
+def describe(pot, position, role, formations, spec, n_hands):
+    parts = [pot.upper(), position.upper(), role.upper(), ", ".join(formations) or "Any"]
     for s in spec.completed:
         parts.append(f"{STREET_NAMES[s.street].capitalize()}: Hero {s.hero}, villain {s.villain}")
     d = spec.decision
     seen = [f"Hero {d.hero}"] * bool(d.hero) + [f"villain {d.villain}"] * bool(d.villain)
-    measuring = "measuring " + " / ".join(spec.measured)
+    measuring = "measuring " + " / ".join(d.hero + action for action in spec.measured)
     parts.append(f"{STREET_NAMES[d.street].capitalize()}: " + ", ".join(seen + [measuring]))
     parts.append(f"{n_hands:,} hands")
     return " · ".join(parts)
 
 
-def _distribution(measured_actions, measured):
-    counts = measured_actions.value_counts()
+def _distribution(labels, measured, prefix):
+    counts = labels.value_counts()
     total = int(counts.sum())
-    return [
-        {
+    rows = []
+    for action in measured:
+        label = prefix + action
+        hands = int(counts.get(label, 0))
+        rows.append({
             "action": action,
+            "label": label,
             "name": ACTION_NAMES[action],
-            "hands": int(counts.get(action, 0)),
-            "pct": round(counts.get(action, 0) / total * 100, 1) if total else 0.0,
-        }
-        for action in measured
-    ]
+            "hands": hands,
+            "pct": round(hands / total * 100, 1) if total else 0.0,
+        })
+    return rows
 
 
-def run_spot(pot, position, role, line, formation=None):
+def run_spot(pot, position, role, line, formations=()):
+    pot, position, role = pot.lower(), position.lower(), role.lower()
+    formations = list(dict.fromkeys(formations))
     spec = parse_line(line, role, position)
-    where, params, measured_sql = build_spot_query(pot, position, role, spec, formation)
+    where, params, measured_sql = build_spot_query(pot, position, role, spec, formations)
     matches = run_spot_query(where, params, measured_sql)
+    prefix = spec.decision.hero
+    matches = matches.assign(measured_action=prefix + matches["measured_action"])  # letter -> label
 
     if matches.empty:
         hands = pd.DataFrame()  # nothing to render, skip the detail round-trip
@@ -45,7 +52,7 @@ def run_spot(pot, position, role, line, formation=None):
         hands = hands.astype(object).where(hands.notna(), None)
 
     return {
-        "interpreted_filter": describe(pot, position, role, formation, spec, len(matches)),
-        "distribution": _distribution(matches["measured_action"], spec.measured),
+        "interpreted_filter": describe(pot, position, role, formations, spec, len(matches)),
+        "distribution": _distribution(matches["measured_action"], spec.measured, prefix),
         "hands": hands,
     }

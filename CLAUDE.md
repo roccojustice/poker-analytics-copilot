@@ -12,6 +12,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - Run a single test file: `pytest tests/test_db.py`
 - Run a single test: `pytest tests/test_query_router.py::<test_name>`
 - Run the DB oracle tests (need Postgres): `pytest -m db` (excluded from the default run)
+- Diff a Spotlight result against a PT4 hand-list export by `hand_no` (both directions): `python pt4_diff.py <export.csv> <pot> <position> <role> "<line>" [--formation "BB vs BTN" ...] [--column "Hand #"]` — export straight from PT4; don't round-trip the CSV through Excel (it drops leading zeros and can turn hand numbers into scientific notation).
 - Lint: `ruff check .` (no `[tool.ruff]` config yet — runs on the 88-char default)
 - Required env vars (`.env`, gitignored, never commit): `OPENAI_API_KEY`, `POSTGRES_HOST`, `POSTGRES_PORT`, `POSTGRES_DB`, `POSTGRES_USER`, `POSTGRES_PASSWORD`
 
@@ -19,18 +20,19 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 An analytics tool over a PokerTracker 4 (PT4) Postgres database — **not** a hand-history parser (it relies on PT4's already-parsed schema) and **not** a strategy/coaching tool. It answers data questions about Hero's own play (frequencies by spot, hands matching a specific spot); it does not recommend how to play.
 
-The target (see `docs/SPEC.md`) is **Spotlight**: a local web app with a selection bar (pot / position / role / formation) plus a typed Line in poker shorthand, compiled deterministically to SQL, returning the interpreted filter, the action-frequency distribution, and the matching hands. The code today is the earlier NL pipeline (LLM router behind `POST /query`), now **frozen** — kept working, not extended.
+The target (see `docs/SPEC.md`) is **Spotlight**: a local web app with a selection bar (pot / position / role / formation) plus a typed Line in poker shorthand, compiled deterministically to SQL, returning the interpreted filter, the action-frequency distribution, and the matching hands. `static/index.html` is the Spotlight page (vanilla JS, one file); the earlier NL pipeline (LLM router behind `POST /query`) is **frozen** — kept working, not extended, with no page of its own.
 
 ## Architecture
 
 Data flow (Spotlight, active): `api.py POST /spot → spotlight.run_spot → line_parser.parse_line → spot_sql.build_spot_query → db.run_spot_query → db.get_hand_details → {interpreted_filter, distribution, hands}`
 
 - **`line_parser.py`**: pure, no DB. `parse_line(line, role, position) -> LineSpec`. Letters belong to the preflop raiser (`-` = Hero PFR, `vs` = villain PFR); `?` marks the decision. Each heads-up street is resolved by matching the PFR's letters against every legal street sequence (`SEQUENCES`), giving exact Hero/villain PT4 action strings. Bad input raises `SpotInputError` (a `ValueError`), which `/spot` turns into a 400.
-- **`spot_sql.py`**: `build_spot_query(pot, position, role, spec, formation=None) -> (where_sql, params, measured_sql)`. `PREFLOP_CONTEXTS` (pot × role) reuses validated `ATOMIC_FILTERS`; `FORMATIONS` are OOP-first seat pairs over `SEATS` (6-max codes).
-- **`spotlight.py`**: `run_spot(...)` orchestrates and builds the distribution (measured-set order, zero rows included) and the interpreted-filter text (`describe`). Empty results skip `get_hand_details`; NaN → `None`.
+- **`spot_sql.py`**: `build_spot_query(pot, position, role, spec, formations=()) -> (where_sql, params, measured_sql)`. `PREFLOP_CONTEXTS` (pot × role) reuses validated `ATOMIC_FILTERS`; `FORMATIONS` are OOP-first seat pairs over `SEATS` (6-max codes). Selected formations are deduped and OR-ed as `(chps.position, v.position) IN (...)`, every seat bound.
+- **`spotlight.py`**: `run_spot(...)` lowercases pot/position/role, orchestrates, and builds the distribution (measured-set order, zero rows included) and the interpreted-filter text (`describe`). Each distribution row and each hand's `measured_action` carry a **label**: Hero's decision-street prefix + the measured letter (`XF`/`XC`/`XR`; `B`/`X` with no prefix). Empty results skip `get_hand_details`; NaN → `None`.
 - **`db.run_spot_query()`**: Hero row + the villain row (the other `flg_f_saw` player) + six `lookup_actions` joins (`h_f/t/r`, `v_f/t/r`); returns `id_hand` + `measured_action`.
+- **`static/index.html`**: the Spotlight page served by `api.py`; its Line presets and formation list live in a `<script id="spot-config">` JSON block that `tests/test_static_config.py` checks against `spot_sql.FORMATIONS` and `parse_line`.
 
-Data flow (NL, frozen): `api.py POST /query` (or `main.py` CLI) `→ llm_parser.py (LLM) → query_router.py → analytics.py / db.py + filter_recipes.py → pandas → result`. `static/index.html` is the single-file vanilla-JS frontend served by `api.py`.
+Data flow (NL, frozen): `api.py POST /query` (or `main.py` CLI) `→ llm_parser.py (LLM) → query_router.py → analytics.py / db.py + filter_recipes.py → pandas → result`.
 
 - **`api.py`** — FastAPI app. `POST /query` parses the question, routes it, and for lines in `lines.py` returns `{interpreted_filter, distribution, hands}`; a generic exception handler turns unexpected errors into a 500 with a fixed message.
 - **`lines.py` / `hero_responses.py`** — `LINES` maps each validated recipe to a hero-response; `HERO_RESPONSES` holds the ordered, mutually exclusive SQL conditions (e.g. raise / fold / call) that `analytics.compute_distribution()` counts via `db.run_distribution_query()`.

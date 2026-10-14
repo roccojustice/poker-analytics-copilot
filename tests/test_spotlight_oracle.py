@@ -44,3 +44,15 @@ def test_spotlight_matches_recipe(recipe, pot, position, role, line):
         recipe_dist = compute_distribution(where, params, LINES[recipe])
         expected = {NAME_TO_LETTER[name]: v["count"] for name, v in recipe_dist.items() if v["count"]}
         assert spot["measured_action"].value_counts().to_dict() == expected
+
+
+def test_formations_pool_as_union_of_single_formations():
+    spec = parse_line("vs B?", "pfc", "oop")
+
+    def hands(formations):
+        where, params, measured_sql = build_spot_query("2bp", "oop", "pfc", spec, formations)
+        return set(run_spot_query(where, params, measured_sql)["id_hand"])
+
+    btn, co = hands(["BB vs BTN"]), hands(["BB vs CO"])
+    assert btn and co and not (btn & co)
+    assert hands(["BB vs BTN", "BB vs CO"]) == btn | co

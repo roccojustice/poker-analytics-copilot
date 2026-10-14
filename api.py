@@ -2,7 +2,7 @@ import traceback
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 from llm_parser import parse_user_query
 from query_router import run_query, is_filter_query, has_distribution
 from line_parser import SpotInputError
@@ -53,17 +53,19 @@ def query(request: QueryRequest):
 
 
 class SpotRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
     pot: str
     position: str
     role: str
     line: str
-    formation: str | None = None
+    formations: list[str] = []
 
 
 @app.post("/spot")
 def spot(request: SpotRequest):
     try:
-        result = run_spot(request.pot, request.position, request.role, request.line, request.formation)
+        result = run_spot(request.pot, request.position, request.role, request.line, request.formations)
     except SpotInputError as exc:
         return JSONResponse(status_code=400, content={"error": str(exc)})
     return {
