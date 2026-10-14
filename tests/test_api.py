@@ -143,3 +143,9 @@ def test_spot_real_parser_error_is_400():
     response = client.post("/spot", json=SPOT_BODY | {"line": "- B-"})
     assert response.status_code == 400
     assert "Missing '?'" in response.json()["error"]
+
+
+def test_spot_rejects_the_old_formation_field(monkeypatch):
+    install_fake_run_spot(monkeypatch, FAKE_RESULT)
+    response = client.post("/spot", json=SPOT_BODY | {"formation": "BB vs BTN"})
+    assert response.status_code == 422

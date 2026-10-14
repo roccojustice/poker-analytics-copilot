@@ -1,5 +1,6 @@
 """Diff a Spotlight result against a PT4 hand-list export by hand_no, both directions."""
 import argparse
+import re
 
 import pandas as pd
 
@@ -9,7 +10,7 @@ from spotlight import run_spot
 
 def normalize_hand_no(value):
     text = str(value).strip()
-    if "E" in text.upper():
+    if re.fullmatch(r"\d+(\.\d+)?[eE][+-]?\d+", text):
         raise ValueError(f"hand_no {text!r} is in scientific notation; re-export with full numbers")
     return text[:-2] if text.endswith(".0") else text
 

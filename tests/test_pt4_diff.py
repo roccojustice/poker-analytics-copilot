@@ -7,6 +7,7 @@ from pt4_diff import diff_hand_sets, normalize_hand_no
     (" 257244123456 ", "257244123456"),
     ("257244123456.0", "257244123456"),
     (257244123456, "257244123456"),
+    ("HE257244123456", "HE257244123456"),
 ])
 def test_normalize_hand_no(raw, expected):
     assert normalize_hand_no(raw) == expected

@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="es">
+<html lang="en">
 <head>
   <meta charset="UTF-8">
   <title>Spotlight</title>
@@ -176,7 +176,7 @@
       const requestId = ++latestRequest;
       const body = { ...state, line: lineEl.value.trim(), formations: selectedFormations() };
       lineErrorEl.textContent = "";
-      outputEl.innerHTML = "Consultando...";
+      outputEl.innerHTML = "Loading...";
 
       try {
         const response = await fetch("/spot", {
