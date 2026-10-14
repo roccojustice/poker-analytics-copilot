@@ -1,6 +1,7 @@
 # Spotlight — Design
 
-*Session 58, 2026-10-11. Brainstormed and approved section by section with the user.*
+*Session 58, 2026-10-11. Brainstormed and approved section by section with the user.
+Frontend, API contract and errors revised in Session 59 (2026-10-13) for M5.*
 
 ## Problem
 
@@ -95,7 +96,7 @@ action string on the decision street, so the distribution is a single `GROUP BY`
 | R9 | 2bp ip pfr — X-B-B | `2bp ip pfr - X-B-?` | B / X |
 | R10 | 3bp ip pfc — C-B-B | `3bp ip pfc vs B-XC-X?` | B / X |
 
-These 20 strings are also the Line combobox's preset list.
+These 20 strings are also the Line input's suggestions.
 
 ## Formations
 
@@ -147,9 +148,19 @@ db.py            new query: Hero row + villain row (the other `flg_f_saw` player
 Request: `{"pot": "2bp"|"3bp", "position": "ip"|"oop", "role": "pfr"|"pfc", "line": str,
 "formation": str|null}`
 
+- `pot`, `position` and `role` are case-insensitive.
+- `formation` is case-insensitive; `null`, `""` and `"Any"` all mean no seat condition.
+
 Response 200:
-`{"interpreted_filter": str, "distribution": [{"action", "hands", "pct"}], "hands": [...]}`
-Each hand row includes `measured_action`.
+`{"interpreted_filter": str, "distribution": [{"action", "label", "name", "hands", "pct"}],
+"hands": [...]}`
+
+- `label` is Hero's prefix on the decision street plus the measured action, e.g. `XF` / `XC` /
+  `XR` for `2bp oop pfc vs B?` (Hero's implied check + the response to the bet). With no prefix
+  it equals `action` (`B` / `X`).
+- The interpreted filter's "measuring …" part uses the labels too.
+- Each hand row includes `measured_action`, holding the same label as the distribution row it
+  counts toward, so the client-side row filter matches by string equality.
 
 Response 400: `{"error": "<parser message>"}`.
 
@@ -159,21 +170,33 @@ The existing `static/index.html` is replaced. It stays a single file with vanill
 no framework.
 
 - **Bar:** `[2BP|3BP]` (`LIMP`/`4BP` shown disabled) · `[OOP|IP]` · `[PFC|PFR]` ·
-  `Line` combobox · `Formation` dropdown (`Any` default) · `Run`.
-- **Line combobox:** the presets filtered by role (`-` lines for PFR, `vs` lines for PFC),
-  plus free typing. `Run` is disabled while it's empty.
+  `Line` input · `Formation` dropdown (`Any` default) · `Run`.
+- **Line input: typing is the primary path.** A plain `<input>` with a native `<datalist>` of
+  suggestions. The suggestions are the v1 presets **for the current pot × position × role**
+  (2–3 per context), so the list never grows as more Lines get studied. Any Line can be typed.
+- **Run:** the button, or `Ctrl+Enter` in the bar. Plain `Enter` does not run, because the
+  browser uses it to pick a datalist suggestion. `Run` is disabled while the Line is empty.
+- **Formation dropdown:** `Any` plus the 15 pairs, OOP seat first.
+- The 20 presets and the 15 formations are hardcoded in `index.html`. A formation list that
+  drifts from `spot_sql.FORMATIONS` fails loud (400), not silently.
 - **Result:**
   1. the interpreted filter in one readable line, e.g.
-     `2BP · IP · PFR · BB vs BTN · Flop: Hero B, villain C · Turn: measuring B / X · 1,204 hands`
-  2. a distribution table (action · hands · %)
-  3. the hands table (existing renderer, plus the measured-action column)
-- Clicking a distribution row filters the hands table to that action; clicking it again
+     `2BP · OOP · PFC · BB vs BTN · Flop: Hero X, villain B, measuring XF / XC / XR · 1,639 hands`
+  2. a distribution table (label · hands · %)
+  3. the hands table (existing card/table renderer, plus the `measured_action` column), with
+     every row and no pagination
+- Clicking a distribution row filters the hands table to that label; clicking it again
   clears the filter. This is client-side only.
-- Parser errors (400) are shown under the bar.
+- Parser errors (400) are shown directly under the Line input; a 500 shows the existing
+  generic message.
+- **Out of M5:** a UI for `/query` (the endpoint stays, with no page), a recent-Lines
+  history, column sorting.
 
 ## Errors and edge cases
 
 - Invalid Line, or a notation/role mismatch → 400 with the parser message, never 500.
+- Unknown formation → 400. The "write the OOP seat first" hint is given only when the pair is a
+  valid formation reversed (`BTN vs BB`), not for every unknown value.
 - 0 hands → 200 with an empty distribution and "0 hands".
 - All-in: an all-in player's later strings are empty, so Lines requiring later actions exclude
   those hands. Facing an all-in raise, `R` simply reads 0%.
