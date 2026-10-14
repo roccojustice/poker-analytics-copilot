@@ -77,40 +77,66 @@ def test_handle_unexpected_exception(monkeypatch):
     assert response.json() == {"error": "Something went wrong processing your question. Please try again."}
 
 
-SPOT_BODY = {"pot": "2bp", "position": "ip", "role": "pfr", "line": "- B-?", "formation": None}
+SPOT_BODY = {"pot": "2bp", "position": "ip", "role": "pfr", "line": "- B-?", "formations": []}
+
+
+def install_fake_run_spot(monkeypatch, result):
+    calls = []
+
+    def fake_run_spot(pot, position, role, line, formations=()):
+        calls.append((pot, position, role, line, formations))
+        return result
+
+    monkeypatch.setattr("api.run_spot", fake_run_spot)
+    return calls
+
+
+FAKE_RESULT = {
+    "interpreted_filter": "2BP · IP · PFR · Any · ...",
+    "distribution": [{"action": "B", "label": "B", "name": "Bet", "hands": 1, "pct": 100.0}],
+    "hands": pd.DataFrame({"id_hand": [1], "measured_action": ["B"]}),
+}
 
 
 def test_spot_returns_result_shape(monkeypatch):
-    fake = {
-        "interpreted_filter": "2BP · IP · PFR · Any · ...",
-        "distribution": [{"action": "B", "name": "Bet", "hands": 1, "pct": 100.0}],
-        "hands": pd.DataFrame({"id_hand": [1], "measured_action": ["B"]}),
-    }
-    calls = []
-
-    def fake_run_spot(pot, position, role, line, formation=None):
-        calls.append((pot, position, role, line, formation))
-        return fake
-
-    monkeypatch.setattr("api.run_spot", fake_run_spot)
+    calls = install_fake_run_spot(monkeypatch, FAKE_RESULT)
     response = client.post("/spot", json=SPOT_BODY)
     assert response.status_code == 200
     assert response.json() == {
         "interpreted_filter": "2BP · IP · PFR · Any · ...",
-        "distribution": [{"action": "B", "name": "Bet", "hands": 1, "pct": 100.0}],
+        "distribution": [{"action": "B", "label": "B", "name": "Bet", "hands": 1, "pct": 100.0}],
         "hands": [{"id_hand": 1, "measured_action": "B"}],
     }
-    assert calls == [("2bp", "ip", "pfr", "- B-?", None)]
+    assert calls == [("2bp", "ip", "pfr", "- B-?", [])]
+
+
+def test_spot_passes_formations_through(monkeypatch):
+    calls = install_fake_run_spot(monkeypatch, FAKE_RESULT)
+    client.post("/spot", json=SPOT_BODY | {"formations": ["BB vs BTN", "BB vs CO"]})
+    assert calls[0][4] == ["BB vs BTN", "BB vs CO"]
+
+
+def test_spot_formations_default_to_empty(monkeypatch):
+    calls = install_fake_run_spot(monkeypatch, FAKE_RESULT)
+    body = {k: v for k, v in SPOT_BODY.items() if k != "formations"}
+    client.post("/spot", json=body)
+    assert calls[0][4] == []
 
 
 def test_spot_input_error_is_400_with_message(monkeypatch):
     def fake_run_spot(*args, **kwargs):
-        raise SpotInputError("Unknown formation: BTN vs BB (write the OOP seat first)")
+        raise SpotInputError("Unknown formation: BTN vs BB")
 
     monkeypatch.setattr("api.run_spot", fake_run_spot)
-    response = client.post("/spot", json=SPOT_BODY | {"formation": "BTN vs BB"})
+    response = client.post("/spot", json=SPOT_BODY | {"formations": ["BTN vs BB"]})
     assert response.status_code == 400
-    assert response.json() == {"error": "Unknown formation: BTN vs BB (write the OOP seat first)"}
+    assert response.json() == {"error": "Unknown formation: BTN vs BB"}
+
+
+def test_spot_line_role_mismatch_is_400():
+    response = client.post("/spot", json=SPOT_BODY | {"line": "vs B?"})
+    assert response.status_code == 400
+    assert response.json() == {"error": "With PFR the Line starts with '-' (your letters)"}
 
 
 def test_spot_real_parser_error_is_400():

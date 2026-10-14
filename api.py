@@ -57,13 +57,13 @@ class SpotRequest(BaseModel):
     position: str
     role: str
     line: str
-    formation: str | None = None
+    formations: list[str] = []
 
 
 @app.post("/spot")
 def spot(request: SpotRequest):
     try:
-        result = run_spot(request.pot, request.position, request.role, request.line, request.formation)
+        result = run_spot(request.pot, request.position, request.role, request.line, request.formations)
     except SpotInputError as exc:
         return JSONResponse(status_code=400, content={"error": str(exc)})
     return {
