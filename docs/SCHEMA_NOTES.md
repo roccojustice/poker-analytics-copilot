@@ -167,3 +167,4 @@ Base: `3bp_ip_pfc_faced_cbet_flop` + `faced_cbet_turn` (`flg_t_cbet_def_opp = tr
 - `chps.amt_<street>_bet_made` / `amt_<street>_bet_facing`: Hero's bet / the bet Hero faced on that street (raises live in separate `*_raise_*` columns).
 - **PT4's `%` columns use two conventions:** `val_<street>_bet_made_pct` = made / pot (0.10 into 0.11 → 90.91), but `val_<street>_bet_facing_pct` = facing / (pot **+ bet**) (0.06 into 0.13 → 31.58, not 46). Spotlight computes both as `bet / amt_pot_<street>` (`get_hand_details` `*_size`). Any sizing filter must decide the convention explicitly.
 - `cash_limit.limit_name` is the stake label, e.g. `$0.02 NL (6 max)`.
+- Villain join check: with Hero `flg_f_saw = true` and `chs.cnt_players_f = 2`, exactly one other row has `flg_f_saw = true` (0 duplicated hands). A probe without Hero's `flg_f_saw` shows two "villains" when Hero folded preflop; `run_spot_query` is not affected.

@@ -268,6 +268,30 @@ implied check is only visible in the filter text. With no prefix the label equal
 A stale client sending the old `formation` key would otherwise get unfiltered hands silently.
 A tool the user relies on must fail loud, not lie.
 
+## 2026-10-15 (Session 60) — Breakdown filters move into v1 (M7); dashboards become M8
+
+M6 run 1 fell back to PT4 for sizing, board/runout, hand strength and BB-result filters, not
+for bugs. Top-level frequencies alone don't replace PT4; the study value is in breaking them
+down. User's call.
+
+## 2026-10-15 (Session 60) — Result-in-BB filters the hand list only; date filters both
+
+The result depends on the action taken (a flop fold rarely loses > 5 BB), so filtering the
+distribution by result biases it toward calls. The date doesn't depend on the action. Rule for
+future filters: if the filter is an *outcome* of the measured action, it filters the list only.
+User's call (option A).
+
+## 2026-10-15 (Session 60) — Bet size = bet / pot at the start of the street, computed by us
+
+PT4's `val_*_bet_facing_pct` divides by pot + bet, while `_made_pct` divides by pot. Using them
+as-is would show a half-pot bet faced as 32%. One convention for both sides, pinned by a `db`
+test (`SCHEMA_NOTES.md`, Session 60).
+
+## 2026-10-15 (Session 60) — JOIN bugs get a `db`-marked test, not a mocked one
+
+A mocked `read_sql` returns whatever the test says, so it passes with or without the bug.
+Mocks stay the default for pandas logic in `db.py`.
+
 ## Earlier decisions (pre-pivot, still in force)
 
 - **Position lives inside the `preflop-context` prefix**, not in `situation`

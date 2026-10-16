@@ -6,51 +6,36 @@
 
 ## Current milestone
 
-**M6 run 1 done; v1 did not pass yet. Next is M7 (breakdown filters).** Session 60 fixed the
-6-max position names in `get_hand_details` (`77d1908`, join on `position` + `cnt_players`), then
-the user ran a real study session on Spotlight. No bugs found. He fell back to PT4 for the
-missing breakdown filters (#5, #6, #7, #10, #11 below), not for the replayer. Scope changed:
-those filters moved into v1 as M7 (`SPEC.md`); dashboards are now M8, packaging M9.
+**M7 (breakdown filters) in progress.** M6 run 1 (this session) fell back to PT4 for missing
+filters, so they moved into v1 as M7 (`SPEC.md`). Shipped this session: 6-max position names
+(`77d1908`), hand table rework (`8a8f3d1`: stake, hand #, bet size as % of pot in the action
+cell, result in BB with win/loss colors, Result-from/to BB list filter), date range filter
+(`637aacf`: From/To, inclusive, narrows hands **and** distribution). All pushed.
 
-## M6 run 1 findings (user's words, grouped)
+## M6 run 1 findings still open
 
-**A. Hand table (display only, cheap)**
-1. Show the stake of each hand (`cash_limit` is already joined).
-2. Bet sizes as % of pot, not USD/BB (needs the pot at the start of each street; check schema).
-3. Hide `id_hand` and `measured_action`.
-8. More descriptive column names.
-9. Color rows: won vs lost.
-
-**B. Breakdown filters (M7)**
-10. Filter by BB won/lost at the end of the hand ("I always review pots where I lost > 5 BB").
-5. Frequencies by sizing (e.g. XR vs small / medium / large) and sizing in the Line:
-   `2bp oop pfc vs Bs?` (s small, m medium, l large, o overbet).
-6. Filter by board type.
-11. Runout filters: flush closes turn, flush closes river, turn pairs mid card, etc.
-    Computable from `chs.card_1..5` + `poker_cards.py` encoding, no PT4 flag needed.
-7. Filter by hand strength (air, K-high, A-high, low pair…) to see what I fold / check / raise.
-   Open: does PT4 store strength per street, or only `id_final_hand`?
-
-**C. Out of scope for now**
-4. Replay button per row (PT4's replayer can't be opened from a browser; own replayer = big).
+- **#5 Sizing**: frequencies by the size Hero faced (e.g. XR vs small / medium / large /
+  overbet) and sizing in the Line, `2bp oop pfc vs Bs?` (s, m, l, o).
+- **#6 / #11 Board & runout**: board type; flush completes turn / river, turn pairs mid card.
+  Pure card math on `chs.card_1..5` + `poker_cards.py` encoding.
+- **#7 Hand strength** at the decision street (air, K-high, A-high, low pair…). Open: does PT4
+  store strength per street, or only `id_final_hand`?
+- **#4 Replay button**: deferred (`SPEC.md`).
 
 ## Next
 
-1. **Group A + #10** in one session: quick display wins plus the easiest filter.
-2. **M7 proper:** pick the first breakdown filter. Sizing (#5) fits the Line grammar most
-   naturally; runout (#11) is pure card math. Design each before coding (brainstorming).
+**Design #5 (sizing) with brainstorming.** First question is the user's: bucket thresholds for
+small / medium / large / overbet. Base is ready: `amt_<street>_bet_facing/made`,
+`amt_pot_<street>`, and the % convention in `SCHEMA_NOTES.md` (Session 60). Sizing narrows
+both hands and distribution (like dates, unlike the BB result filter).
 
 ## Open questions / deferred minors
 
-- Sizing buckets: thresholds for small / medium / large / overbet are the user's call.
-- `tests/test_db.py` now has a `db`-marked test (position names): a mock can't catch a JOIN bug.
-  Note in `DECISIONS.md` at wrap-up.
 - Previous result stays visible after a toggle change until Run (filter line says what's shown).
 - "1 hands" singular; a street with >8 actions says "impossible" not "unsupported".
 - `pt4_diff`: whitespace-only CSV cell → spurious "missing"; wrong `--column` is a bare KeyError.
 
 ## Uncommitted work in the tree
 
-`docs/SPEC.md` (scope change, ladder) and `docs/STATE.md` (this file). `77d1908` not pushed.
-Run the app: `venv\Scripts\python -m uvicorn api:app --port 8000`. PT4 exports live in
-`exports/` (gitignored).
+None after this wrap-up commit. Run the app: `venv\Scripts\python -m uvicorn api:app --port 8000`
+(no `--reload`: restart after backend changes; Ctrl+F5 after `index.html` changes).
