@@ -90,6 +90,18 @@ Ordered by the user's review priority. They are also the Line input's suggestion
 | 9 | 2bp ip pfr | `- X-B-?` | B / X |
 | 10 | 3bp ip pfc | `vs B-XC-X?` | B / X |
 
+### Breakdown filters (added Session 60, from the first M6 run)
+
+The first real study session fell back to PT4 for these. Each narrows any Line's result
+and its distribution:
+
+- **Bet sizing** of the bet Hero faces or makes (small / medium / large / overbet), in the
+  Line (`vs Bs?`) and as a per-sizing distribution
+- **Board / runout**: flop texture, flush completes on turn/river, turn pairs a flop card,
+  etc. Computed from the card ids (`poker_cards.py` encoding), not from PT4 flags
+- **Hand strength** at the decision street (air, K-high, A-high, low pair, …)
+- **Result in BB** (e.g. lost more than 5 BB)
+
 ## Milestone ladder
 
 | # | Milestone | Status / closes when |
@@ -99,9 +111,10 @@ Ordered by the user's review priority. They are also the Line input's suggestion
 | M3 | Minimal usable UI (NL text query) | ✅ Session 52. Failed in real use (Session 58); superseded by M5 |
 | M4 | **Spotlight core:** `line_parser.py` + `spot_sql.py` + `POST /spot` | ✅ Session 58. Oracle 9/9 exact (hand sets + distributions), no exceptions |
 | M5 | **Spotlight UI:** bar, Line input, Formations, result view | ✅ Session 59. 4 PT4 export diffs 0/0; the three failed questions answered in the UI |
-| M6 | v1 study session | The "v1 done" test above |
-| M7 | Dashboards: one per line, 20 total. Each design defined by the user when reached | Each line has its dashboard |
-| M8 | Packaging: one command to launch, no dev shell | Runs as an app |
+| M6 | v1 study session | Run 1 (Session 60): fell back to PT4 for missing breakdown filters. Re-run after M7 |
+| M7 | **Breakdown filters**: sizing, board/runout, hand strength, BB result | Each validated against PT4 by exact set membership; M6 re-run passes |
+| M8 | Dashboards: one per line, 20 total. Each design defined by the user when reached | Each line has its dashboard |
+| M9 | Packaging: one command to launch, no dev shell | Runs as an app |
 
 ## Conserved from earlier work
 
@@ -119,12 +132,13 @@ Ordered by the user's review priority. They are also the Line input's suggestion
 
 ## Deferred / out of scope for v1
 
-- NL refinement over a Spotlight result (board texture, bet sizing, "only the folds" beyond
-  the client-side click filter)
+- NL refinement over a Spotlight result ("only the folds" beyond the client-side click
+  filter); board texture and bet sizing moved into v1 as breakdown filters (Session 60)
 - Donk notation (`D`); PT4 has `flg_<street>_donk*` flags to validate it against
 - Multiway, `LIMP` / `4BP`, and a precomputed replayed-sequence table (needed for multiway;
   feasibility shown in the Session 57 spike, `spikes/`)
 - Date-range filtering
-- Stake/`cash_limit` filtering, board-texture analysis (schema gaps, Session 17)
+- Stake/`cash_limit` filtering (schema gap, Session 17; showing the stake per hand is in scope)
+- In-app hand replayer (asked for in M6 run 1; a project of its own)
 - PEP 8 `E501` pass (needs a `[tool.ruff]` line-length decision first)
 - Auth, cloud, multi-user (single-user tool by design)
