@@ -130,12 +130,12 @@ def get_hand_details(id_hands, id_player=10):
             hr_win.group_details AS winning_hand_details
         FROM cash_hand_player_statistics chps
         JOIN
-            (SELECT DISTINCT ON (position) position, description
-            FROM lookup_positions) lp ON chps.position = lp.position
-        JOIN
             cash_limit cl ON chps.id_limit = cl.id_limit
         JOIN
             cash_hand_summary chs ON chps.id_hand = chs.id_hand
+        JOIN
+            lookup_positions lp ON chps.position = lp.position
+                               AND chs.cnt_players = lp.cnt_players
         LEFT JOIN
             lookup_hand_ranks hr_final ON chps.id_final_hand = hr_final.id_hand_rank
         LEFT JOIN

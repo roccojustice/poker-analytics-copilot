@@ -80,6 +80,22 @@ def test_get_hand_details_orders_newest_first(monkeypatch):
         "hand list must show the most recently played hands first"
     )
 
+@pytest.mark.db
+@pytest.mark.parametrize("hand_no, expected", [
+    ("261654386261", "UTG"),    # code 3, 6-handed
+    ("261654433397", "MP"),     # code 2, 6-handed
+    ("257721989956", "MP+1"),   # code 3, 9-handed
+])
+def test_get_hand_details_position_name_depends_on_table_size(hand_no, expected):
+    from db import engine
+    id_hand = pd.read_sql(
+        "SELECT id_hand FROM cash_hand_summary WHERE hand_no = %(h)s", engine, params={"h": hand_no}
+    )["id_hand"].item()
+
+    df = get_hand_details([id_hand])
+
+    assert df["position"].tolist() == [expected]
+
 def test_run_distribution_query_builds_count_filter_per_action(monkeypatch):
     monkeypatch.setattr("db.pd.read_sql", fake_read_sql)
     conditions = [("check", "chps.flg_t_check = true"), ("bet", "chps.flg_t_check = false")]
