@@ -1,3 +1,4 @@
+from datetime import date
 import traceback
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
@@ -60,12 +61,17 @@ class SpotRequest(BaseModel):
     role: str
     line: str
     formations: list[str] = []
+    date_from: date | None = None
+    date_to: date | None = None
 
 
 @app.post("/spot")
 def spot(request: SpotRequest):
     try:
-        result = run_spot(request.pot, request.position, request.role, request.line, request.formations)
+        result = run_spot(
+            request.pot, request.position, request.role, request.line, request.formations,
+            date_from=request.date_from, date_to=request.date_to,
+        )
     except SpotInputError as exc:
         return JSONResponse(status_code=400, content={"error": str(exc)})
     return {

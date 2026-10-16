@@ -20,6 +20,8 @@
     details.formations .panel { position: absolute; z-index: 10; background: #fff; border: 1px solid #bbb; padding: 0.4rem 0.6rem; max-height: 24rem; overflow-y: auto; }
     details.formations label { display: block; padding: 0.15rem 0; white-space: nowrap; cursor: pointer; }
     #run { padding: 0.4rem 1rem; font-size: 1rem; }
+    .dates { display: flex; gap: 0.5rem; align-items: center; }
+    .dates input { padding: 0.3rem; font-size: 0.95rem; }
     #output { margin-top: 1.25rem; }
     .filter-line { font-weight: bold; margin-bottom: 0.75rem; }
     table { border-collapse: collapse; width: 100%; margin-bottom: 1rem; font-size: 0.78rem; }
@@ -71,6 +73,10 @@
       <summary id="formations-summary">Any</summary>
       <div class="panel" id="formations-panel"></div>
     </details>
+    <div class="dates">
+      <label>From <input type="date" id="date-from"></label>
+      <label>To <input type="date" id="date-to"></label>
+    </div>
     <button id="run" disabled>Run</button>
   </div>
   <div id="output"></div>
@@ -182,7 +188,11 @@
 
     async function run() {
       const requestId = ++latestRequest;
-      const body = { ...state, line: lineEl.value.trim(), formations: selectedFormations() };
+      const body = {
+        ...state, line: lineEl.value.trim(), formations: selectedFormations(),
+        date_from: document.getElementById("date-from").value || null,
+        date_to: document.getElementById("date-to").value || null,
+      };
       lineErrorEl.textContent = "";
       outputEl.innerHTML = "Loading...";
 

@@ -7,8 +7,14 @@ from spot_sql import build_spot_query
 ACTION_NAMES = {"B": "Bet", "X": "Check", "F": "Fold", "C": "Call", "R": "Raise"}
 
 
-def describe(pot, position, role, formations, spec, n_hands):
+def describe(pot, position, role, formations, spec, n_hands, date_from=None, date_to=None):
     parts = [pot.upper(), position.upper(), role.upper(), ", ".join(formations) or "Any"]
+    if date_from and date_to:
+        parts.append(f"{date_from} → {date_to}")
+    elif date_from:
+        parts.append(f"from {date_from}")
+    elif date_to:
+        parts.append(f"until {date_to}")
     for s in spec.completed:
         parts.append(f"{STREET_NAMES[s.street].capitalize()}: Hero {s.hero}, villain {s.villain}")
     d = spec.decision
@@ -36,11 +42,11 @@ def _distribution(labels, measured, prefix):
     return rows
 
 
-def run_spot(pot, position, role, line, formations=()):
+def run_spot(pot, position, role, line, formations=(), date_from=None, date_to=None):
     pot, position, role = pot.lower(), position.lower(), role.lower()
     formations = list(dict.fromkeys(formations))
     spec = parse_line(line, role, position)
-    where, params, measured_sql = build_spot_query(pot, position, role, spec, formations)
+    where, params, measured_sql = build_spot_query(pot, position, role, spec, formations, date_from, date_to)
     matches = run_spot_query(where, params, measured_sql)
     prefix = spec.decision.hero
     matches = matches.assign(measured_action=prefix + matches["measured_action"])  # letter -> label
@@ -52,7 +58,7 @@ def run_spot(pot, position, role, line, formations=()):
         hands = hands.astype(object).where(hands.notna(), None)
 
     return {
-        "interpreted_filter": describe(pot, position, role, formations, spec, len(matches)),
+        "interpreted_filter": describe(pot, position, role, formations, spec, len(matches), date_from, date_to),
         "distribution": _distribution(matches["measured_action"], spec.measured, prefix),
         "hands": hands,
     }

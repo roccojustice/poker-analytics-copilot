@@ -100,7 +100,8 @@ and its distribution:
 - **Board / runout**: flop texture, flush completes on turn/river, turn pairs a flop card,
   etc. Computed from the card ids (`poker_cards.py` encoding), not from PT4 flags
 - **Hand strength** at the decision street (air, K-high, A-high, low pair, …)
-- **Result in BB** (e.g. lost more than 5 BB)
+- **Result in BB** (e.g. lost more than 5 BB); narrows the hand list only, not the distribution
+- **Date range** (From / To, inclusive); narrows both. Shipped Session 60
 
 ## Milestone ladder
 
@@ -137,7 +138,6 @@ and its distribution:
 - Donk notation (`D`); PT4 has `flg_<street>_donk*` flags to validate it against
 - Multiway, `LIMP` / `4BP`, and a precomputed replayed-sequence table (needed for multiway;
   feasibility shown in the Session 57 spike, `spikes/`)
-- Date-range filtering
 - Stake/`cash_limit` filtering (schema gap, Session 17; showing the stake per hand is in scope)
 - In-app hand replayer (asked for in M6 run 1; a project of its own)
 - PEP 8 `E501` pass (needs a `[tool.ruff]` line-length decision first)

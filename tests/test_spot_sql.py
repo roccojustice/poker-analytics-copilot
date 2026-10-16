@@ -1,3 +1,4 @@
+from datetime import date
 import pytest
 from line_parser import parse_line, SpotInputError
 from spot_sql import build_spot_query, FORMATIONS, PREFLOP_CONTEXTS
@@ -91,3 +92,31 @@ def test_bad_bar_values_raise(pot, formations, message):
     spec = parse_line("- B-?", "pfr", "ip")
     with pytest.raises(SpotInputError, match=message):
         build_spot_query(pot, "ip", "pfr", spec, formations)
+
+
+def test_no_dates_add_no_date_condition():
+    where, params, _ = build("2bp", "ip", "pfr", "- B-?")
+    assert "date_played" not in where
+    assert not {"date_from", "date_to"} & set(params)
+
+
+def test_date_range_is_bound_and_inclusive_of_the_end_day():
+    spec = parse_line("- B-?", "pfr", "ip")
+    where, params, _ = build_spot_query("2bp", "ip", "pfr", spec, (), date(2026, 9, 1), date(2026, 10, 15))
+    assert "chps.date_played >= %(date_from)s" in where
+    assert "chps.date_played < %(date_to)s" in where
+    assert params["date_from"] == date(2026, 9, 1)
+    assert params["date_to"] == date(2026, 10, 16)  # exclusive bound = the day after
+
+
+def test_open_ended_date_range_binds_one_side():
+    spec = parse_line("- B-?", "pfr", "ip")
+    where, params, _ = build_spot_query("2bp", "ip", "pfr", spec, (), date_from=date(2026, 9, 1))
+    assert "%(date_from)s" in where and "%(date_to)s" not in where
+    assert "date_to" not in params
+
+
+def test_date_from_after_date_to_raises():
+    spec = parse_line("- B-?", "pfr", "ip")
+    with pytest.raises(SpotInputError, match="From date is after To date"):
+        build_spot_query("2bp", "ip", "pfr", spec, (), date(2026, 10, 2), date(2026, 10, 1))

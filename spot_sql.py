@@ -1,3 +1,5 @@
+from datetime import timedelta
+
 from filter_recipes import assemble_where
 from line_parser import SpotInputError
 
@@ -28,7 +30,7 @@ FORMATIONS = [
 ]
 
 
-def build_spot_query(pot, position, role, spec, formations=()):
+def build_spot_query(pot, position, role, spec, formations=(), date_from=None, date_to=None):
     if pot not in ("2bp", "3bp"):
         raise SpotInputError(f"Unknown pot: {pot}")
     items = PREFLOP_CONTEXTS[(pot, role)] + ["heads_up_flop", POSITION_ATOMS[position]]
@@ -63,5 +65,14 @@ def build_spot_query(pot, position, role, spec, formations=()):
             params[f"hero_pos_{i}"] = SEATS[hero_seat]
             params[f"villain_pos_{i}"] = SEATS[villain_seat]
         where += f" AND (chps.position, v.position) IN ({', '.join(pairs)})"
+
+    if date_from and date_to and date_from > date_to:
+        raise SpotInputError("From date is after To date")
+    if date_from:
+        where += " AND chps.date_played >= %(date_from)s"
+        params["date_from"] = date_from
+    if date_to:
+        where += " AND chps.date_played < %(date_to)s"
+        params["date_to"] = date_to + timedelta(days=1)  # inclusive of the whole To day
 
     return where, params, measured_sql

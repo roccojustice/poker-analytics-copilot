@@ -1,3 +1,4 @@
+from datetime import date
 from fastapi.testclient import TestClient
 from api import app
 import pandas as pd
@@ -83,7 +84,7 @@ SPOT_BODY = {"pot": "2bp", "position": "ip", "role": "pfr", "line": "- B-?", "fo
 def install_fake_run_spot(monkeypatch, result):
     calls = []
 
-    def fake_run_spot(pot, position, role, line, formations=()):
+    def fake_run_spot(pot, position, role, line, formations=(), date_from=None, date_to=None):
         calls.append((pot, position, role, line, formations))
         return result
 
@@ -148,4 +149,39 @@ def test_spot_real_parser_error_is_400():
 def test_spot_rejects_the_old_formation_field(monkeypatch):
     install_fake_run_spot(monkeypatch, FAKE_RESULT)
     response = client.post("/spot", json=SPOT_BODY | {"formation": "BB vs BTN"})
+    assert response.status_code == 422
+
+
+def test_spot_passes_dates_through(monkeypatch):
+    seen = {}
+
+    def fake_run_spot(pot, position, role, line, formations=(), date_from=None, date_to=None):
+        seen.update(date_from=date_from, date_to=date_to)
+        return FAKE_RESULT
+
+    monkeypatch.setattr("api.run_spot", fake_run_spot)
+    client.post("/spot", json=SPOT_BODY | {"date_from": "2026-09-01", "date_to": "2026-10-15"})
+    assert seen == {"date_from": date(2026, 9, 1), "date_to": date(2026, 10, 15)}
+
+
+def test_spot_dates_default_to_none(monkeypatch):
+    seen = {}
+
+    def fake_run_spot(pot, position, role, line, formations=(), date_from="unset", date_to="unset"):
+        seen.update(date_from=date_from, date_to=date_to)
+        return FAKE_RESULT
+
+    monkeypatch.setattr("api.run_spot", fake_run_spot)
+    client.post("/spot", json=SPOT_BODY)
+    assert seen == {"date_from": None, "date_to": None}
+
+
+def test_spot_inverted_dates_is_400():
+    response = client.post("/spot", json=SPOT_BODY | {"date_from": "2026-10-02", "date_to": "2026-10-01"})
+    assert response.status_code == 400
+    assert response.json() == {"error": "From date is after To date"}
+
+
+def test_spot_malformed_date_is_422():
+    response = client.post("/spot", json=SPOT_BODY | {"date_from": "2026-13-45"})
     assert response.status_code == 422

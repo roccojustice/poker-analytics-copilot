@@ -1,3 +1,5 @@
+from datetime import date
+import pytest
 import numpy as np
 import pandas as pd
 from line_parser import parse_line
@@ -88,3 +90,34 @@ def test_describe_joins_several_formations():
     spec = parse_line("vs B?", "pfc", "oop")
     text = spotlight.describe("2bp", "oop", "pfc", ["BB vs BTN", "BB vs CO"], spec, 2668)
     assert text.startswith("2BP · OOP · PFC · BB vs BTN, BB vs CO · Flop: ")
+
+
+def test_dates_reach_the_query_params(monkeypatch):
+    seen = {}
+
+    def fake_query(where, params, measured_sql):
+        seen.update(params)
+        return fake_matches([(1, "C")])
+
+    install(monkeypatch, fake_matches([]))
+    monkeypatch.setattr("spotlight.run_spot_query", fake_query)
+    spotlight.run_spot("2bp", "oop", "pfc", "vs B?", [], date(2026, 9, 1), date(2026, 10, 15))
+    assert seen.get("date_from") == date(2026, 9, 1)
+    assert seen.get("date_to") == date(2026, 10, 16)
+
+
+@pytest.mark.parametrize("date_from, date_to, shown", [
+    (date(2026, 9, 1), date(2026, 10, 15), "2026-09-01 → 2026-10-15"),
+    (date(2026, 9, 1), None, "from 2026-09-01"),
+    (None, date(2026, 10, 15), "until 2026-10-15"),
+])
+def test_describe_shows_the_date_range_after_formations(date_from, date_to, shown):
+    spec = parse_line("vs B?", "pfc", "oop")
+    text = spotlight.describe("2bp", "oop", "pfc", [], spec, 5, date_from, date_to)
+    assert text.startswith(f"2BP · OOP · PFC · Any · {shown} · Flop: ")
+
+
+def test_describe_without_dates_has_no_date_part():
+    spec = parse_line("vs B?", "pfc", "oop")
+    text = spotlight.describe("2bp", "oop", "pfc", [], spec, 5)
+    assert text.startswith("2BP · OOP · PFC · Any · Flop: ")

@@ -1,3 +1,5 @@
+from datetime import date
+import pandas as pd
 import pytest
 from analytics import compute_distribution
 from db import run_filter_query, run_spot_query
@@ -5,6 +7,7 @@ from filter_recipes import build_where_clause
 from line_parser import parse_line
 from lines import LINES
 from spot_sql import build_spot_query
+from spotlight import run_spot
 
 pytestmark = pytest.mark.db
 
@@ -56,3 +59,16 @@ def test_formations_pool_as_union_of_single_formations():
     btn, co = hands(["BB vs BTN"]), hands(["BB vs CO"])
     assert btn and co and not (btn & co)
     assert hands(["BB vs BTN", "BB vs CO"]) == btn | co
+
+
+def test_date_range_matches_filtering_the_full_result_by_day():
+    date_from, date_to = date(2026, 7, 1), date(2026, 8, 5)
+    full = run_spot("2bp", "oop", "pfc", "vs B?")["hands"]
+    days = pd.to_datetime(full["date_played"]).dt.date
+    expected = set(full.loc[(days >= date_from) & (days <= date_to), "id_hand"])
+
+    ranged = run_spot("2bp", "oop", "pfc", "vs B?", [], date_from, date_to)
+
+    assert set(ranged["hands"]["id_hand"]) == expected
+    assert sum(row["hands"] for row in ranged["distribution"]) == len(expected)
+    assert (days == date_to).any()  # the To day itself has hands, so inclusivity is tested
