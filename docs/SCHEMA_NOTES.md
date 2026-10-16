@@ -158,6 +158,12 @@ Base: `3bp_ip_pfc_faced_cbet_flop` + `faced_cbet_turn` (`flg_t_cbet_def_opp = tr
 ## Spotlight M5 validation + position labels (Session 59)
 - PT4 hand-list exports diffed by `hand_no` with `pt4_diff.py`, all 0 extra / 0 missing: `2bp ip pfr - B-B-?` 632, `3bp oop pfr - B-B-?` 138, `2bp oop pfc vs B-X-?` 1,006, `2bp oop pfc vs B?` + `BB vs BTN` 1,639.
 - The user's PT4 "BB vs BTN" export also held 31 hands with Hero in **SB** vs BTN (1,670 rows). Spotlight's `BB vs BTN` means Hero in BB only; ticking `BB vs BTN` + `SB vs BTN` matched the full export 1,670/1,670 (validates multi-select OR against PT4). When diffing a formation, check the export's `Position` column first.
-- `lookup_positions.description` depends on `cnt_players` as well as `position`: code `2` is `MP` at 6-handed but `UTG` (3), `UTG+1` (4), `MP+2` (9–10); code `3` is `UTG` at 6-handed, `MP+1` at 9–10. `DISTINCT ON (position)` picks an arbitrary row (live: 2 → `MP+2`, 3 → `MP+1`), so `get_hand_details` shows 9-max names on 6-max hands. Display-only (filters use codes). Fix: join on `position` **and** `chs.cnt_players`.
+- `lookup_positions.description` depends on `cnt_players` as well as `position`: code `2` is `MP` at 6-handed but `UTG` (3), `UTG+1` (4), `MP+2` (9–10); code `3` is `UTG` at 6-handed, `MP+1` at 9–10. `DISTINCT ON (position)` picks an arbitrary row (live: 2 → `MP+2`, 3 → `MP+1`), so `get_hand_details` shows 9-max names on 6-max hands. Display-only (filters use codes). Fixed Session 60: join on `position` **and** `chs.cnt_players` (`(position, cnt_players)` is unique; every Hero hand has a match).
 - `hand_no` formats in the DB: `RC…` (~148k), `HD…` (~74k), plain numeric; ~6.6k start with `00`. Compare as strings; a CSV round-tripped through Excel loses the zeros.
 - PT4 CSV export header for the hand number is `Hand #`.
+
+## Bet sizing, pot per street, stake (Session 60)
+- `chs.amt_pot_f/t/r` = pot at the **start** of that street (checked: `amt_pot_t = amt_pot_f` + both flop bets; an uncalled all-in excess is not added).
+- `chps.amt_<street>_bet_made` / `amt_<street>_bet_facing`: Hero's bet / the bet Hero faced on that street (raises live in separate `*_raise_*` columns).
+- **PT4's `%` columns use two conventions:** `val_<street>_bet_made_pct` = made / pot (0.10 into 0.11 → 90.91), but `val_<street>_bet_facing_pct` = facing / (pot **+ bet**) (0.06 into 0.13 → 31.58, not 46). Spotlight computes both as `bet / amt_pot_<street>` (`get_hand_details` `*_size`). Any sizing filter must decide the convention explicitly.
+- `cash_limit.limit_name` is the stake label, e.g. `$0.02 NL (6 max)`.

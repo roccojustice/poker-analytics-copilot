@@ -109,8 +109,10 @@ def get_hand_details(id_hands, id_player=10):
     query = """
         SELECT
             chps.id_hand,
+            chs.hand_no,
             chps.date_played,
             lp.description AS position,
+            cl.limit_name,
             hr_final.group_name AS final_hand_group,
             hr_final.group_details AS final_hand_details,
             chps.holecard_1,
@@ -122,6 +124,10 @@ def get_hand_details(id_hands, id_player=10):
             chps.amt_bet_f,
             chps.amt_bet_t,
             chps.amt_bet_r,
+            chs.amt_pot_f, chs.amt_pot_t, chs.amt_pot_r,
+            chps.amt_f_bet_made, chps.amt_f_bet_facing,
+            chps.amt_t_bet_made, chps.amt_t_bet_facing,
+            chps.amt_r_bet_made, chps.amt_r_bet_facing,
             chs.amt_pot,
             cl.amt_bb,
             chps.amt_won,
@@ -169,10 +175,21 @@ def get_hand_details(id_hands, id_player=10):
     df["river"] = df["card_5"].apply(decode)
     df["final_hand"] = df["final_hand_group"] + ", " + df["final_hand_details"]
     df["winning_hand"] = df["winning_hand_group"] + ", " + df["winning_hand_details"]
+    df["stake"] = df["limit_name"]
+    df["pot_bb"] = df["amt_pot"] / df["amt_bb"]
+    df["result_bb"] = df["amt_won"] / df["amt_bb"]
+    size_inputs = []
+    for street in ("f", "t", "r"):
+        made, facing, pot = f"amt_{street}_bet_made", f"amt_{street}_bet_facing", f"amt_pot_{street}"
+        bet = df[made].where(df[made] > 0, df[facing])
+        # vs the pot at street start; PT4's val_*_bet_facing_pct divides by pot + bet
+        df[f"{street}_size"] = (100 * bet / df[pot]).where(bet > 0)
+        size_inputs += [made, facing, pot]
 
     df = df.drop(columns=[
         "holecard_1", "holecard_2", "card_1", "card_2", "card_3", "card_4", "card_5",
         "final_hand_group", "final_hand_details", "winning_hand_group", "winning_hand_details",
+        "limit_name", *size_inputs,
     ])
 
     df = df.fillna({

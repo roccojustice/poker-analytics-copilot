@@ -41,37 +41,50 @@ def test_run_filter_query_clause_order_with_since_date_and_limit(monkeypatch):
     assert since_date_pos < order_by_pos < limit_pos, "SQL clauses must appear in order: WHERE conditions, then ORDER BY, then LIMIT"
     assert result["params"] == {"id_player": 42, "since_date": "2023-01-01", "limit": 10}
 
+HAND_ROW = {
+    "id_hand": 1,
+    "hand_no": "261654385495",
+    "date_played": "2025-01-01",
+    "position": "BTN",
+    "limit_name": "$0.02 NL (6 max)",
+    "final_hand_group": "One Pair",
+    "final_hand_details": "Aces",
+    "holecard_1": 1,
+    "holecard_2": 2,
+    "card_1": 0,
+    "card_2": 0,
+    "card_3": 0,
+    "card_4": 0,
+    "card_5": 0,
+    "f_act": "XC",
+    "t_act": "B",
+    "r_act": "X",
+    "amt_bet_f": 0.06,
+    "amt_bet_t": 0.10,
+    "amt_bet_r": 0,
+    "amt_pot_f": 0.13,
+    "amt_pot_t": 0.25,
+    "amt_pot_r": 0.45,
+    "amt_f_bet_made": 0,
+    "amt_f_bet_facing": 0.06,
+    "amt_t_bet_made": 0.10,
+    "amt_t_bet_facing": 0,
+    "amt_r_bet_made": 0,
+    "amt_r_bet_facing": 0,
+    "amt_pot": 0.53,
+    "amt_bb": 0.02,
+    "amt_won": -0.20,
+    "winner": "villain",
+    "winning_hand_group": "One Pair",
+    "winning_hand_details": "Kings",
+}
+
 def test_get_hand_details_orders_newest_first(monkeypatch):
     captured = {}
 
     def fake_read_sql(query, engine, params=None):
         captured["query"] = query
-        return pd.DataFrame([{
-            "id_hand": 1,
-            "date_played": "2025-01-01",
-            "position": "BTN",
-            "final_hand_group": "One Pair",
-            "final_hand_details": "Aces",
-            "holecard_1": 1,
-            "holecard_2": 2,
-            "card_1": 0,
-            "card_2": 0,
-            "card_3": 0,
-            "card_4": 0,
-            "card_5": 0,
-            "f_act": "B",
-            "t_act": "X",
-            "r_act": "F",
-            "amt_bet_f": 0.32,
-            "amt_bet_t": 0,
-            "amt_bet_r": 0,
-            "amt_pot": 1.98,
-            "amt_bb": 0.25,
-            "amt_won": -0.94,
-            "winner": "villain",
-            "winning_hand_group": "One Pair",
-            "winning_hand_details": "Kings",
-        }])
+        return pd.DataFrame([HAND_ROW])
 
     monkeypatch.setattr("db.pd.read_sql", fake_read_sql)
     get_hand_details([1])
@@ -79,6 +92,24 @@ def test_get_hand_details_orders_newest_first(monkeypatch):
     assert "ORDER BY chps.date_played DESC" in captured["query"], (
         "hand list must show the most recently played hands first"
     )
+
+def test_get_hand_details_adds_stake_and_amounts_in_bb(monkeypatch):
+    monkeypatch.setattr("db.pd.read_sql", lambda query, engine, params=None: pd.DataFrame([HAND_ROW]))
+
+    row = get_hand_details([1]).iloc[0]
+
+    assert row.get("stake") == "$0.02 NL (6 max)"
+    assert row.get("pot_bb") == pytest.approx(26.5)
+    assert row.get("result_bb") == pytest.approx(-10.0)
+
+def test_get_hand_details_bet_size_is_pct_of_pot_at_street_start(monkeypatch):
+    monkeypatch.setattr("db.pd.read_sql", lambda query, engine, params=None: pd.DataFrame([HAND_ROW]))
+
+    row = get_hand_details([1]).iloc[0]
+
+    assert row.get("f_size") == pytest.approx(100 * 0.06 / 0.13)  # faced, not PT4's bet/(pot+bet)
+    assert row.get("t_size") == pytest.approx(100 * 0.10 / 0.25)  # made
+    assert pd.isna(row.get("r_size", 0))                           # no bet on the river
 
 @pytest.mark.db
 @pytest.mark.parametrize("hand_no, expected", [
@@ -95,6 +126,19 @@ def test_get_hand_details_position_name_depends_on_table_size(hand_no, expected)
     df = get_hand_details([id_hand])
 
     assert df["position"].tolist() == [expected]
+
+@pytest.mark.db
+def test_get_hand_details_real_hand_sizes_and_stake():
+    from db import engine
+    id_hand = pd.read_sql(
+        "SELECT id_hand FROM cash_hand_summary WHERE hand_no = '261654385495'", engine
+    )["id_hand"].item()
+
+    row = get_hand_details([id_hand]).iloc[0]
+
+    assert row["stake"] == "$0.02 NL (6 max)"
+    assert row["f_size"] == pytest.approx(100 * 0.06 / 0.13)  # XC vs 0.06 into 0.13
+    assert row["t_size"] == pytest.approx(100 * 0.14 / 0.25)  # faced 0.14 into 0.25
 
 def test_run_distribution_query_builds_count_filter_per_action(monkeypatch):
     monkeypatch.setattr("db.pd.read_sql", fake_read_sql)

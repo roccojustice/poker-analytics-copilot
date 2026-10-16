@@ -36,6 +36,13 @@
     .card { display: inline-block; padding: 0 4px; margin: 0 1px; border: 1px solid #ccc; border-radius: 3px; background: #fff; font-weight: bold; }
     .card-red { color: #d32f2f; }
     .card-black { color: #222; }
+    tr.win td { background: #c8e6c9; }
+    tr.loss td { background: #ffcdd2; }
+    tr.win td.num:last-child { color: #1b5e20; font-weight: bold; }
+    tr.loss td.num:last-child { color: #b71c1c; font-weight: bold; }
+    .hand-filter { margin-bottom: 0.5rem; font-size: 0.9rem; }
+    .hand-filter input { width: 5rem; padding: 0.2rem; }
+    td.num { text-align: right; }
   </style>
 </head>
 <body>
@@ -107,6 +114,7 @@
     let latestRequest = 0;
     let currentHands = [];
     let activeLabel = null;
+    const resultRange = { min: "", max: "" };
 
     function escapeHtml(str) {
       const div = document.createElement("div");
@@ -208,9 +216,19 @@
       outputEl.innerHTML =
         `<div class="filter-line">${escapeHtml(data.interpreted_filter)}</div>` +
         renderDistribution(data.distribution) +
-        '<h3>Matching hands</h3><div id="hands"></div>';
+        '<h3>Matching hands</h3>' +
+        '<div class="hand-filter">Result from ' +
+        `<input id="result-min" type="number" step="any" value="${escapeHtml(resultRange.min)}"> to ` +
+        `<input id="result-max" type="number" step="any" value="${escapeHtml(resultRange.max)}"> BB ` +
+        '· <span id="hand-count"></span></div><div id="hands"></div>';
       outputEl.querySelectorAll("table.dist tbody tr").forEach(row => {
         row.addEventListener("click", () => toggleLabel(row.dataset.label));
+      });
+      ["min", "max"].forEach(bound => {
+        document.getElementById(`result-${bound}`).addEventListener("input", event => {
+          resultRange[bound] = event.target.value;
+          renderHands();
+        });
       });
       renderHands();
     }
@@ -224,7 +242,15 @@
     }
 
     function renderHands() {
-      const rows = activeLabel ? currentHands.filter(hand => hand.measured_action === activeLabel) : currentHands;
+      const a = resultRange.min === "" ? -Infinity : Number(resultRange.min);
+      const b = resultRange.max === "" ? Infinity : Number(resultRange.max);
+      const [min, max] = [Math.min(a, b), Math.max(a, b)];  // either field order means the same range
+      const rows = currentHands.filter(hand =>
+        (!activeLabel || hand.measured_action === activeLabel) &&
+        hand.result_bb >= min && hand.result_bb <= max
+      );
+      document.getElementById("hand-count").textContent =
+        `${rows.length.toLocaleString("en-US")} of ${currentHands.length.toLocaleString("en-US")} hands`;
       document.getElementById("hands").innerHTML = renderTable(rows);
     }
 
@@ -238,23 +264,40 @@
       return html;
     }
 
-    const CARD_COLUMNS = new Set(["hole_cards", "flop", "turn", "river"]);
-    const WRAP_COLUMNS = new Set(["final_hand", "winning_hand"]);
     const SUIT_SYMBOLS = { c: "♣", d: "♦", h: "♥", s: "♠" };
     const RED_SUITS = new Set(["d", "h"]);
 
-    const COLUMN_PRIORITY = [
-      "date_played", "position", "measured_action", "final_hand", "hole_cards", "flop",
-      "f_act", "amt_bet_f", "turn", "t_act", "amt_bet_t", "river", "r_act", "amt_bet_r",
-      "winner", "winning_hand",
-      "amt_pot", "amt_bb", "amt_won",
-      "id_hand",
+    const text = key => row => formatCell(row[key]);
+    const cards = key => row => renderCards(row[key]);
+    const action = street => row => renderAction(row[`${street}_act`], row[`${street}_size`]);
+    const bb = key => row => formatBB(row[key]);
+
+    const COLUMNS = [
+      { label: "Date", render: text("date_played") },
+      { label: "Hand #", render: text("hand_no") },
+      { label: "Stake", render: text("stake") },
+      { label: "Pos", render: text("position") },
+      { label: "Cards", render: cards("hole_cards") },
+      { label: "Flop", render: cards("flop") },
+      { label: "Flop action", render: action("f") },
+      { label: "Turn", render: cards("turn") },
+      { label: "Turn action", render: action("t") },
+      { label: "River", render: cards("river") },
+      { label: "River action", render: action("r") },
+      { label: "Hero hand", render: text("final_hand"), cls: "wrap" },
+      { label: "Winner", render: text("winner") },
+      { label: "Winning hand", render: text("winning_hand"), cls: "wrap" },
+      { label: "Pot (BB)", render: bb("pot_bb"), cls: "num" },
+      { label: "Result (BB)", render: bb("result_bb"), cls: "num" },
     ];
 
-    function orderColumns(columns) {
-      const known = COLUMN_PRIORITY.filter(col => columns.includes(col));
-      const unknown = columns.filter(col => !COLUMN_PRIORITY.includes(col));
-      return [...known, ...unknown];
+    function renderAction(act, size) {
+      if (!act) return "—";
+      return escapeHtml(act) + (size === null || size === undefined ? "" : ` ${Math.round(size)}%`);
+    }
+
+    function formatBB(value) {
+      return value === null || value === undefined ? "—" : value.toFixed(1);
     }
 
     function renderCards(cardStr) {
@@ -275,16 +318,15 @@
 
     function renderTable(rows) {
       if (!rows || rows.length === 0) return "<p>No matching hands.</p>";
-      const columns = orderColumns(Object.keys(rows[0]));
       let html = '<div class="table-scroll"><table><thead><tr>';
-      columns.forEach(col => html += `<th>${escapeHtml(col)}</th>`);
+      COLUMNS.forEach(col => html += `<th>${escapeHtml(col.label)}</th>`);
       html += "</tr></thead><tbody>";
       rows.forEach(row => {
-        html += "<tr>";
-        columns.forEach(col => {
-          const cell = CARD_COLUMNS.has(col) ? renderCards(row[col]) : formatCell(row[col]);
-          const cellClass = WRAP_COLUMNS.has(col) ? ' class="wrap"' : "";
-          html += `<td${cellClass}>${cell}</td>`;
+        const outcome = row.result_bb > 0 ? "win" : row.result_bb < 0 ? "loss" : "";
+        html += outcome ? `<tr class="${outcome}">` : "<tr>";
+        COLUMNS.forEach(col => {
+          const cellClass = col.cls ? ` class="${col.cls}"` : "";
+          html += `<td${cellClass}>${col.render(row)}</td>`;
         });
         html += "</tr>";
       });
