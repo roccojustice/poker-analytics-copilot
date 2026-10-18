@@ -2,6 +2,7 @@ from datetime import timedelta
 
 from filter_recipes import assemble_where
 from line_parser import SpotInputError
+from sizing import SIZE_BUCKETS, street_bet_sql
 
 # Preflop part of the validated recipes (SCHEMA_NOTES.md); position is added separately.
 PREFLOP_CONTEXTS = {
@@ -30,6 +31,29 @@ FORMATIONS = [
 ]
 
 
+def _size_conditions(street, size, params):
+    _, lo, hi = SIZE_BUCKETS[size]
+    bet, pot = street_bet_sql(street), f"chs.amt_pot_{street}"
+    sql = f" AND {bet} >= %(size_{street}_lo)s * {pot}"
+    params[f"size_{street}_lo"] = lo
+    if hi is not None:
+        sql += f" AND {bet} < %(size_{street}_hi)s * {pot}"
+        params[f"size_{street}_hi"] = hi
+    return sql
+
+
+def _sized_bet_label(street, params):
+    bet, pot = street_bet_sql(street), f"chs.amt_pot_{street}"
+    whens = []
+    for key, (_, _, hi) in SIZE_BUCKETS.items():
+        if hi is None:
+            open_label = f"B{key.lower()}"
+            continue
+        whens.append(f"WHEN {bet} < %(bucket_{key})s * {pot} THEN 'B{key.lower()}'")
+        params[f"bucket_{key}"] = hi
+    return f"CASE {' '.join(whens)} ELSE '{open_label}' END"
+
+
 def build_spot_query(pot, position, role, spec, formations=(), date_from=None, date_to=None):
     if pot not in ("2bp", "3bp"):
         raise SpotInputError(f"Unknown pot: {pot}")
@@ -41,16 +65,24 @@ def build_spot_query(pot, position, role, spec, formations=(), date_from=None, d
         where += f" AND v_{s.street}.action = %(v_{s.street})s"
         params[f"h_{s.street}"] = s.hero
         params[f"v_{s.street}"] = s.villain
+        if s.size:
+            where += _size_conditions(s.street, s.size, params)
 
     d = spec.decision
-    measured_sql = f"substr(h_{d.street}.action, %(measure_pos)s, 1)"
+    letter_sql = f"substr(h_{d.street}.action, %(measure_pos)s, 1)"
     where += f" AND h_{d.street}.action LIKE %(h_{d.street}_prefix)s"
     where += f" AND v_{d.street}.action LIKE %(v_{d.street}_prefix)s"
-    where += f" AND {measured_sql} = ANY(%(measured)s)"
+    where += f" AND {letter_sql} = ANY(%(measured)s)"
     params[f"h_{d.street}_prefix"] = d.hero + "%"
     params[f"v_{d.street}_prefix"] = d.villain + "%"
     params["measure_pos"] = len(d.hero) + 1
     params["measured"] = list(spec.measured)
+    if d.size:
+        where += _size_conditions(d.street, d.size, params)
+
+    measured_sql = letter_sql
+    if "B" in spec.measured:  # Hero's own bet is labelled by size
+        measured_sql = f"CASE WHEN {letter_sql} = 'B' THEN {_sized_bet_label(d.street, params)} ELSE {letter_sql} END"
 
     selected = list(dict.fromkeys(formations))  # dedupe, keep order
     unknown = [f for f in selected if f not in FORMATIONS]
