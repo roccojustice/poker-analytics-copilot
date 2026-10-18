@@ -1,4 +1,5 @@
 from datetime import date
+from decimal import Decimal
 import pytest
 from line_parser import parse_line, SpotInputError
 from spot_sql import build_spot_query, FORMATIONS, PREFLOP_CONTEXTS
@@ -120,3 +121,49 @@ def test_date_from_after_date_to_raises():
     spec = parse_line("- B-?", "pfr", "ip")
     with pytest.raises(SpotInputError, match="From date is after To date"):
         build_spot_query("2bp", "ip", "pfr", spec, (), date(2026, 10, 2), date(2026, 10, 1))
+
+
+def test_sized_street_binds_decimal_bounds_against_its_pot():
+    where, params, _ = build("2bp", "oop", "pfc", "vs Bm?")
+    bet = "(chps.amt_f_bet_made + chps.amt_f_bet_facing)"
+    assert f"{bet} >= %(size_f_lo)s * chs.amt_pot_f" in where
+    assert f"{bet} < %(size_f_hi)s * chs.amt_pot_f" in where
+    assert params["size_f_lo"] == Decimal("0.45") and type(params["size_f_lo"]) is Decimal
+    assert params["size_f_hi"] == Decimal("0.70") and type(params["size_f_hi"]) is Decimal
+
+
+def test_overbet_has_no_upper_bound():
+    where, params, _ = build("2bp", "oop", "pfc", "vs Bo?")
+    assert "%(size_f_lo)s" in where and "size_f_hi" not in where
+    assert params["size_f_lo"] == Decimal("1.05") and "size_f_hi" not in params
+
+
+def test_each_sized_street_gets_its_own_bounds():
+    where, params, _ = build("2bp", "ip", "pfc", "vs Bs-XCl-X?")
+    assert params["size_f_hi"] == Decimal("0.45")
+    assert (params["size_t_lo"], params["size_t_hi"]) == (Decimal("0.70"), Decimal("1.05"))
+    assert "chs.amt_pot_t" in where and "size_r_lo" not in params
+
+
+def test_no_suffix_adds_no_size_condition():
+    where, params, _ = build("3bp", "ip", "pfc", "vs B-XC-X?")
+    assert "bet_made" not in where
+    assert not [k for k in params if k.startswith("size_")]  # bucket_* belong to the B/X label
+
+
+def test_bet_decision_labels_bets_by_size():
+    where, params, measured_sql = build("2bp", "ip", "pfr", "- B-?")
+    letter = "substr(h_t.action, %(measure_pos)s, 1)"
+    assert f"{letter} = ANY(%(measured)s)" in where  # filter on the letter, not the label
+    assert measured_sql.startswith(f"CASE WHEN {letter} = 'B' THEN CASE ")
+    for key in ("S", "M", "L"):
+        assert f"< %(bucket_{key})s * chs.amt_pot_t THEN 'B{key.lower()}'" in measured_sql
+    assert "ELSE 'Bo' END" in measured_sql and measured_sql.endswith(f"ELSE {letter} END")
+    assert (params["bucket_S"], params["bucket_M"], params["bucket_L"]) == (
+        Decimal("0.45"), Decimal("0.70"), Decimal("1.05"))
+
+
+def test_facing_decision_label_is_unchanged():
+    _, params, measured_sql = build("2bp", "oop", "pfc", "vs B?")
+    assert measured_sql == "substr(h_f.action, %(measure_pos)s, 1)"
+    assert "bucket_S" not in params

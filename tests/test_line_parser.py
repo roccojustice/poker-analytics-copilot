@@ -92,3 +92,44 @@ def test_case_and_whitespace_are_ignored():
 def test_impossible_sequences_raise(line, role, position, message):
     with pytest.raises(SpotInputError, match=message):
         parse_line(line, role, position)
+
+
+def SZ(street, hero, villain, size):
+    return StreetSpec(street, hero, villain, size)
+
+
+@pytest.mark.parametrize("line, role, position, expected", [
+    ("vs Bs?", "pfc", "oop", LineSpec((), SZ("f", "X", "B", "S"), FCR)),
+    ("vs XCs-X?", "pfc", "ip", LineSpec((SZ("f", "B", "XC", "S"),), S("t", "", "X"), BX)),
+    ("- Xs?", "pfr", "oop", LineSpec((), SZ("f", "X", "B", "S"), FCR)),
+    ("- XRs-?", "pfr", "oop", LineSpec((SZ("f", "XR", "BC", "S"),), S("t", "", ""), BX)),
+    ("vs BCl-?", "pfc", "oop", LineSpec((SZ("f", "XR", "BC", "L"),), S("t", "", ""), BX)),
+    ("vs Bm-XCo-X?", "pfc", "ip",
+     LineSpec((SZ("f", "C", "B", "M"), SZ("t", "B", "XC", "O")), S("r", "", "X"), BX)),
+    ("- Bl-?", "pfr", "ip", LineSpec((SZ("f", "B", "XC", "L"),), S("t", "", "X"), BX)),
+])
+def test_size_suffix_sets_the_street_size(line, role, position, expected):
+    assert parse_line(line, role, position) == expected
+
+
+def test_size_suffix_is_case_and_space_insensitive():
+    assert parse_line(" vs b s ? ", "pfc", "oop") == parse_line("vs Bs?", "pfc", "oop")
+
+
+def test_line_without_suffix_has_no_sizes():
+    spec = parse_line("vs B-XC-X?", "pfc", "ip")
+    assert all(s.size is None for s in spec.completed + (spec.decision,))
+
+
+@pytest.mark.parametrize("line, role, position, message", [
+    ("- Xs-?", "pfr", "oop", "flop: no bet to size"),
+    ("vs Xs?", "pfc", "ip", "flop: no bet to size"),
+    ("- s?", "pfr", "oop", "flop: no bet to size"),
+    ("vs B-Xm-?", "pfc", "oop", "turn: no bet to size"),
+    ("vs Bsm?", "pfc", "oop", "flop: the size goes once, at the end of the street's letters"),
+    ("vs XsC-?", "pfc", "oop", "flop: the size goes once, at the end of the street's letters"),
+    ("- s-?", "pfr", "oop", "flop: empty street"),
+])
+def test_bad_size_suffix_raises(line, role, position, message):
+    with pytest.raises(SpotInputError, match=message):
+        parse_line(line, role, position)

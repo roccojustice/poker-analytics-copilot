@@ -45,6 +45,9 @@
     .hand-filter { margin-bottom: 0.5rem; font-size: 0.9rem; }
     .hand-filter input { width: 5rem; padding: 0.2rem; }
     td.num { text-align: right; }
+    table.dist tr.sub td:first-child { padding-left: 1.6rem; }
+    table.dist tr.sub { color: #444; }
+    .hint { color: #666; font-size: 0.8rem; margin-top: 0.15rem; }
   </style>
 </head>
 <body>
@@ -65,9 +68,10 @@
       <button data-value="pfr">PFR</button>
     </div>
     <div class="line-box">
-      <input id="line" list="line-presets" placeholder="Line, e.g. vs B?" autocomplete="off" spellcheck="false">
+      <input id="line" list="line-presets" placeholder="Line, e.g. vs Bs?" autocomplete="off" spellcheck="false">
       <datalist id="line-presets"></datalist>
       <div id="line-error"></div>
+      <div class="hint">Size per street: s &lt;45% · m 45–70% · l 70–105% · o ≥105%</div>
     </div>
     <details class="formations" id="formations">
       <summary id="formations-summary">Any</summary>
@@ -120,6 +124,7 @@
     let latestRequest = 0;
     let currentHands = [];
     let activeLabel = null;
+    let parentOf = {};
     const resultRange = { min: "", max: "" };
 
     function escapeHtml(str) {
@@ -223,6 +228,7 @@
     function showResult(data) {
       currentHands = data.hands;
       activeLabel = null;
+      parentOf = Object.fromEntries(data.distribution.filter(r => r.parent).map(r => [r.label, r.parent]));
       outputEl.innerHTML =
         `<div class="filter-line">${escapeHtml(data.interpreted_filter)}</div>` +
         renderDistribution(data.distribution) +
@@ -256,7 +262,7 @@
       const b = resultRange.max === "" ? Infinity : Number(resultRange.max);
       const [min, max] = [Math.min(a, b), Math.max(a, b)];  // either field order means the same range
       const rows = currentHands.filter(hand =>
-        (!activeLabel || hand.measured_action === activeLabel) &&
+        (!activeLabel || hand.measured_action === activeLabel || parentOf[hand.measured_action] === activeLabel) &&
         hand.result_bb >= min && hand.result_bb <= max
       );
       document.getElementById("hand-count").textContent =
@@ -267,7 +273,8 @@
     function renderDistribution(distribution) {
       let html = '<table class="dist"><thead><tr><th>Action</th><th>Hands</th><th>%</th></tr></thead><tbody>';
       distribution.forEach(row => {
-        html += `<tr data-label="${escapeHtml(row.label)}"><td>${escapeHtml(row.label)}</td>` +
+        html += `<tr data-label="${escapeHtml(row.label)}"${row.parent ? ' class="sub"' : ""}>` +
+          `<td>${escapeHtml(row.label)}</td>` +
           `<td>${row.hands.toLocaleString("en-US")}</td><td>${row.pct.toFixed(1)}%</td></tr>`;
       });
       html += "</tbody></table>";

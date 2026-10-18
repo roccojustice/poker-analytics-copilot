@@ -46,7 +46,7 @@ def test_spotlight_matches_recipe(recipe, pot, position, role, line):
     if not allowed["extra"] and not allowed["missing"]:
         recipe_dist = compute_distribution(where, params, LINES[recipe])
         expected = {NAME_TO_LETTER[name]: v["count"] for name, v in recipe_dist.items() if v["count"]}
-        assert spot["measured_action"].value_counts().to_dict() == expected
+        assert spot["measured_action"].str[0].value_counts().to_dict() == expected
 
 
 def test_formations_pool_as_union_of_single_formations():

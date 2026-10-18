@@ -5,6 +5,7 @@ import re
 import pandas as pd
 
 from db import engine
+from sizing import SIZE_BUCKETS
 from spotlight import run_spot
 
 
@@ -17,6 +18,13 @@ def normalize_hand_no(value):
 
 def diff_hand_sets(spot, export):
     return {"extra": spot - export, "missing": export - spot}
+
+
+def filter_by_label(hands, label):
+    if label is None or hands.empty:
+        return hands
+    labels = {label} | {label + k.lower() for k in SIZE_BUCKETS}  # an overall B row keeps its sizes
+    return hands[hands["measured_action"].isin(labels)]
 
 
 def export_hand_nos(csv_path, column):
@@ -44,10 +52,11 @@ def main():
     parser.add_argument("line")
     parser.add_argument("--formation", action="append", default=[])
     parser.add_argument("--column", default="Hand #")
+    parser.add_argument("--label")
     args = parser.parse_args()
 
     result = run_spot(args.pot, args.position, args.role, args.line, args.formation)
-    hands = result["hands"]
+    hands = filter_by_label(result["hands"], args.label)
     spot = spot_hand_nos([] if hands.empty else [int(i) for i in hands["id_hand"]])
     export = export_hand_nos(args.csv, args.column)
     diff = diff_hand_sets(spot, export)
