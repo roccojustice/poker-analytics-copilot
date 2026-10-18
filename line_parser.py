@@ -1,6 +1,8 @@
 import re
 from dataclasses import dataclass
 
+from sizing import SIZE_BUCKETS
+
 STREETS = ("f", "t", "r")
 STREET_NAMES = {"f": "flop", "t": "turn", "r": "river"}
 LETTERS = set("XBCRF")
@@ -38,15 +40,22 @@ def _split_tokens(line, role, position):
     if len(tokens) > 3:
         raise SpotInputError("A Line has at most 3 streets (flop, turn, river)")
 
+    parsed = []
     for street, letters in zip(STREETS, tokens):
         name = STREET_NAMES[street]
         is_decision = street == STREETS[len(tokens) - 1]
+        size = None
+        if letters and letters[-1] in SIZE_BUCKETS:
+            letters, size = letters[:-1], letters[-1]
+        if any(ch in SIZE_BUCKETS for ch in letters):
+            raise SpotInputError(f"{name}: the size goes once, at the end of the street's letters")
         if not letters and not is_decision:
             raise SpotInputError(f"{name}: empty street")
         unknown = sorted(set(letters) - LETTERS)
         if unknown:
             raise SpotInputError(f"{name}: unknown letter '{unknown[0]}' (use X B C R F)")
-    return tokens
+        parsed.append((letters, size))
+    return parsed
 
 
 @dataclass(frozen=True)
@@ -54,6 +63,7 @@ class StreetSpec:
     street: str
     hero: str
     villain: str
+    size: str | None = None
 
 
 @dataclass(frozen=True)
@@ -122,18 +132,20 @@ def parse_line(line, role, position):
     pfr_seat = hero_seat if role == "pfr" else 1 - hero_seat
 
     decision_street = STREETS[len(tokens) - 1]
-    if role == "pfc" and hero_seat == 1 and tokens[-1] == "":
+    if role == "pfc" and hero_seat == 1 and tokens[-1][0] == "":
         raise SpotInputError(
             f"Hero is IP: the villain acts first on the {STREET_NAMES[decision_street]}; "
             "write his action before '?'"
         )
 
     completed = []
-    for street, letters in zip(STREETS, tokens):
+    for street, (letters, size) in zip(STREETS, tokens):
         is_decision = street == decision_street
         seq = _resolve(street, letters, is_decision, hero_seat, pfr_seat, role)
+        if size and "B" not in seq:
+            raise SpotInputError(f"{STREET_NAMES[street]}: no bet to size")
         strings = _seat_strings(seq)
-        spec = StreetSpec(street, strings[hero_seat], strings[1 - hero_seat])
+        spec = StreetSpec(street, strings[hero_seat], strings[1 - hero_seat], size)
         if is_decision:
             measured = ("F", "C", "R") if _is_facing(seq) else ("B", "X")
             return LineSpec(tuple(completed), spec, measured)
