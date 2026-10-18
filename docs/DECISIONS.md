@@ -292,6 +292,13 @@ test (`SCHEMA_NOTES.md`, Session 60).
 A mocked `read_sql` returns whatever the test says, so it passes with or without the bug.
 Mocks stay the default for pandas logic in `db.py`.
 
+## 2026-10-17 (Session 61) — Size suffix sizes the street's bet, from Hero's row
+
+The suffix (`s`/`m`/`l`/`o`, cuts 45 / 70 / 105%) qualifies the street's only bet, whoever made it
+and whatever letter it follows (`XRs` = check-raise vs a small bet). Raises are never sized. The
+amount is Hero's row (`bet_made + bet_facing`), capped at Hero's stack, so a hand's bucket matches
+the % in the hand table. Facing-bet 2D split deferred, high priority. User's call.
+
 ## Earlier decisions (pre-pivot, still in force)
 
 - **Position lives inside the `preflop-context` prefix**, not in `situation`
