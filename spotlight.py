@@ -8,9 +8,9 @@ from spot_sql import build_spot_query
 ACTION_NAMES = {"B": "Bet", "X": "Check", "F": "Fold", "C": "Call", "R": "Raise"}
 
 
-def _street_text(spec_street, actors):
-    text = f"{STREET_NAMES[spec_street.street].capitalize()}: " + ", ".join(actors)
-    return text + (f", bet {size_text(spec_street.size)}" if spec_street.size else "")
+def _street_text(spec_street, actors, tail=()):
+    size = [f"bet {size_text(spec_street.size)}"] if spec_street.size else []
+    return f"{STREET_NAMES[spec_street.street].capitalize()}: " + ", ".join(actors + size + list(tail))
 
 
 def describe(pot, position, role, formations, spec, n_hands, date_from=None, date_to=None):
@@ -26,7 +26,7 @@ def describe(pot, position, role, formations, spec, n_hands, date_from=None, dat
     d = spec.decision
     seen = [f"Hero {d.hero}"] * bool(d.hero) + [f"villain {d.villain}"] * bool(d.villain)
     measuring = "measuring " + " / ".join(d.hero + action for action in spec.measured)
-    parts.append(_street_text(d, seen) + ", " + measuring)
+    parts.append(_street_text(d, seen, [measuring]))
     parts.append(f"{n_hands:,} hands")
     return " · ".join(parts)
 

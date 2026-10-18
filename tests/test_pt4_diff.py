@@ -32,3 +32,8 @@ def test_filter_by_label_keeps_only_that_label():
 def test_no_label_keeps_every_hand():
     hands = pd.DataFrame({"id_hand": [1, 2], "measured_action": ["Bs", "X"]})
     assert list(filter_by_label(hands, None)["id_hand"]) == [1, 2]
+
+
+def test_overall_label_keeps_its_sized_children():
+    hands = pd.DataFrame({"id_hand": [1, 2, 3], "measured_action": ["Bs", "Bo", "X"]})
+    assert list(filter_by_label(hands, "B")["id_hand"]) == [1, 2]

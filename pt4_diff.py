@@ -5,6 +5,7 @@ import re
 import pandas as pd
 
 from db import engine
+from sizing import SIZE_BUCKETS
 from spotlight import run_spot
 
 
@@ -22,7 +23,8 @@ def diff_hand_sets(spot, export):
 def filter_by_label(hands, label):
     if label is None or hands.empty:
         return hands
-    return hands[hands["measured_action"] == label]
+    labels = {label} | {label + k.lower() for k in SIZE_BUCKETS}  # an overall B row keeps its sizes
+    return hands[hands["measured_action"].isin(labels)]
 
 
 def export_hand_nos(csv_path, column):

@@ -151,3 +151,12 @@ def test_describe_names_the_size_on_the_decision_street():
 def test_describe_middle_bucket_shows_both_bounds():
     spec = parse_line("vs Bm?", "pfc", "oop")
     assert "bet medium (45–70%)" in spotlight.describe("2bp", "oop", "pfc", [], spec, 5)
+
+
+@pytest.mark.parametrize("line, expected", [
+    ("- ?", "· Flop: measuring B / X · "),
+    ("- XRs-?", "· Turn: measuring B / X · "),
+])
+def test_describe_decision_without_prior_actions_has_no_dangling_comma(line, expected):
+    spec = parse_line(line, "pfr", "oop")
+    assert expected in spotlight.describe("2bp", "oop", "pfr", [], spec, 5)
