@@ -21,4 +21,4 @@ def size_text(size):
         return f"{name} (≥{pct(lo)})"
     if lo == 0:
         return f"{name} (<{pct(hi)})"
-    return f"{name} ({pct(lo)}–{pct(hi)})"
+    return f"{name} ({int(lo * 100)}–{pct(hi)})"

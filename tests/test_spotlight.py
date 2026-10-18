@@ -40,10 +40,23 @@ def test_hands_carry_the_label(monkeypatch):
 
 
 def test_label_equals_action_without_prefix(monkeypatch):
-    install(monkeypatch, fake_matches([(7, "B"), (8, "X")]))
+    install(monkeypatch, fake_matches([(7, "Bs"), (8, "X")]))
     result = spotlight.run_spot("2bp", "ip", "pfr", "- B-?")
-    assert [row["label"] for row in result["distribution"]] == ["B", "X"]
-    assert dict(zip(result["hands"]["id_hand"], result["hands"]["measured_action"])) == {7: "B", 8: "X"}
+    assert [row["label"] for row in result["distribution"]] == ["B", "Bs", "Bm", "Bl", "Bo", "X"]
+    assert dict(zip(result["hands"]["id_hand"], result["hands"]["measured_action"])) == {7: "Bs", 8: "X"}
+
+
+def test_bet_splits_by_size_under_an_overall_row(monkeypatch):
+    install(monkeypatch, fake_matches([(1, "Bs"), (2, "Bs"), (3, "Bl"), (4, "X")]))
+    rows = spotlight.run_spot("2bp", "ip", "pfr", "- B-?")["distribution"]
+    assert rows == [
+        {"action": "B", "label": "B", "name": "Bet", "hands": 3, "pct": 75.0},
+        {"action": "Bs", "label": "Bs", "name": "Bet small", "hands": 2, "pct": 50.0, "parent": "B"},
+        {"action": "Bm", "label": "Bm", "name": "Bet medium", "hands": 0, "pct": 0.0, "parent": "B"},
+        {"action": "Bl", "label": "Bl", "name": "Bet large", "hands": 1, "pct": 25.0, "parent": "B"},
+        {"action": "Bo", "label": "Bo", "name": "Bet overbet", "hands": 0, "pct": 0.0, "parent": "B"},
+        {"action": "X", "label": "X", "name": "Check", "hands": 1, "pct": 25.0},
+    ]
 
 
 def test_bar_values_are_case_insensitive(monkeypatch):
@@ -63,7 +76,7 @@ def test_zero_hands_skips_detail_query_and_returns_empty(monkeypatch):
     result = spotlight.run_spot("2bp", "ip", "pfr", "- B-?")
     assert calls == []
     assert result["hands"].empty
-    assert [row["hands"] for row in result["distribution"]] == [0, 0]
+    assert [row["hands"] for row in result["distribution"]] == [0, 0, 0, 0, 0, 0]
     assert result["interpreted_filter"].endswith("0 hands")
 
 
@@ -121,3 +134,20 @@ def test_describe_without_dates_has_no_date_part():
     spec = parse_line("vs B?", "pfc", "oop")
     text = spotlight.describe("2bp", "oop", "pfc", [], spec, 5)
     assert text.startswith("2BP · OOP · PFC · Any · Flop: ")
+
+
+def test_describe_names_the_size_of_a_completed_street():
+    spec = parse_line("vs XCs-X?", "pfc", "ip")
+    text = spotlight.describe("2bp", "ip", "pfc", [], spec, 5)
+    assert "· Flop: Hero B, villain XC, bet small (<45%) · " in text
+
+
+def test_describe_names_the_size_on_the_decision_street():
+    spec = parse_line("vs Bo?", "pfc", "oop")
+    text = spotlight.describe("2bp", "oop", "pfc", [], spec, 5)
+    assert "Flop: Hero X, villain B, bet overbet (≥105%), measuring XF / XC / XR" in text
+
+
+def test_describe_middle_bucket_shows_both_bounds():
+    spec = parse_line("vs Bm?", "pfc", "oop")
+    assert "bet medium (45–70%)" in spotlight.describe("2bp", "oop", "pfc", [], spec, 5)
