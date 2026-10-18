@@ -2,37 +2,34 @@
 
 *Overwritten every session. Single source of truth for "where are we / what's next."*
 
-**Last updated:** 2026-10-15, Session 60
+**Last updated:** 2026-10-17, Session 61
 
 ## Current milestone
 
-**M7 (breakdown filters) in progress.** M6 run 1 (this session) fell back to PT4 for missing
-filters, so they moved into v1 as M7 (`SPEC.md`). Shipped this session: 6-max position names
-(`77d1908`), hand table rework (`8a8f3d1`: stake, hand #, bet size as % of pot in the action
-cell, result in BB with win/loss colors, Result-from/to BB list filter), date range filter
-(`637aacf`: From/To, inclusive, narrows hands **and** distribution). All pushed.
-
-## M6 run 1 findings still open
-
-- **#5 Sizing**: frequencies by the size Hero faced (e.g. XR vs small / medium / large /
-  overbet) and sizing in the Line, `2bp oop pfc vs Bs?` (s, m, l, o).
-- **#6 / #11 Board & runout**: board type; flush completes turn / river, turn pairs mid card.
-  Pure card math on `chs.card_1..5` + `poker_cards.py` encoding.
-- **#7 Hand strength** at the decision street (air, K-high, A-high, low pair…). Open: does PT4
-  store strength per street, or only `id_final_hand`?
-- **#4 Replay button**: deferred (`SPEC.md`).
+**M7 (breakdown filters) in progress.** Shipped this session: **#5 bet sizing** (merged
+`056b8c5`, pushed). Per-street suffix `s/m/l/o` (cuts 45 / 70 / 105% of pot at street start)
+sizes the street's only bet from Hero's row; B/X decisions split `B` into `Bs/Bm/Bl/Bo` under
+an overall `B`. Validated vs PT4: 0/0, and 0/1 with one justified exact-45% hand (`SCHEMA_NOTES`).
+`pt4_diff --label` diffs one distribution row.
 
 ## Next
 
-**Design #5 (sizing) with brainstorming.** First question is the user's: bucket thresholds for
-small / medium / large / overbet. Base is ready: `amt_<street>_bet_facing/made`,
-`amt_pot_<street>`, and the % convention in `SCHEMA_NOTES.md` (Session 60). Sizing narrows
-both hands and distribution (like dates, unlike the BB result filter).
+**Write the implementation plan for the facing-bet split** (writing-plans skill), from the
+approved spec `docs/superpowers/specs/2026-10-17-facing-split-design.md`: sized labels
+`XFs/XCm/…` on F/C/R decisions without a decision-street suffix, a new `split` key
+(size rows, row-relative %), 2D table on the page. Then execute it (Native worked well).
+
+## Still open in M7
+
+- **#6 / #11 Board & runout**: card math on `chs.card_1..5`; needs the user's board taxonomy.
+- **#7 Hand strength**: spike first — does PT4 store strength per street or only `id_final_hand`?
+- Then **re-run M6** (real study session, no fallback to PT4). #4 Replay button stays deferred.
 
 ## Open questions / deferred minors
 
-- Previous result stays visible after a toggle change until Run (filter line says what's shown).
-- "1 hands" singular; a street with >8 actions says "impossible" not "unsupported".
+- Sizing: a NULL/zero `amt_pot_<s>` would label `Bo` (0 rows today); text reads "bet overbet".
+- Previous result stays visible after a toggle change until Run; "1 hands" singular; a street
+  with >8 actions says "impossible" not "unsupported".
 - `pt4_diff`: whitespace-only CSV cell → spurious "missing"; wrong `--column` is a bare KeyError.
 
 ## Uncommitted work in the tree

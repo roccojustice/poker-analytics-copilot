@@ -299,6 +299,14 @@ and whatever letter it follows (`XRs` = check-raise vs a small bet). Raises are 
 amount is Hero's row (`bet_made + bet_facing`), capped at Hero's stack, so a hand's bucket matches
 the % in the hand table. Facing-bet 2D split deferred, high priority. User's call.
 
+## 2026-10-17 (Session 61) — Facing-bet split: row-relative %, validated by set equality, not a PT4 export
+
+On an F/C/R decision with no decision-street suffix, `/spot` adds a `split` (one row per size
+bucket, response % within each row, so rows compare like the solver). `distribution` stays the
+1D "All" row so the oracle and API keep working. No new PT4 export: the bucket SQL is already
+PT4-validated, and requiring the split's `XCs` hands to equal `vs Bs?`'s `XC` hands is a stricter
+check. User's call (option A).
+
 ## Earlier decisions (pre-pivot, still in force)
 
 - **Position lives inside the `preflop-context` prefix**, not in `situation`
