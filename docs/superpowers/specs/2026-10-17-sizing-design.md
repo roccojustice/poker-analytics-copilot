@@ -32,7 +32,7 @@ Defined once, in a `SIZE_BUCKETS` registry.
 ## The Line
 
 - The suffix goes **at the end of a street's letters**, at most one per street:
-  `vs Bs-XCl-?`, `- XRs?`, `vs Bm?`.
+  `vs Bs-XCl-X?`, `- XRs-?`, `vs Bm?`.
 - It sizes **the only bet of that street**. Heads-up, a street has at most one bet; every
   later aggression is a raise. Raises are never sized.
 - Who made the bet doesn't matter, and the letter it follows doesn't matter:
@@ -40,9 +40,9 @@ Defined once, in a `SIZE_BUCKETS` registry.
 | Line | Reads | The suffix sizes |
 |---|---|---|
 | `vs Bs?` | villain cbets small; Hero decides | villain's cbet |
-| `vs XCs-?` | villain checks, Hero bets small, villain calls | Hero's bet |
-| `- XRs?` (Hero PFR OOP) | Hero checks, villain bets small, Hero raises, … | villain's bet |
-| `vs BCl-?` | villain bets large, Hero raises, villain calls | villain's bet, not Hero's raise |
+| `vs XCs-X?` (Hero PFC IP) | villain checks, Hero bets small, villain calls | Hero's bet |
+| `- XRs-?` (Hero PFR OOP) | Hero checks, villain bets small, Hero raises, villain calls | villain's bet |
+| `vs BCl-?` (Hero PFC OOP) | Hero checks, villain bets large, Hero raises, villain calls | villain's bet, not Hero's raise |
 
 - The decision street takes a suffix too (`vs Bs?`): it sizes the bet Hero faces there.
 - **Errors** (`SpotInputError` → 400): a suffix on a street whose resolved sequence has no bet
@@ -52,9 +52,12 @@ Defined once, in a `SIZE_BUCKETS` registry.
 
 ## SQL
 
-- The street's bet = `chps.amt_<s>_bet_made + v.amt_<s>_bet_made` (Hero's row + the villain
-  row `run_spot_query` already joins; exactly one is non-zero when the street has a bet).
-  **Pin with a `db` test before relying on it.**
+- The street's bet = `chps.amt_<s>_bet_made + chps.amt_<s>_bet_facing`, **Hero's row only**:
+  Hero's bet when Hero bet, the bet Hero faced otherwise. Probed in Session 61 over every
+  heads-up flop/turn/river: the two are never both non-zero, and their sum is > 0 exactly when
+  the street has a bet. `amt_<s>_bet_facing` is capped at Hero's effective stack (a villain
+  shove bigger than Hero's stack is sized by what Hero can call), the same amount the hand
+  table's `<s>_size` shows, so a hand's bucket always agrees with the % in its action cell.
 - Per suffixed street: `bet >= %(lo)s * chs.amt_pot_<s> AND bet < %(hi)s * chs.amt_pot_<s>`
   (no upper condition for `o`). Multiplying instead of dividing keeps exact boundaries (a bet
   of exactly 45% is `m`) free of rounding. `lo` / `hi` are bound params.
@@ -63,7 +66,7 @@ Defined once, in a `SIZE_BUCKETS` registry.
 ## Distribution (Hero's bet split)
 
 When the decision measures `B` / `X`, `measured_action` for a bet carries its bucket
-(`Bs`, `Bm`, `Bl`, `Bo`), computed in SQL from Hero's `amt_<s>_bet_made` on the decision street.
+(`Bs`, `Bm`, `Bl`, `Bo`), computed in SQL from the decision street's bet (Hero's `amt_<s>_bet_made`).
 Rows, in this order:
 
 ```
@@ -84,7 +87,8 @@ X      62%
 
 - Each hand's `measured_action` is the sized label (`Bs`, …). Clicking `B` shows every bet;
   clicking `Bs` shows only small ones (prefix match on the overall row).
-- The interpreted filter names the size: `Flop: Hero X, villain B small (<45%)`.
+- The interpreted filter names the size after the street's actions:
+  `Flop: Hero X, villain B, bet small (<45%)`.
 - The Line field gets a one-line hint listing the suffixes.
 
 ## Testing
