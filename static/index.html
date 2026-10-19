@@ -78,6 +78,10 @@
       <summary id="formations-summary">Any</summary>
       <div class="panel" id="formations-panel"></div>
     </details>
+    <details class="formations" id="flop-types">
+      <summary>Flop: Any</summary>
+      <div class="panel"></div>
+    </details>
     <div class="dates">
       <label>From <input type="date" id="date-from"></label>
       <label>To <input type="date" id="date-to"></label>
@@ -104,7 +108,8 @@
       "UTG vs MP", "UTG vs CO", "UTG vs BTN",
       "MP vs CO", "MP vs BTN",
       "CO vs BTN"
-    ]
+    ],
+    "flop_types": ["BLL", "Low", "2BWL", "Low paired", "High paired", "A high", "Monotone", "3BW"]
   }
   </script>
 
@@ -116,9 +121,6 @@
     const lineEl = document.getElementById("line");
     const lineErrorEl = document.getElementById("line-error");
     const presetsEl = document.getElementById("line-presets");
-    const formationsEl = document.getElementById("formations");
-    const formationsSummaryEl = document.getElementById("formations-summary");
-    const formationsPanelEl = document.getElementById("formations-panel");
     const runEl = document.getElementById("run");
     const outputEl = document.getElementById("output");
 
@@ -155,27 +157,30 @@
       }));
     }
 
-    CONFIG.formations.forEach(formation => {
-      const label = document.createElement("label");
-      const box = document.createElement("input");
-      box.type = "checkbox";
-      box.value = formation;
-      label.append(box, " " + formation);
-      formationsPanelEl.append(label);
-    });
-
-    function selectedFormations() {
-      return [...formationsPanelEl.querySelectorAll("input:checked")].map(box => box.value);
+    // A checkbox dropdown; returns a getter for the checked values (none checked = Any)
+    function multiSelect(id, options, summaryText) {
+      const el = document.getElementById(id);
+      const summaryEl = el.querySelector("summary");
+      const panelEl = el.querySelector(".panel");
+      options.forEach(option => {
+        const label = document.createElement("label");
+        const box = document.createElement("input");
+        box.type = "checkbox";
+        box.value = option;
+        label.append(box, " " + option);
+        panelEl.append(label);
+      });
+      const selected = () => [...panelEl.querySelectorAll("input:checked")].map(box => box.value);
+      panelEl.addEventListener("change", () => summaryEl.textContent = summaryText(selected()));
+      document.addEventListener("click", event => {
+        if (!el.contains(event.target)) el.open = false;
+      });
+      return selected;
     }
 
-    formationsPanelEl.addEventListener("change", () => {
-      const selected = selectedFormations();
-      formationsSummaryEl.textContent = selected.length ? selected.join(", ") : "Any";
-    });
-
-    document.addEventListener("click", event => {
-      if (!formationsEl.contains(event.target)) formationsEl.open = false;
-    });
+    const joinedOrAny = values => values.length ? values.join(", ") : "Any";
+    const selectedFormations = multiSelect("formations", CONFIG.formations, joinedOrAny);
+    const selectedFlopTypes = multiSelect("flop-types", CONFIG.flop_types, values => "Flop: " + joinedOrAny(values));
 
     lineEl.addEventListener("input", () => {
       runEl.disabled = !lineEl.value.trim();
@@ -195,7 +200,7 @@
     async function run() {
       const requestId = ++latestRequest;
       const body = {
-        ...state, line: lineEl.value.trim(), formations: selectedFormations(),
+        ...state, line: lineEl.value.trim(), formations: selectedFormations(), flop_types: selectedFlopTypes(),
         date_from: document.getElementById("date-from").value || null,
         date_to: document.getElementById("date-to").value || null,
       };
@@ -327,6 +332,7 @@
       { label: "Pos", render: text("position") },
       { label: "Cards", render: cards("hole_cards") },
       { label: "Flop", render: cards("flop") },
+      { label: "Flop type", render: text("flop_type") },
       { label: "Flop action", render: action("f") },
       { label: "Turn", render: cards("turn") },
       { label: "Turn action", render: action("t") },
