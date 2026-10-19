@@ -170,3 +170,12 @@ Base: `3bp_ip_pfc_faced_cbet_flop` + `faced_cbet_turn` (`flg_t_cbet_def_opp = tr
 - **Sizing validated vs PT4 (Session 61, `pt4_diff`):** `2bp ip pfr - ?` row `Bs` vs PT4 "bet made % < 45": 8615 = 8615, 0/0. `2bp oop pfc vs Bs?` vs PT4 "bet facing % < 31.03" (45% converted by p/(1+p)): 2136 vs 2137, 0 extra, 1 missing — `HD2921565999` (id_hand 359242), villain bet 0.72 into 1.60 = exactly 45.00%, which is M by our lower-inclusive rule; PT4's stored `val_f_bet_facing_pct` is 31.03, equal to the converted cut, so PT4's filter included it. Justified boundary case, not a bug.
 - `cash_limit.limit_name` is the stake label, e.g. `$0.02 NL (6 max)`.
 - Villain join check: with Hero `flg_f_saw = true` and `chs.cnt_players_f = 2`, exactly one other row has `flg_f_saw = true` (0 duplicated hands). A probe without Hero's `flg_f_saw` shows two "villains" when Hero folded preflop; `run_spot_query` is not affected.
+
+## Flop cards (Session 62)
+
+- Every hand where Hero and one villain both saw the flop (54,920 hands, a superset of every
+  Spotlight hand) has `chs.card_1..3` set and in 1–52: no 0 / NULL. `board_types.flop_type`
+  relies on it and raises otherwise.
+- Sanity check of the flop types on real data (`2bp oop pfc vs B?`, 4,229 hands): every type
+  sits within ~2 points of its theoretical share except `Low` (17.9% vs 22.8%), consistent with
+  card removal from a BB defend range full of low cards.

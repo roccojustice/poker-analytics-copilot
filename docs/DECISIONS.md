@@ -307,6 +307,22 @@ bucket, response % within each row, so rows compare like the solver). `distribut
 PT4-validated, and requiring the split's `XCs` hands to equal `vs Bs?`'s `XC` hands is a stricter
 check. User's call (option A).
 
+## 2026-10-18 (Session 62) — Flop types are a filter, classified in Python, ordered by frequency
+
+The user's 8 flop types (`board_types.py`) are a filter, not a breakdown: a selection narrows
+distribution, split and hands, because frequencies and sizings change with texture. The
+classification runs in Python over the PT4 card ids, not in SQL: one function serves the filter
+and the `Flop type` column (they cannot disagree), and the rules are tested on all 22,100 flops
+without a DB. The page orders the types from most to least common. Validated with the user's
+fixtures, the exact counts, and a `db` test showing the 8 types partition a real result (PT4 has
+no such categories to export). User's call.
+
+## 2026-10-18 (Session 62) — A bad flop card id fails loudly
+
+Every match is classified even with Flop = Any. If a flop card id is missing or outside 1–52, the
+request fails (500) instead of showing an empty type, so a broken import shows up right away.
+Current data has none. User's call.
+
 ## Earlier decisions (pre-pivot, still in force)
 
 - **Position lives inside the `preflop-context` prefix**, not in `situation`
