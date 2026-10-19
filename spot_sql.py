@@ -42,16 +42,21 @@ def _size_conditions(street, size, params):
     return sql
 
 
-def _sized_bet_label(street, params):
+def _size_letter_sql(street, params):
     bet, pot = street_bet_sql(street), f"chs.amt_pot_{street}"
     whens = []
     for key, (_, _, hi) in SIZE_BUCKETS.items():
         if hi is None:
-            open_label = f"B{key.lower()}"
+            open_letter = key.lower()
             continue
-        whens.append(f"WHEN {bet} < %(bucket_{key})s * {pot} THEN 'B{key.lower()}'")
+        whens.append(f"WHEN {bet} < %(bucket_{key})s * {pot} THEN '{key.lower()}'")
         params[f"bucket_{key}"] = hi
-    return f"CASE {' '.join(whens)} ELSE '{open_label}' END"
+    return f"CASE {' '.join(whens)} ELSE '{open_letter}' END"
+
+
+def splits_by_size(spec):
+    """A response to a bet on an unsized decision street is labelled by that bet's size."""
+    return spec.measured == ("F", "C", "R") and spec.decision.size is None
 
 
 def build_spot_query(pot, position, role, spec, formations=(), date_from=None, date_to=None):
@@ -82,7 +87,9 @@ def build_spot_query(pot, position, role, spec, formations=(), date_from=None, d
 
     measured_sql = letter_sql
     if "B" in spec.measured:  # Hero's own bet is labelled by size
-        measured_sql = f"CASE WHEN {letter_sql} = 'B' THEN {_sized_bet_label(d.street, params)} ELSE {letter_sql} END"
+        measured_sql = f"CASE WHEN {letter_sql} = 'B' THEN 'B' || {_size_letter_sql(d.street, params)} ELSE {letter_sql} END"
+    elif splits_by_size(spec):
+        measured_sql = f"{letter_sql} || {_size_letter_sql(d.street, params)}"
 
     selected = list(dict.fromkeys(formations))  # dedupe, keep order
     unknown = [f for f in selected if f not in FORMATIONS]

@@ -2,7 +2,7 @@ from datetime import date
 from decimal import Decimal
 import pytest
 from line_parser import parse_line, SpotInputError
-from spot_sql import build_spot_query, FORMATIONS, PREFLOP_CONTEXTS
+from spot_sql import build_spot_query, splits_by_size, FORMATIONS, PREFLOP_CONTEXTS
 
 
 def build(pot, position, role, line, formations=()):
@@ -24,9 +24,10 @@ def test_decision_street_binds_prefixes_and_measured_set():
     assert "v_f.action LIKE %(v_f_prefix)s" in where
     assert params["h_f_prefix"] == "X%"
     assert params["v_f_prefix"] == "B%"
-    assert measured_sql == "substr(h_f.action, %(measure_pos)s, 1)"
+    letter = "substr(h_f.action, %(measure_pos)s, 1)"
+    assert measured_sql.startswith(letter)
     assert params["measure_pos"] == 2
-    assert f"{measured_sql} = ANY(%(measured)s)" in where
+    assert f"{letter} = ANY(%(measured)s)" in where
     assert params["measured"] == ["F", "C", "R"]
 
 
@@ -155,15 +156,45 @@ def test_bet_decision_labels_bets_by_size():
     where, params, measured_sql = build("2bp", "ip", "pfr", "- B-?")
     letter = "substr(h_t.action, %(measure_pos)s, 1)"
     assert f"{letter} = ANY(%(measured)s)" in where  # filter on the letter, not the label
-    assert measured_sql.startswith(f"CASE WHEN {letter} = 'B' THEN CASE ")
+    assert measured_sql.startswith(f"CASE WHEN {letter} = 'B' THEN 'B' || CASE ")
     for key in ("S", "M", "L"):
-        assert f"< %(bucket_{key})s * chs.amt_pot_t THEN 'B{key.lower()}'" in measured_sql
-    assert "ELSE 'Bo' END" in measured_sql and measured_sql.endswith(f"ELSE {letter} END")
+        assert f"< %(bucket_{key})s * chs.amt_pot_t THEN '{key.lower()}'" in measured_sql
+    assert "ELSE 'o' END" in measured_sql and measured_sql.endswith(f"ELSE {letter} END")
     assert (params["bucket_S"], params["bucket_M"], params["bucket_L"]) == (
         Decimal("0.45"), Decimal("0.70"), Decimal("1.05"))
 
 
-def test_facing_decision_label_is_unchanged():
-    _, params, measured_sql = build("2bp", "oop", "pfc", "vs B?")
-    assert measured_sql == "substr(h_f.action, %(measure_pos)s, 1)"
+LETTER_F = "substr(h_f.action, %(measure_pos)s, 1)"
+
+
+def test_facing_decision_without_suffix_labels_the_response_by_size():
+    where, params, measured_sql = build("2bp", "oop", "pfc", "vs B?")
+    assert f"{LETTER_F} = ANY(%(measured)s)" in where  # filter on the letter, not the label
+    assert measured_sql.startswith(f"{LETTER_F} || CASE ")
+    for key in ("S", "M", "L"):
+        assert f"< %(bucket_{key})s * chs.amt_pot_f THEN '{key.lower()}'" in measured_sql
+    assert measured_sql.endswith("ELSE 'o' END")
+    assert (params["bucket_S"], params["bucket_M"], params["bucket_L"]) == (
+        Decimal("0.45"), Decimal("0.70"), Decimal("1.05"))
+
+
+def test_facing_decision_with_suffix_label_stays_the_letter():
+    _, params, measured_sql = build("2bp", "oop", "pfc", "vs Bs?")
+    assert measured_sql == LETTER_F
     assert "bucket_S" not in params
+
+
+def test_turn_split_after_a_sized_flop_keeps_both_bounds():
+    _, params, measured_sql = build("2bp", "oop", "pfc", "vs Bs-B?")
+    assert "size_f_lo" in params and "bucket_S" in params
+    assert "* chs.amt_pot_t THEN 's'" in measured_sql
+
+
+@pytest.mark.parametrize("line, role, position, expected", [
+    ("vs B?", "pfc", "oop", True),
+    ("- B?", "pfr", "ip", True),
+    ("vs Bs?", "pfc", "oop", False),
+    ("- B-?", "pfr", "ip", False),
+])
+def test_splits_by_size(line, role, position, expected):
+    assert splits_by_size(parse_line(line, role, position)) is expected
