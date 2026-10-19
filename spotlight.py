@@ -1,7 +1,8 @@
 import pandas as pd
 
+from board_types import FLOP_TYPES, flop_type
 from db import run_spot_query, get_hand_details
-from line_parser import parse_line, STREET_NAMES
+from line_parser import parse_line, STREET_NAMES, SpotInputError
 from sizing import SIZE_BUCKETS, size_text
 from spot_sql import build_spot_query, splits_by_size
 
@@ -13,7 +14,7 @@ def _street_text(spec_street, actors, tail=()):
     return f"{STREET_NAMES[spec_street.street].capitalize()}: " + ", ".join(actors + size + list(tail))
 
 
-def describe(pot, position, role, formations, spec, n_hands, date_from=None, date_to=None):
+def describe(pot, position, role, formations, spec, n_hands, date_from=None, date_to=None, flop_types=()):
     parts = [pot.upper(), position.upper(), role.upper(), ", ".join(formations) or "Any"]
     if date_from and date_to:
         parts.append(f"{date_from} → {date_to}")
@@ -21,6 +22,8 @@ def describe(pot, position, role, formations, spec, n_hands, date_from=None, dat
         parts.append(f"from {date_from}")
     elif date_to:
         parts.append(f"until {date_to}")
+    if flop_types:
+        parts.append("Flop type: " + ", ".join(flop_types))
     for s in spec.completed:
         parts.append(_street_text(s, [f"Hero {s.hero}", f"villain {s.villain}"]))
     d = spec.decision
@@ -73,12 +76,23 @@ def _split(labels, prefix):
     return rows
 
 
-def run_spot(pot, position, role, line, formations=(), date_from=None, date_to=None):
+def _with_flop_type(matches, flop_types):
+    cards = ["card_1", "card_2", "card_3"]
+    types = [flop_type(*flop) for flop in matches[cards].itertuples(index=False)]
+    matches = matches.assign(flop_type=pd.Series(types, index=matches.index, dtype=object)).drop(columns=cards)
+    return matches[matches["flop_type"].isin(flop_types)] if flop_types else matches
+
+
+def run_spot(pot, position, role, line, formations=(), date_from=None, date_to=None, flop_types=()):
     pot, position, role = pot.lower(), position.lower(), role.lower()
     formations = list(dict.fromkeys(formations))
+    flop_types = list(dict.fromkeys(flop_types))
+    unknown = [t for t in flop_types if t not in FLOP_TYPES]
+    if unknown:
+        raise SpotInputError(f"Unknown flop type: {unknown[0]}")
     spec = parse_line(line, role, position)
     where, params, measured_sql = build_spot_query(pot, position, role, spec, formations, date_from, date_to)
-    matches = run_spot_query(where, params, measured_sql)
+    matches = _with_flop_type(run_spot_query(where, params, measured_sql), flop_types)
     prefix = spec.decision.hero
     matches = matches.assign(measured_action=prefix + matches["measured_action"])  # letter -> label
     split = splits_by_size(spec)
@@ -92,7 +106,7 @@ def run_spot(pot, position, role, line, formations=(), date_from=None, date_to=N
         hands = hands.astype(object).where(hands.notna(), None)
 
     return {
-        "interpreted_filter": describe(pot, position, role, formations, spec, len(matches), date_from, date_to),
+        "interpreted_filter": describe(pot, position, role, formations, spec, len(matches), date_from, date_to, flop_types),
         "distribution": _distribution(unsized, spec.measured, prefix),
         "split": _split(labels, prefix) if split else None,
         "hands": hands,
