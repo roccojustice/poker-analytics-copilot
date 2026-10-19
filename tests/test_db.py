@@ -176,6 +176,7 @@ def test_run_spot_query_builds_skeleton_and_binds_params(monkeypatch):
                             "substr(h_t.action, %(measure_pos)s, 1)", id_player=42)
     query = result["query"]
     assert "substr(h_t.action, %(measure_pos)s, 1) AS measured_action" in query
+    assert "chs.card_1, chs.card_2, chs.card_3" in query
     assert "v.id_player <> chps.id_player AND v.flg_f_saw = true" in query
     for alias in ("h_f", "h_t", "h_r", "v_f", "v_t", "v_r"):
         assert f"lookup_actions {alias} ON" in query

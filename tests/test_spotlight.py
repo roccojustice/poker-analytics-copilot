@@ -3,11 +3,23 @@ import pytest
 import numpy as np
 import pandas as pd
 from line_parser import parse_line
+from line_parser import SpotInputError
 import spotlight
+
+BLL_FLOP = "Ks9d3c"
+
+
+def card_id(card):
+    return "cdhs".index(card[1]) * 13 + "23456789TJQKA".index(card[0]) + 1
 
 
 def fake_matches(rows):
-    return pd.DataFrame(rows, columns=["id_hand", "measured_action"])
+    """Rows are (id_hand, letter) on a BLL flop, or (id_hand, letter, flop)."""
+    records = []
+    for row in rows:
+        id_hand, letter, flop = row if len(row) == 3 else (*row, BLL_FLOP)
+        records.append((id_hand, *[card_id(flop[i:i + 2]) for i in range(0, 6, 2)], letter))
+    return pd.DataFrame(records, columns=["id_hand", "card_1", "card_2", "card_3", "measured_action"])
 
 
 def install(monkeypatch, matches, details=None):
@@ -112,7 +124,56 @@ def test_nan_in_hand_details_becomes_none(monkeypatch):
     details = pd.DataFrame({"id_hand": [1], "amt_won": [np.nan]})
     install(monkeypatch, fake_matches([(1, "B")]), details)
     hands = spotlight.run_spot("2bp", "ip", "pfr", "- B-?")["hands"]
-    assert hands.to_dict(orient="records") == [{"id_hand": 1, "amt_won": None, "measured_action": "B"}]
+    assert hands.to_dict(orient="records") == [
+        {"id_hand": 1, "amt_won": None, "flop_type": "BLL", "measured_action": "B"}]
+
+
+MIXED = [(1, "Cs", "KsQd4c"), (2, "Cs", "Ks9d3c"), (3, "Fm", "7s6d2c")]  # 2BWL, BLL, Low
+
+
+def test_flop_filter_keeps_only_selected_types(monkeypatch):
+    install(monkeypatch, fake_matches(MIXED))
+    result = spotlight.run_spot("2bp", "oop", "pfc", "vs B?", flop_types=["BLL", "Low"])
+    assert set(result["hands"]["id_hand"]) == {2, 3}
+    assert [row["hands"] for row in result["distribution"]] == [1, 1, 0]
+    assert result["split"][0]["hands"] == 1
+
+
+def test_no_flop_types_keeps_every_hand(monkeypatch):
+    install(monkeypatch, fake_matches(MIXED))
+    hands = spotlight.run_spot("2bp", "oop", "pfc", "vs B?")["hands"]
+    assert dict(zip(hands["id_hand"], hands["flop_type"])) == {1: "2BWL", 2: "BLL", 3: "Low"}
+
+
+def test_flop_filter_to_zero_hands(monkeypatch):
+    calls = install(monkeypatch, fake_matches(MIXED))
+    result = spotlight.run_spot("2bp", "oop", "pfc", "vs B?", flop_types=["Monotone"])
+    assert calls == []
+    assert [row["hands"] for row in result["distribution"]] == [0, 0, 0]
+    assert [row["hands"] for row in result["split"]] == [0, 0, 0, 0]
+    assert result["interpreted_filter"].endswith("0 hands")
+
+
+def test_unknown_flop_type_raises_before_the_query(monkeypatch):
+    def no_query(*args):
+        raise AssertionError("queried")
+
+    monkeypatch.setattr("spotlight.run_spot_query", no_query)
+    with pytest.raises(SpotInputError, match="bll"):
+        spotlight.run_spot("2bp", "oop", "pfc", "vs B?", flop_types=["bll"])
+
+
+def test_duplicate_flop_types_show_once(monkeypatch):
+    install(monkeypatch, fake_matches(MIXED))
+    text = spotlight.run_spot("2bp", "oop", "pfc", "vs B?", flop_types=["BLL", "BLL"])["interpreted_filter"]
+    assert text.count("Flop type: BLL") == 1 and "BLL, BLL" not in text
+
+
+def test_describe_flop_part_after_dates():
+    spec = parse_line("vs B?", "pfc", "oop")
+    text = spotlight.describe("2bp", "oop", "pfc", [], spec, 5, date(2026, 9, 1), None, ["BLL", "Low"])
+    assert "· from 2026-09-01 · Flop type: BLL, Low · " in text
+    assert "Flop type" not in spotlight.describe("2bp", "oop", "pfc", [], spec, 5)
 
 
 def test_describe_reads_like_the_bar():

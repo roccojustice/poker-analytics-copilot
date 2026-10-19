@@ -63,6 +63,7 @@ class SpotRequest(BaseModel):
     formations: list[str] = []
     date_from: date | None = None
     date_to: date | None = None
+    flop_types: list[str] = []
 
 
 @app.post("/spot")
@@ -70,7 +71,7 @@ def spot(request: SpotRequest):
     try:
         result = run_spot(
             request.pot, request.position, request.role, request.line, request.formations,
-            date_from=request.date_from, date_to=request.date_to,
+            date_from=request.date_from, date_to=request.date_to, flop_types=request.flop_types,
         )
     except SpotInputError as exc:
         return JSONResponse(status_code=400, content={"error": str(exc)})

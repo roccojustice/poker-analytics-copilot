@@ -84,7 +84,7 @@ SPOT_BODY = {"pot": "2bp", "position": "ip", "role": "pfr", "line": "- B-?", "fo
 def install_fake_run_spot(monkeypatch, result):
     calls = []
 
-    def fake_run_spot(pot, position, role, line, formations=(), date_from=None, date_to=None):
+    def fake_run_spot(pot, position, role, line, formations=(), date_from=None, date_to=None, flop_types=()):
         calls.append((pot, position, role, line, formations))
         return result
 
@@ -164,7 +164,7 @@ def test_spot_rejects_the_old_formation_field(monkeypatch):
 def test_spot_passes_dates_through(monkeypatch):
     seen = {}
 
-    def fake_run_spot(pot, position, role, line, formations=(), date_from=None, date_to=None):
+    def fake_run_spot(pot, position, role, line, formations=(), date_from=None, date_to=None, flop_types=()):
         seen.update(date_from=date_from, date_to=date_to)
         return FAKE_RESULT
 
@@ -176,7 +176,7 @@ def test_spot_passes_dates_through(monkeypatch):
 def test_spot_dates_default_to_none(monkeypatch):
     seen = {}
 
-    def fake_run_spot(pot, position, role, line, formations=(), date_from="unset", date_to="unset"):
+    def fake_run_spot(pot, position, role, line, formations=(), date_from="unset", date_to="unset", flop_types=()):
         seen.update(date_from=date_from, date_to=date_to)
         return FAKE_RESULT
 
@@ -194,3 +194,33 @@ def test_spot_inverted_dates_is_400():
 def test_spot_malformed_date_is_422():
     response = client.post("/spot", json=SPOT_BODY | {"date_from": "2026-13-45"})
     assert response.status_code == 422
+
+
+def test_spot_passes_flop_types_through(monkeypatch):
+    seen = {}
+
+    def fake_run_spot(pot, position, role, line, formations=(), date_from=None, date_to=None, flop_types="unset"):
+        seen["flop_types"] = flop_types
+        return FAKE_RESULT
+
+    monkeypatch.setattr("api.run_spot", fake_run_spot)
+    client.post("/spot", json=SPOT_BODY | {"flop_types": ["BLL", "Low"]})
+    assert seen == {"flop_types": ["BLL", "Low"]}
+
+
+def test_spot_flop_types_default_to_empty(monkeypatch):
+    seen = {}
+
+    def fake_run_spot(pot, position, role, line, formations=(), date_from=None, date_to=None, flop_types="unset"):
+        seen["flop_types"] = flop_types
+        return FAKE_RESULT
+
+    monkeypatch.setattr("api.run_spot", fake_run_spot)
+    client.post("/spot", json=SPOT_BODY)
+    assert seen == {"flop_types": []}
+
+
+def test_spot_unknown_flop_type_is_400():
+    response = client.post("/spot", json=SPOT_BODY | {"flop_types": ["bll"]})
+    assert response.status_code == 400
+    assert "bll" in response.json()["error"]
