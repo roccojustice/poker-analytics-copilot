@@ -62,8 +62,9 @@ outside 1–52 raises (it would mean a broken join, not a user error).
 - `POST /spot` takes `flop_types: list[str] = []`. Deduped, order kept. An unknown name is a
   `SpotInputError` → 400 with the name in the message. Empty = Any.
 - `run_spot(..., flop_types=())`.
-- Interpreted filter: after formations and dates, a part `Flop: BLL, Low` when any type is
-  selected; no part when none (like dates).
+- Interpreted filter: after formations and dates, a part `Flop type: BLL, Low` when any type is
+  selected; no part when none (like dates). *(Built as `Flop type:`, not `Flop:` — `Flop:` already
+  opens the flop street text.)*
 - Hand list: a `Flop type` column right after `Flop`. Computed in `run_spot` from the cards
   `run_spot_query` already returns (same `flop_type` the filter uses) and merged into the hands
   with `measured_action`; the raw card columns are not sent. `get_hand_details` is **not**
