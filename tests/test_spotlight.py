@@ -23,7 +23,7 @@ def install(monkeypatch, matches, details=None):
 
 
 def test_distribution_counts_in_measured_order_with_zero_rows(monkeypatch):
-    install(monkeypatch, fake_matches([(1, "C"), (2, "C"), (3, "F")]))
+    install(monkeypatch, fake_matches([(1, "Cs"), (2, "Cm"), (3, "Fs")]))
     result = spotlight.run_spot("2bp", "oop", "pfc", "vs B?")
     assert result["distribution"] == [
         {"action": "F", "label": "XF", "name": "Fold", "hands": 1, "pct": 33.3},
@@ -34,9 +34,37 @@ def test_distribution_counts_in_measured_order_with_zero_rows(monkeypatch):
 
 
 def test_hands_carry_the_label(monkeypatch):
-    install(monkeypatch, fake_matches([(7, "C"), (8, "F")]))
+    install(monkeypatch, fake_matches([(7, "Cs"), (8, "Fm")]))
     hands = spotlight.run_spot("2bp", "oop", "pfc", "vs B?")["hands"]
-    assert dict(zip(hands["id_hand"], hands["measured_action"])) == {7: "XC", 8: "XF"}
+    assert dict(zip(hands["id_hand"], hands["measured_action"])) == {7: "XCs", 8: "XFm"}
+
+
+def test_split_rows_in_bucket_order_with_row_relative_pct(monkeypatch):
+    install(monkeypatch, fake_matches([(1, "Fs"), (2, "Cs"), (3, "Cs"), (4, "Rl")]))
+    split = spotlight.run_spot("2bp", "oop", "pfc", "vs B?")["split"]
+    assert [row["size"] for row in split] == ["S", "M", "L", "O"]
+    assert split[0] == {"size": "S", "name": "small", "hands": 3, "pct_faced": 75.0, "cells": [
+        {"action": "F", "label": "XFs", "hands": 1, "pct": 33.3},
+        {"action": "C", "label": "XCs", "hands": 2, "pct": 66.7},
+        {"action": "R", "label": "XRs", "hands": 0, "pct": 0.0},
+    ]}
+    assert split[1]["hands"] == 0 and [c["pct"] for c in split[1]["cells"]] == [0.0, 0.0, 0.0]
+    assert split[2]["pct_faced"] == 25.0 and split[2]["cells"][2]["pct"] == 100.0
+
+
+def test_split_with_zero_hands_has_four_zero_rows(monkeypatch):
+    install(monkeypatch, fake_matches([]))
+    split = spotlight.run_spot("2bp", "oop", "pfc", "vs B?")["split"]
+    assert [(r["hands"], r["pct_faced"]) for r in split] == [(0, 0.0)] * 4
+
+
+@pytest.mark.parametrize("line, role, position, rows", [
+    ("vs Bs?", "pfc", "oop", [(1, "C")]),
+    ("- B-?", "pfr", "ip", [(1, "Bs")]),
+])
+def test_split_is_none_when_not_applicable(monkeypatch, line, role, position, rows):
+    install(monkeypatch, fake_matches(rows))
+    assert spotlight.run_spot("2bp", position, role, line)["split"] is None
 
 
 def test_label_equals_action_without_prefix(monkeypatch):
