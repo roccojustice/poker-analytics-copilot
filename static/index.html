@@ -29,9 +29,10 @@
     th { background: #f4f4f4; }
     tr:nth-child(even) { background: #fafafa; }
     table.dist { width: auto; font-size: 0.95rem; }
-    table.dist tbody tr { cursor: pointer; }
-    table.dist tbody tr:hover { background: #eef3fb; }
-    table.dist tbody tr.selected { background: #dbe7f8; font-weight: bold; }
+    table.dist [data-pick] { cursor: pointer; }
+    table.dist [data-pick]:hover { background: #eef3fb; }
+    table.dist .selected { background: #dbe7f8; font-weight: bold; }
+    table.dist td small { display: block; color: #666; font-size: 0.75rem; }
     .table-scroll { overflow-x: auto; }
     .wrap { white-space: normal; max-width: 14rem; }
     .error { background: #fdecea; border: 1px solid #f5c2c0; padding: 0.75rem; border-radius: 4px; }
@@ -123,8 +124,8 @@
 
     let latestRequest = 0;
     let currentHands = [];
-    let activeLabel = null;
-    let parentOf = {};
+    let activePick = null;
+    let groupsOf = {};  // hand label -> every pick that selects it
     const resultRange = { min: "", max: "" };
 
     function escapeHtml(str) {
@@ -227,18 +228,18 @@
 
     function showResult(data) {
       currentHands = data.hands;
-      activeLabel = null;
-      parentOf = Object.fromEntries(data.distribution.filter(r => r.parent).map(r => [r.label, r.parent]));
+      activePick = null;
+      groupsOf = buildGroups(data.distribution, data.split);
       outputEl.innerHTML =
         `<div class="filter-line">${escapeHtml(data.interpreted_filter)}</div>` +
-        renderDistribution(data.distribution) +
+        (data.split ? renderSplit(data.distribution, data.split) : renderDistribution(data.distribution)) +
         '<h3>Matching hands</h3>' +
         '<div class="hand-filter">Result from ' +
         `<input id="result-min" type="number" step="any" value="${escapeHtml(resultRange.min)}"> to ` +
         `<input id="result-max" type="number" step="any" value="${escapeHtml(resultRange.max)}"> BB ` +
         '· <span id="hand-count"></span></div><div id="hands"></div>';
-      outputEl.querySelectorAll("table.dist tbody tr").forEach(row => {
-        row.addEventListener("click", () => toggleLabel(row.dataset.label));
+      outputEl.querySelectorAll("table.dist [data-pick]").forEach(el => {
+        el.addEventListener("click", () => togglePick(el.dataset.pick));
       });
       ["min", "max"].forEach(bound => {
         document.getElementById(`result-${bound}`).addEventListener("input", event => {
@@ -249,10 +250,20 @@
       renderHands();
     }
 
-    function toggleLabel(label) {
-      activeLabel = activeLabel === label ? null : label;
-      outputEl.querySelectorAll("table.dist tbody tr").forEach(row => {
-        row.classList.toggle("selected", row.dataset.label === activeLabel);
+    function buildGroups(distribution, split) {
+      const groups = {};
+      distribution.filter(r => r.parent).forEach(r => groups[r.label] = [r.label, r.parent]);
+      (split || []).forEach(row => row.cells.forEach(cell => {
+        const all = distribution.find(r => r.action === cell.action).label;
+        groups[cell.label] = [cell.label, all, `size:${row.size}`];
+      }));
+      return groups;
+    }
+
+    function togglePick(pick) {
+      activePick = activePick === pick ? null : pick;
+      outputEl.querySelectorAll("table.dist [data-pick]").forEach(el => {
+        el.classList.toggle("selected", el.dataset.pick === activePick);
       });
       renderHands();
     }
@@ -262,7 +273,7 @@
       const b = resultRange.max === "" ? Infinity : Number(resultRange.max);
       const [min, max] = [Math.min(a, b), Math.max(a, b)];  // either field order means the same range
       const rows = currentHands.filter(hand =>
-        (!activeLabel || hand.measured_action === activeLabel || parentOf[hand.measured_action] === activeLabel) &&
+        (!activePick || (groupsOf[hand.measured_action] || [hand.measured_action]).includes(activePick)) &&
         hand.result_bb >= min && hand.result_bb <= max
       );
       document.getElementById("hand-count").textContent =
@@ -273,9 +284,29 @@
     function renderDistribution(distribution) {
       let html = '<table class="dist"><thead><tr><th>Action</th><th>Hands</th><th>%</th></tr></thead><tbody>';
       distribution.forEach(row => {
-        html += `<tr data-label="${escapeHtml(row.label)}"${row.parent ? ' class="sub"' : ""}>` +
+        html += `<tr data-pick="${escapeHtml(row.label)}"${row.parent ? ' class="sub"' : ""}>` +
           `<td>${escapeHtml(row.label)}</td>` +
           `<td>${row.hands.toLocaleString("en-US")}</td><td>${row.pct.toFixed(1)}%</td></tr>`;
+      });
+      html += "</tbody></table>";
+      return html;
+    }
+
+    function renderSplit(distribution, split) {
+      const total = distribution.reduce((sum, r) => sum + r.hands, 0);
+      const cell = (pick, pct, hands) => `<td data-pick="${escapeHtml(pick)}">${pct.toFixed(1)}%` +
+        `<small>${hands.toLocaleString("en-US")}</small></td>`;
+      const faced = (hands, pct) => `<td>${hands.toLocaleString("en-US")} (${pct.toFixed(1)}%)</td>`;
+      let html = '<table class="dist"><thead><tr><th>Size</th><th>Hands (% faced)</th>';
+      distribution.forEach(r => html += `<th>${escapeHtml(r.label)}</th>`);
+      html += "</tr></thead><tbody><tr><td>All</td>" + faced(total, total ? 100 : 0);
+      distribution.forEach(r => html += cell(r.label, r.pct, r.hands));
+      html += "</tr>";
+      split.forEach(row => {
+        html += `<tr><td data-pick="size:${escapeHtml(row.size)}">${escapeHtml(row.name)}</td>` +
+          faced(row.hands, row.pct_faced);
+        row.cells.forEach(c => html += cell(c.label, c.pct, c.hands));
+        html += "</tr>";
       });
       html += "</tbody></table>";
       return html;

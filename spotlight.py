@@ -3,7 +3,7 @@ import pandas as pd
 from db import run_spot_query, get_hand_details
 from line_parser import parse_line, STREET_NAMES
 from sizing import SIZE_BUCKETS, size_text
-from spot_sql import build_spot_query
+from spot_sql import build_spot_query, splits_by_size
 
 ACTION_NAMES = {"B": "Bet", "X": "Check", "F": "Fold", "C": "Call", "R": "Raise"}
 
@@ -32,8 +32,7 @@ def describe(pot, position, role, formations, spec, n_hands, date_from=None, dat
 
 
 def _row(action, label, name, hands, total, parent=None):
-    row = {"action": action, "label": label, "name": name, "hands": hands,
-           "pct": round(hands / total * 100, 1) if total else 0.0}
+    row = {"action": action, "label": label, "name": name, "hands": hands, "pct": _pct(hands, total)}
     if parent:
         row["parent"] = parent
     return row
@@ -56,6 +55,24 @@ def _distribution(labels, measured, prefix):
     return rows
 
 
+def _pct(part, whole):
+    return round(part / whole * 100, 1) if whole else 0.0
+
+
+def _split(labels, prefix):
+    counts = labels.value_counts()
+    rows = []
+    for key, (name, _, _) in SIZE_BUCKETS.items():
+        cells = [{"action": action, "label": prefix + action + key.lower(),
+                  "hands": int(counts.get(prefix + action + key.lower(), 0))} for action in ("F", "C", "R")]
+        row_hands = sum(cell["hands"] for cell in cells)
+        for cell in cells:
+            cell["pct"] = _pct(cell["hands"], row_hands)
+        rows.append({"size": key, "name": name, "hands": row_hands,
+                     "pct_faced": _pct(row_hands, len(labels)), "cells": cells})
+    return rows
+
+
 def run_spot(pot, position, role, line, formations=(), date_from=None, date_to=None):
     pot, position, role = pot.lower(), position.lower(), role.lower()
     formations = list(dict.fromkeys(formations))
@@ -64,6 +81,9 @@ def run_spot(pot, position, role, line, formations=(), date_from=None, date_to=N
     matches = run_spot_query(where, params, measured_sql)
     prefix = spec.decision.hero
     matches = matches.assign(measured_action=prefix + matches["measured_action"])  # letter -> label
+    split = splits_by_size(spec)
+    labels = matches["measured_action"]
+    unsized = labels.str[:len(prefix) + 1] if split else labels  # XCs -> XC for the 1D rows
 
     if matches.empty:
         hands = pd.DataFrame()  # nothing to render, skip the detail round-trip
@@ -73,6 +93,7 @@ def run_spot(pot, position, role, line, formations=(), date_from=None, date_to=N
 
     return {
         "interpreted_filter": describe(pot, position, role, formations, spec, len(matches), date_from, date_to),
-        "distribution": _distribution(matches["measured_action"], spec.measured, prefix),
+        "distribution": _distribution(unsized, spec.measured, prefix),
+        "split": _split(labels, prefix) if split else None,
         "hands": hands,
     }

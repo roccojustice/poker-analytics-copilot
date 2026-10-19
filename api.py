@@ -78,6 +78,7 @@ def spot(request: SpotRequest):
         "interpreted_filter": result["interpreted_filter"],
         "distribution": result["distribution"],
         "hands": result["hands"].to_dict(orient="records"),
+        "split": result["split"],
     }
 
 

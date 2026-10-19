@@ -96,6 +96,7 @@ FAKE_RESULT = {
     "interpreted_filter": "2BP · IP · PFR · Any · ...",
     "distribution": [{"action": "B", "label": "B", "name": "Bet", "hands": 1, "pct": 100.0}],
     "hands": pd.DataFrame({"id_hand": [1], "measured_action": ["B"]}),
+    "split": None,
 }
 
 
@@ -107,8 +108,16 @@ def test_spot_returns_result_shape(monkeypatch):
         "interpreted_filter": "2BP · IP · PFR · Any · ...",
         "distribution": [{"action": "B", "label": "B", "name": "Bet", "hands": 1, "pct": 100.0}],
         "hands": [{"id_hand": 1, "measured_action": "B"}],
+        "split": None,
     }
     assert calls == [("2bp", "ip", "pfr", "- B-?", [])]
+
+
+def test_spot_passes_split_through(monkeypatch):
+    split = [{"size": "S", "name": "small", "hands": 1, "pct_faced": 100.0,
+              "cells": [{"action": "C", "label": "XCs", "hands": 1, "pct": 100.0}]}]
+    install_fake_run_spot(monkeypatch, FAKE_RESULT | {"split": split})
+    assert client.post("/spot", json=SPOT_BODY).json()["split"] == split
 
 
 def test_spot_passes_formations_through(monkeypatch):
