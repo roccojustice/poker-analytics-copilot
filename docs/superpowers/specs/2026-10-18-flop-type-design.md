@@ -39,8 +39,9 @@ session's conversation) become test fixtures; the first 2BWL example list was wr
 broadway each) and is not a fixture.
 
 The display names above are the canonical spellings, used in the API, the page and the
-filter text. Page order (the user's order when defining them): 2BWL, BLL, Low, Low paired,
-High paired, A high, Monotone, 3BW.
+filter text. Page order (user's call): most to least common over all flops — BLL, Low, 2BWL,
+Low paired, High paired, A high, Monotone, 3BW. BLL and Low tie at 5,040; BLL goes first
+(the user's most-studied type).
 
 ## Where the type is computed — *builder's call recorded here: in Python, not SQL*
 
