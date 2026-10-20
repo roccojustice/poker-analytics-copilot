@@ -323,6 +323,21 @@ Every match is classified even with Flop = Any. If a flop card id is missing or 
 request fails (500) instead of showing an empty type, so a broken import shows up right away.
 Current data has none. User's call.
 
+## 2026-10-19 (Session 63) — Runout labels overlap; OR within a street, AND across streets
+
+Turn and river cards get every label that applies (`FC`, `SC`, `BP high/mid/low`, `BW A/K/Q/J`,
+`FDP`), so a card like `2h` on `Kh9h2c` shows up under both FC and BP low. Only `Brick` is
+exclusive, of everything except `FDP` (a card can be FDP + Brick). Selected labels are OR-ed
+within a street and AND-ed across Flop/Turn/River. The Turn filter needs a turn or river
+decision and the River filter a river decision; otherwise the request fails. User's call.
+
+## 2026-10-19 (Session 63) — SC = narrow straight-close (variant D), not "any new straight"
+
+`SC` fires when the card's rank is new to the board and, with two other distinct board ranks,
+forms a trio spanning ≤3 (A counts as both 14 and 1). The broad rule (the card completes any
+5-card straight) hit 36.8% of turns, too often to mean "the straight came in". D hits ~22%, and
+the real data showed 20.8%. User's call after reviewing generated examples.
+
 ## Earlier decisions (pre-pivot, still in force)
 
 - **Position lives inside the `preflop-context` prefix**, not in `situation`
