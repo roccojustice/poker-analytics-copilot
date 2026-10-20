@@ -84,7 +84,7 @@ SPOT_BODY = {"pot": "2bp", "position": "ip", "role": "pfr", "line": "- B-?", "fo
 def install_fake_run_spot(monkeypatch, result):
     calls = []
 
-    def fake_run_spot(pot, position, role, line, formations=(), date_from=None, date_to=None, flop_types=()):
+    def fake_run_spot(pot, position, role, line, formations=(), date_from=None, date_to=None, flop_types=(), turn_types=(), river_types=()):
         calls.append((pot, position, role, line, formations))
         return result
 
@@ -164,7 +164,7 @@ def test_spot_rejects_the_old_formation_field(monkeypatch):
 def test_spot_passes_dates_through(monkeypatch):
     seen = {}
 
-    def fake_run_spot(pot, position, role, line, formations=(), date_from=None, date_to=None, flop_types=()):
+    def fake_run_spot(pot, position, role, line, formations=(), date_from=None, date_to=None, flop_types=(), turn_types=(), river_types=()):
         seen.update(date_from=date_from, date_to=date_to)
         return FAKE_RESULT
 
@@ -176,7 +176,7 @@ def test_spot_passes_dates_through(monkeypatch):
 def test_spot_dates_default_to_none(monkeypatch):
     seen = {}
 
-    def fake_run_spot(pot, position, role, line, formations=(), date_from="unset", date_to="unset", flop_types=()):
+    def fake_run_spot(pot, position, role, line, formations=(), date_from="unset", date_to="unset", flop_types=(), turn_types=(), river_types=()):
         seen.update(date_from=date_from, date_to=date_to)
         return FAKE_RESULT
 
@@ -199,7 +199,7 @@ def test_spot_malformed_date_is_422():
 def test_spot_passes_flop_types_through(monkeypatch):
     seen = {}
 
-    def fake_run_spot(pot, position, role, line, formations=(), date_from=None, date_to=None, flop_types="unset"):
+    def fake_run_spot(pot, position, role, line, formations=(), date_from=None, date_to=None, flop_types="unset", turn_types=(), river_types=()):
         seen["flop_types"] = flop_types
         return FAKE_RESULT
 
@@ -211,7 +211,7 @@ def test_spot_passes_flop_types_through(monkeypatch):
 def test_spot_flop_types_default_to_empty(monkeypatch):
     seen = {}
 
-    def fake_run_spot(pot, position, role, line, formations=(), date_from=None, date_to=None, flop_types="unset"):
+    def fake_run_spot(pot, position, role, line, formations=(), date_from=None, date_to=None, flop_types="unset", turn_types=(), river_types=()):
         seen["flop_types"] = flop_types
         return FAKE_RESULT
 
@@ -224,3 +224,39 @@ def test_spot_unknown_flop_type_is_400():
     response = client.post("/spot", json=SPOT_BODY | {"flop_types": ["bll"]})
     assert response.status_code == 400
     assert "bll" in response.json()["error"]
+
+
+def test_spot_passes_runout_types_through(monkeypatch):
+    seen = {}
+
+    def fake_run_spot(*args, turn_types="unset", river_types="unset", **kwargs):
+        seen.update(turn_types=turn_types, river_types=river_types)
+        return FAKE_RESULT
+
+    monkeypatch.setattr("api.run_spot", fake_run_spot)
+    client.post("/spot", json=SPOT_BODY | {"turn_types": ["FC", "SC"], "river_types": ["Brick"]})
+    assert seen == {"turn_types": ["FC", "SC"], "river_types": ["Brick"]}
+
+
+def test_spot_runout_types_default_to_empty(monkeypatch):
+    seen = {}
+
+    def fake_run_spot(*args, turn_types="unset", river_types="unset", **kwargs):
+        seen.update(turn_types=turn_types, river_types=river_types)
+        return FAKE_RESULT
+
+    monkeypatch.setattr("api.run_spot", fake_run_spot)
+    client.post("/spot", json=SPOT_BODY)
+    assert seen == {"turn_types": [], "river_types": []}
+
+
+def test_spot_unknown_turn_type_is_400():
+    response = client.post("/spot", json=SPOT_BODY | {"line": "- B-?", "turn_types": ["fc"]})
+    assert response.status_code == 400
+    assert "fc" in response.json()["error"]
+
+
+def test_spot_river_types_on_turn_line_is_400():
+    response = client.post("/spot", json=SPOT_BODY | {"line": "- B-?", "river_types": ["Brick"]})
+    assert response.status_code == 400
+    assert "river" in response.json()["error"]

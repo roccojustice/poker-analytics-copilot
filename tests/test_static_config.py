@@ -2,7 +2,7 @@ import json
 import re
 from pathlib import Path
 
-from board_types import FLOP_TYPES
+from board_types import FLOP_TYPES, RIVER_LABELS, TURN_LABELS
 from line_parser import parse_line
 from spot_sql import FORMATIONS
 
@@ -22,6 +22,12 @@ def test_formations_match_the_backend():
 
 def test_flop_types_match_the_backend():
     assert load_config()["flop_types"] == list(FLOP_TYPES)
+
+
+def test_runout_types_match_the_backend():
+    config = load_config()
+    assert config["turn_types"] == list(TURN_LABELS)
+    assert config["river_types"] == list(RIVER_LABELS)
 
 
 def test_presets_are_the_20_v1_lines_and_all_parse():
