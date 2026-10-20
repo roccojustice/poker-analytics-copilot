@@ -19,6 +19,8 @@
     details.formations summary::after { content: " ▾"; }
     details.formations .panel { position: absolute; z-index: 10; background: #fff; border: 1px solid #bbb; padding: 0.4rem 0.6rem; max-height: 24rem; overflow-y: auto; }
     details.formations label { display: block; padding: 0.15rem 0; white-space: nowrap; cursor: pointer; }
+    details.formations label.child { padding-left: 1.2rem; }
+    details.formations.off summary { color: #aaa; cursor: not-allowed; }
     #run { padding: 0.4rem 1rem; font-size: 1rem; }
     .dates { display: flex; gap: 0.5rem; align-items: center; }
     .dates input { padding: 0.3rem; font-size: 0.95rem; }
@@ -82,6 +84,14 @@
       <summary>Flop: Any</summary>
       <div class="panel"></div>
     </details>
+    <details class="formations" id="turn-types">
+      <summary>Turn: Any</summary>
+      <div class="panel"></div>
+    </details>
+    <details class="formations" id="river-types">
+      <summary>River: Any</summary>
+      <div class="panel"></div>
+    </details>
     <div class="dates">
       <label>From <input type="date" id="date-from"></label>
       <label>To <input type="date" id="date-to"></label>
@@ -109,7 +119,9 @@
       "MP vs CO", "MP vs BTN",
       "CO vs BTN"
     ],
-    "flop_types": ["BLL", "Low", "2BWL", "Low paired", "High paired", "A high", "Monotone", "3BW"]
+    "flop_types": ["BLL", "Low", "2BWL", "Low paired", "High paired", "A high", "Monotone", "3BW"],
+    "turn_types": ["FC", "SC", "BP high", "BP mid", "BP low", "BW A", "BW K", "BW Q", "BW J", "FDP", "Brick"],
+    "river_types": ["FC", "SC", "BP high", "BP mid", "BP low", "BW A", "BW K", "BW Q", "BW J", "Brick"]
   }
   </script>
 
@@ -157,33 +169,87 @@
       }));
     }
 
-    // A checkbox dropdown; returns a getter for the checked values (none checked = Any)
-    function multiSelect(id, options, summaryText) {
+    // A checkbox dropdown; returns a getter for the checked values (none checked or disabled = Any).
+    // grouped: options sharing a first word ("BP high", "BP low") nest under a parent box ("BP").
+    function multiSelect(id, options, summaryText, grouped = false) {
       const el = document.getElementById(id);
       const summaryEl = el.querySelector("summary");
       const panelEl = el.querySelector(".panel");
-      options.forEach(option => {
+      const head = option => option.split(" ")[0];
+      const groupOf = option =>
+        grouped && options.filter(o => head(o) === head(option)).length > 1 ? head(option) : null;
+      const addBox = (text, data, cls) => {
         const label = document.createElement("label");
         const box = document.createElement("input");
         box.type = "checkbox";
-        box.value = option;
-        label.append(box, " " + option);
+        Object.assign(box.dataset, data);
+        if (cls) label.className = cls;
+        label.append(box, " " + text);
         panelEl.append(label);
+      };
+      options.forEach(option => {
+        const group = groupOf(option);
+        if (group && !panelEl.querySelector(`[data-group="${group}"]`)) addBox(group, { group });
+        addBox(option, group ? { value: option, parent: group } : { value: option }, group && "child");
       });
-      const selected = () => [...panelEl.querySelectorAll("input:checked")].map(box => box.value);
-      panelEl.addEventListener("change", () => summaryEl.textContent = summaryText(selected()));
+      const leaves = () => [...panelEl.querySelectorAll("input[data-value]")];
+      const children = group => [...panelEl.querySelectorAll(`[data-parent="${group}"]`)];
+      const checked = () => leaves().filter(box => box.checked).map(box => box.dataset.value);
+      const shown = () => {
+        const names = [];
+        checked().forEach(value => {
+          const group = groupOf(value);
+          const name = group && children(group).every(box => box.checked) ? group : value;
+          if (!names.includes(name)) names.push(name);
+        });
+        return names;
+      };
+      panelEl.addEventListener("change", event => {
+        const group = event.target.dataset.group;
+        if (group) children(group).forEach(box => box.checked = event.target.checked);
+        panelEl.querySelectorAll("[data-group]").forEach(parent => {
+          const kids = children(parent.dataset.group);
+          parent.checked = kids.every(box => box.checked);
+          parent.indeterminate = !parent.checked && kids.some(box => box.checked);
+        });
+        summaryEl.textContent = summaryText(shown());
+      });
+      summaryEl.addEventListener("click", event => {
+        if (el.classList.contains("off")) event.preventDefault();
+      });
       document.addEventListener("click", event => {
         if (!el.contains(event.target)) el.open = false;
       });
+      const selected = () => el.classList.contains("off") ? [] : checked();
+      selected.setEnabled = enabled => {
+        el.classList.toggle("off", !enabled);
+        if (!enabled) el.open = false;
+        panelEl.querySelectorAll("input").forEach(box => box.disabled = !enabled);
+      };
       return selected;
     }
 
     const joinedOrAny = values => values.length ? values.join(", ") : "Any";
     const selectedFormations = multiSelect("formations", CONFIG.formations, joinedOrAny);
     const selectedFlopTypes = multiSelect("flop-types", CONFIG.flop_types, values => "Flop: " + joinedOrAny(values));
+    const selectedTurnTypes = multiSelect("turn-types", CONFIG.turn_types, values => "Turn: " + joinedOrAny(values), true);
+    const selectedRiverTypes = multiSelect("river-types", CONFIG.river_types, values => "River: " + joinedOrAny(values), true);
+
+    // Streets in the Line (1 flop, 2 turn, 3 river), split like line_parser._split_tokens
+    function lineStreets(line) {
+      return line.replace(/\s+/g, "").replace(/^(-|vs)/i, "").split("-").length;
+    }
+
+    function refreshRunoutControls() {
+      const streets = lineStreets(lineEl.value);
+      selectedTurnTypes.setEnabled(streets >= 2);
+      selectedRiverTypes.setEnabled(streets >= 3);
+    }
+    refreshRunoutControls();
 
     lineEl.addEventListener("input", () => {
       runEl.disabled = !lineEl.value.trim();
+      refreshRunoutControls();
     });
 
     barEl.addEventListener("keydown", event => {
@@ -201,6 +267,7 @@
       const requestId = ++latestRequest;
       const body = {
         ...state, line: lineEl.value.trim(), formations: selectedFormations(), flop_types: selectedFlopTypes(),
+        turn_types: selectedTurnTypes(), river_types: selectedRiverTypes(),
         date_from: document.getElementById("date-from").value || null,
         date_to: document.getElementById("date-to").value || null,
       };
@@ -335,8 +402,10 @@
       { label: "Flop type", render: text("flop_type") },
       { label: "Flop action", render: action("f") },
       { label: "Turn", render: cards("turn") },
+      { label: "Turn type", render: text("turn_type") },
       { label: "Turn action", render: action("t") },
       { label: "River", render: cards("river") },
+      { label: "River type", render: text("river_type") },
       { label: "River action", render: action("r") },
       { label: "Hero hand", render: text("final_hand"), cls: "wrap" },
       { label: "Winner", render: text("winner") },
