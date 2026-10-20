@@ -1,6 +1,6 @@
 import pandas as pd
 
-from board_types import FLOP_TYPES, flop_type
+from board_types import FLOP_TYPES, RIVER_LABELS, TURN_LABELS, flop_type, river_labels, turn_labels
 from db import run_spot_query, get_hand_details
 from line_parser import parse_line, STREET_NAMES, SpotInputError
 from sizing import SIZE_BUCKETS, size_text
@@ -14,7 +14,8 @@ def _street_text(spec_street, actors, tail=()):
     return f"{STREET_NAMES[spec_street.street].capitalize()}: " + ", ".join(actors + size + list(tail))
 
 
-def describe(pot, position, role, formations, spec, n_hands, date_from=None, date_to=None, flop_types=()):
+def describe(pot, position, role, formations, spec, n_hands, date_from=None, date_to=None, flop_types=(),
+             turn_types=(), river_types=()):
     parts = [pot.upper(), position.upper(), role.upper(), ", ".join(formations) or "Any"]
     if date_from and date_to:
         parts.append(f"{date_from} → {date_to}")
@@ -24,6 +25,10 @@ def describe(pot, position, role, formations, spec, n_hands, date_from=None, dat
         parts.append(f"until {date_to}")
     if flop_types:
         parts.append("Flop type: " + ", ".join(flop_types))
+    if turn_types:
+        parts.append("Turn type: " + ", ".join(turn_types))
+    if river_types:
+        parts.append("River type: " + ", ".join(river_types))
     for s in spec.completed:
         parts.append(_street_text(s, [f"Hero {s.hero}", f"villain {s.villain}"]))
     d = spec.decision
@@ -76,23 +81,60 @@ def _split(labels, prefix):
     return rows
 
 
-def _with_flop_type(matches, flop_types):
-    cards = ["card_1", "card_2", "card_3"]
-    types = [flop_type(*flop) for flop in matches[cards].itertuples(index=False)]
-    matches = matches.assign(flop_type=pd.Series(types, index=matches.index, dtype=object)).drop(columns=cards)
-    return matches[matches["flop_type"].isin(flop_types)] if flop_types else matches
+def _board_column(matches, cards, label):
+    return pd.Series([label(*row) for row in matches[cards].itertuples(index=False)], index=matches.index, dtype=object)
 
 
-def run_spot(pot, position, role, line, formations=(), date_from=None, date_to=None, flop_types=()):
+def _labels_column(matches, cards, labeler):
+    return _board_column(matches, cards, lambda *ids: ", ".join(labeler(*ids)))
+
+
+def _keep(column, selected):
+    return column.map(lambda labels: bool(set(labels.split(", ")) & set(selected)))
+
+
+def _with_board_types(matches, street, flop_types, turn_types, river_types):
+    cards = ["card_1", "card_2", "card_3", "card_4", "card_5"]
+    none = pd.Series(None, index=matches.index, dtype=object)
+    matches = matches.assign(
+        flop_type=_board_column(matches, cards[:3], flop_type),
+        turn_type=_labels_column(matches, cards[:4], turn_labels) if street in ("t", "r") else none,
+        river_type=_labels_column(matches, cards, river_labels) if street == "r" else none,
+    )
+    keep = pd.Series(True, index=matches.index)
+    if flop_types:
+        keep &= matches["flop_type"].isin(flop_types)
+    if turn_types:
+        keep &= _keep(matches["turn_type"], turn_types)
+    if river_types:
+        keep &= _keep(matches["river_type"], river_types)
+    return matches[keep].drop(columns=cards)
+
+
+def _checked(values, registry, name):
+    values = list(dict.fromkeys(values))
+    unknown = [v for v in values if v not in registry]
+    if unknown:
+        raise SpotInputError(f"Unknown {name}: {unknown[0]}")
+    return values
+
+
+def run_spot(pot, position, role, line, formations=(), date_from=None, date_to=None, flop_types=(),
+             turn_types=(), river_types=()):
     pot, position, role = pot.lower(), position.lower(), role.lower()
     formations = list(dict.fromkeys(formations))
-    flop_types = list(dict.fromkeys(flop_types))
-    unknown = [t for t in flop_types if t not in FLOP_TYPES]
-    if unknown:
-        raise SpotInputError(f"Unknown flop type: {unknown[0]}")
+    flop_types = _checked(flop_types, FLOP_TYPES, "flop type")
+    turn_types = _checked(turn_types, TURN_LABELS, "turn type")
+    river_types = _checked(river_types, RIVER_LABELS, "river type")
     spec = parse_line(line, role, position)
+    street = spec.decision.street
+    if turn_types and street == "f":
+        raise SpotInputError("Turn type needs a decision on the turn or river")
+    if river_types and street != "r":
+        raise SpotInputError("River type needs a decision on the river")
     where, params, measured_sql = build_spot_query(pot, position, role, spec, formations, date_from, date_to)
-    matches = _with_flop_type(run_spot_query(where, params, measured_sql), flop_types)
+    matches = run_spot_query(where, params, measured_sql)
+    matches = _with_board_types(matches, street, flop_types, turn_types, river_types)
     prefix = spec.decision.hero
     matches = matches.assign(measured_action=prefix + matches["measured_action"])  # letter -> label
     split = splits_by_size(spec)
@@ -106,7 +148,8 @@ def run_spot(pot, position, role, line, formations=(), date_from=None, date_to=N
         hands = hands.astype(object).where(hands.notna(), None)
 
     return {
-        "interpreted_filter": describe(pot, position, role, formations, spec, len(matches), date_from, date_to, flop_types),
+        "interpreted_filter": describe(pot, position, role, formations, spec, len(matches), date_from, date_to, flop_types,
+                                       turn_types, river_types),
         "distribution": _distribution(unsized, spec.measured, prefix),
         "split": _split(labels, prefix) if split else None,
         "hands": hands,

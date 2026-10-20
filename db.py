@@ -86,7 +86,7 @@ def run_distribution_query(where_clause, params, conditions, id_player=10, since
 def run_spot_query(where_clause, params, measured_sql, id_player=10):
 
     query = f"""
-        SELECT chps.id_hand, chs.card_1, chs.card_2, chs.card_3, {measured_sql} AS measured_action
+        SELECT chps.id_hand, chs.card_1, chs.card_2, chs.card_3, chs.card_4, chs.card_5, {measured_sql} AS measured_action
         FROM cash_hand_player_statistics chps
             JOIN cash_hand_summary chs ON chps.id_hand = chs.id_hand
             JOIN cash_hand_player_statistics v

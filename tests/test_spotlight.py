@@ -14,12 +14,14 @@ def card_id(card):
 
 
 def fake_matches(rows):
-    """Rows are (id_hand, letter) on a BLL flop, or (id_hand, letter, flop)."""
+    """Rows are (id_hand, letter[, flop[, runout]]): flop defaults to BLL, runout to turn 2h and no river."""
     records = []
     for row in rows:
-        id_hand, letter, flop = row if len(row) == 3 else (*row, BLL_FLOP)
-        records.append((id_hand, *[card_id(flop[i:i + 2]) for i in range(0, 6, 2)], letter))
-    return pd.DataFrame(records, columns=["id_hand", "card_1", "card_2", "card_3", "measured_action"])
+        id_hand, letter, flop, runout = [*row, *(BLL_FLOP, "2h")[len(row) - 2:]]
+        cards = [card_id(board[i:i + 2]) for board in (flop, runout) for i in range(0, len(board), 2)]
+        records.append((id_hand, *cards, *[0] * (5 - len(cards)), letter))
+    columns = ["id_hand", "card_1", "card_2", "card_3", "card_4", "card_5", "measured_action"]
+    return pd.DataFrame(records, columns=columns)
 
 
 def install(monkeypatch, matches, details=None):
@@ -125,7 +127,8 @@ def test_nan_in_hand_details_becomes_none(monkeypatch):
     install(monkeypatch, fake_matches([(1, "B")]), details)
     hands = spotlight.run_spot("2bp", "ip", "pfr", "- B-?")["hands"]
     assert hands.to_dict(orient="records") == [
-        {"id_hand": 1, "amt_won": None, "flop_type": "BLL", "measured_action": "B"}]
+        {"id_hand": 1, "amt_won": None, "flop_type": "BLL", "turn_type": "Brick", "river_type": None,
+         "measured_action": "B"}]
 
 
 MIXED = [(1, "Cs", "KsQd4c"), (2, "Cs", "Ks9d3c"), (3, "Fm", "7s6d2c")]  # 2BWL, BLL, Low
@@ -167,6 +170,77 @@ def test_duplicate_flop_types_show_once(monkeypatch):
     install(monkeypatch, fake_matches(MIXED))
     text = spotlight.run_spot("2bp", "oop", "pfc", "vs B?", flop_types=["BLL", "BLL"])["interpreted_filter"]
     assert text.count("Flop type: BLL") == 1 and "BLL, BLL" not in text
+
+
+RUNOUTS = [(1, "Bs", "9s7c3h", "Kh"), (2, "X", "9s7c3h", "8d"), (3, "Bs", "9s7c3h", "2d")]  # BW K+FDP, SC, Brick
+
+
+def test_turn_filter_or_within_street(monkeypatch):
+    install(monkeypatch, fake_matches(RUNOUTS))
+    result = spotlight.run_spot("2bp", "ip", "pfr", "- B-?", turn_types=["SC", "BW K"])
+    assert set(result["hands"]["id_hand"]) == {1, 2}
+    assert [row["hands"] for row in result["distribution"] if "parent" not in row] == [1, 1]
+
+
+def test_flop_turn_river_and(monkeypatch):
+    rows = [(1, "B", BLL_FLOP, "2c7d"),    # BLL, turn FDP+Brick, river Brick
+            (2, "B", BLL_FLOP, "2c7c"),    # BLL, turn FDP+Brick, river FC
+            (3, "B", BLL_FLOP, "Kc7c"),    # BLL, turn BP high+FDP, river FC
+            (4, "B", "7s6d2c", "Ah7c")]    # Low
+    install(monkeypatch, fake_matches(rows))
+    result = spotlight.run_spot("2bp", "ip", "pfr", "- B-B-?", flop_types=["BLL"], turn_types=["Brick"],
+                                river_types=["FC"])
+    assert list(result["hands"]["id_hand"]) == [2]
+
+
+def test_turn_decision_without_river(monkeypatch):
+    install(monkeypatch, fake_matches(RUNOUTS))
+    hands = spotlight.run_spot("2bp", "ip", "pfr", "- B-?")["hands"]
+    assert list(hands["turn_type"]) == ["BW K, FDP", "SC", "Brick"]
+    assert list(hands["river_type"]) == [None, None, None]
+
+
+def test_flop_decision_has_no_runout_values(monkeypatch):
+    install(monkeypatch, fake_matches([(1, "Cs", BLL_FLOP, "")]))
+    hands = spotlight.run_spot("2bp", "oop", "pfc", "vs B?")["hands"]
+    assert hands.loc[0, "turn_type"] is None and hands.loc[0, "river_type"] is None
+
+
+def no_query(*args):
+    raise AssertionError("queried")
+
+
+@pytest.mark.parametrize("line, kwargs", [
+    ("vs B?", {"turn_types": ["FC"]}),
+    ("- B-?", {"river_types": ["Brick"]}),
+])
+def test_runout_types_need_their_street(monkeypatch, line, kwargs):
+    monkeypatch.setattr("spotlight.run_spot_query", no_query)
+    role, position = ("pfc", "oop") if line.startswith("vs") else ("pfr", "ip")
+    with pytest.raises(SpotInputError, match="decision"):
+        spotlight.run_spot("2bp", position, role, line, **kwargs)
+
+
+@pytest.mark.parametrize("kwargs, bad", [({"turn_types": ["fc"]}, "fc"), ({"river_types": ["FDP"]}, "FDP")])
+def test_unknown_runout_label_raises(monkeypatch, kwargs, bad):
+    monkeypatch.setattr("spotlight.run_spot_query", no_query)
+    with pytest.raises(SpotInputError, match=bad):
+        spotlight.run_spot("2bp", "ip", "pfr", "- B-B-?", **kwargs)
+
+
+def test_describe_runout_parts(monkeypatch):
+    install(monkeypatch, fake_matches([(1, "Bs", BLL_FLOP, "2c7d")]))
+    text = spotlight.run_spot("2bp", "ip", "pfr", "- B-B-?", flop_types=["BLL"], turn_types=["FC", "BP high", "FC"],
+                              river_types=["Brick"])["interpreted_filter"]
+    assert "· Flop type: BLL · Turn type: FC, BP high · River type: Brick · " in text
+    plain = spotlight.run_spot("2bp", "ip", "pfr", "- B-B-?")["interpreted_filter"]
+    assert "Turn type" not in plain and "River type" not in plain
+
+
+def test_hand_columns_joined_in_page_order(monkeypatch):
+    install(monkeypatch, fake_matches([(1, "B", "Ts9h8d", "Qc")]))
+    hands = spotlight.run_spot("2bp", "ip", "pfr", "- B-?")["hands"]
+    assert hands.loc[0, "turn_type"] == "SC, BW Q"
 
 
 def test_describe_flop_part_after_dates():
