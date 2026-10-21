@@ -301,6 +301,34 @@ def test_describe_hand_part(monkeypatch):
     assert "Hand:" not in spotlight.run_spot("2bp", "oop", "pfc", "vs B?")["interpreted_filter"]
 
 
+def test_hand_split_rows_cells_and_pcts(monkeypatch):
+    install(monkeypatch, fake_matches([(1, "Bs", BLL_FLOP, "2h", "KcQd"), (2, "X", BLL_FLOP, "2h", "KcQd"),
+                                       (3, "X", BLL_FLOP, "2h", "7h6h")]))
+    split = spotlight.run_spot("2bp", "ip", "pfr", "- ?")["hand_split"]
+    assert [(r["hand_type"], r["hands"], r["pct_total"]) for r in split] == [
+        ("Top pair", 2, 66.7), ("No made hand", 1, 33.3)]
+    assert [(c["label"], c["hands"], c["pct"]) for c in split[0]["cells"]] == [
+        ("B", 1, 50.0), ("Bs", 1, 50.0), ("Bm", 0, 0.0), ("Bl", 0, 0.0), ("Bo", 0, 0.0), ("X", 1, 50.0)]
+
+
+def test_hand_split_facing_uses_unsized_cells(monkeypatch):
+    install(monkeypatch, fake_matches(HOLES[:3]))
+    split = spotlight.run_spot("2bp", "oop", "pfc", "vs B?")["hand_split"]
+    assert [c["label"] for c in split[0]["cells"]] == ["XF", "XC", "XR"]
+    assert [(r["hand_type"], [c["hands"] for c in r["cells"]]) for r in split] == [
+        ("Top pair", [0, 1, 0]), ("2nd pair", [0, 1, 0]), ("No made hand", [1, 0, 0])]
+
+
+def test_hand_split_none_on_turn_decision(monkeypatch):
+    install(monkeypatch, fake_matches(RUNOUTS))
+    assert spotlight.run_spot("2bp", "ip", "pfr", "- B-?")["hand_split"] is None
+
+
+def test_hand_split_empty_list_when_no_hands(monkeypatch):
+    install(monkeypatch, fake_matches(HOLES[:1]))
+    assert spotlight.run_spot("2bp", "oop", "pfc", "vs B?", hand_types=["Set"])["hand_split"] == []
+
+
 def test_describe_flop_part_after_dates():
     spec = parse_line("vs B?", "pfc", "oop")
     text = spotlight.describe("2bp", "oop", "pfc", [], spec, 5, date(2026, 9, 1), None, ["BLL", "Low"])

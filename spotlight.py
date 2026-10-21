@@ -84,6 +84,13 @@ def _split(labels, prefix):
     return rows
 
 
+def _hand_split(types, labels, spec, prefix):
+    total = len(types)
+    return [{"hand_type": t, "hands": int(n), "pct_total": _pct(int(n), total),
+             "cells": _distribution(labels[types == t], spec.measured, prefix)}
+            for t in HAND_TYPES if (n := (types == t).sum())]
+
+
 def _board_column(matches, cards, label):
     return pd.Series([label(*row) for row in matches[cards].itertuples(index=False)], index=matches.index, dtype=object)
 
@@ -169,5 +176,6 @@ def run_spot(pot, position, role, line, formations=(), date_from=None, date_to=N
                                        turn_types, river_types, hand_types),
         "distribution": _distribution(unsized, spec.measured, prefix),
         "split": _split(labels, prefix) if split else None,
+        "hand_split": _hand_split(matches["hand_type"], unsized, spec, prefix) if street == "f" else None,
         "hands": hands,
     }
