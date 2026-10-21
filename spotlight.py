@@ -2,6 +2,7 @@ import pandas as pd
 
 from board_types import FLOP_TYPES, RIVER_LABELS, TURN_LABELS, flop_type, river_labels, turn_labels
 from db import run_spot_query, get_hand_details
+from hand_strength import HAND_TYPES, hand_type
 from line_parser import parse_line, STREET_NAMES, SpotInputError
 from sizing import SIZE_BUCKETS, size_text
 from spot_sql import build_spot_query, splits_by_size
@@ -15,7 +16,7 @@ def _street_text(spec_street, actors, tail=()):
 
 
 def describe(pot, position, role, formations, spec, n_hands, date_from=None, date_to=None, flop_types=(),
-             turn_types=(), river_types=()):
+             turn_types=(), river_types=(), hand_types=()):
     parts = [pot.upper(), position.upper(), role.upper(), ", ".join(formations) or "Any"]
     if date_from and date_to:
         parts.append(f"{date_from} → {date_to}")
@@ -29,6 +30,8 @@ def describe(pot, position, role, formations, spec, n_hands, date_from=None, dat
         parts.append("Turn type: " + ", ".join(turn_types))
     if river_types:
         parts.append("River type: " + ", ".join(river_types))
+    if hand_types:
+        parts.append("Hand: " + ", ".join(hand_types))
     for s in spec.completed:
         parts.append(_street_text(s, [f"Hero {s.hero}", f"villain {s.villain}"]))
     d = spec.decision
@@ -108,7 +111,17 @@ def _with_board_types(matches, street, flop_types, turn_types, river_types):
         keep &= _keep(matches["turn_type"], turn_types)
     if river_types:
         keep &= _keep(matches["river_type"], river_types)
-    return matches[keep].drop(columns=cards)
+    return matches[keep]
+
+
+def _with_hand_type(matches, street, hand_types):
+    cards = ["holecard_1", "holecard_2", "card_1", "card_2", "card_3"]
+    on_flop = street == "f"
+    matches = matches.assign(hand_type=_board_column(matches, cards, hand_type) if on_flop
+                             else pd.Series(None, index=matches.index, dtype=object))
+    if hand_types:
+        matches = matches[matches["hand_type"].isin(hand_types)]
+    return matches.drop(columns=cards + ["card_4", "card_5"])
 
 
 def _checked(values, registry, name):
@@ -120,21 +133,25 @@ def _checked(values, registry, name):
 
 
 def run_spot(pot, position, role, line, formations=(), date_from=None, date_to=None, flop_types=(),
-             turn_types=(), river_types=()):
+             turn_types=(), river_types=(), hand_types=()):
     pot, position, role = pot.lower(), position.lower(), role.lower()
     formations = list(dict.fromkeys(formations))
     flop_types = _checked(flop_types, FLOP_TYPES, "flop type")
     turn_types = _checked(turn_types, TURN_LABELS, "turn type")
     river_types = _checked(river_types, RIVER_LABELS, "river type")
+    hand_types = _checked(hand_types, HAND_TYPES, "hand type")
     spec = parse_line(line, role, position)
     street = spec.decision.street
     if turn_types and street == "f":
         raise SpotInputError("Turn type needs a decision on the turn or river")
     if river_types and street != "r":
         raise SpotInputError("River type needs a decision on the river")
+    if hand_types and street != "f":
+        raise SpotInputError("Hand type needs a decision on the flop")
     where, params, measured_sql = build_spot_query(pot, position, role, spec, formations, date_from, date_to)
     matches = run_spot_query(where, params, measured_sql)
     matches = _with_board_types(matches, street, flop_types, turn_types, river_types)
+    matches = _with_hand_type(matches, street, hand_types)
     prefix = spec.decision.hero
     matches = matches.assign(measured_action=prefix + matches["measured_action"])  # letter -> label
     split = splits_by_size(spec)
@@ -149,7 +166,7 @@ def run_spot(pot, position, role, line, formations=(), date_from=None, date_to=N
 
     return {
         "interpreted_filter": describe(pot, position, role, formations, spec, len(matches), date_from, date_to, flop_types,
-                                       turn_types, river_types),
+                                       turn_types, river_types, hand_types),
         "distribution": _distribution(unsized, spec.measured, prefix),
         "split": _split(labels, prefix) if split else None,
         "hands": hands,

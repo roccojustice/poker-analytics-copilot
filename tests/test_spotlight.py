@@ -14,13 +14,14 @@ def card_id(card):
 
 
 def fake_matches(rows):
-    """Rows are (id_hand, letter[, flop[, runout]]): flop defaults to BLL, runout to turn 2h and no river."""
+    """Rows are (id_hand, letter[, flop[, runout[, hole]]]): BLL flop, turn 2h, no river, hole 7h6h by default."""
     records = []
     for row in rows:
-        id_hand, letter, flop, runout = [*row, *(BLL_FLOP, "2h")[len(row) - 2:]]
+        id_hand, letter, flop, runout, hole = [*row, *(BLL_FLOP, "2h", "7h6h")[len(row) - 2:]]
         cards = [card_id(board[i:i + 2]) for board in (flop, runout) for i in range(0, len(board), 2)]
-        records.append((id_hand, *cards, *[0] * (5 - len(cards)), letter))
-    columns = ["id_hand", "card_1", "card_2", "card_3", "card_4", "card_5", "measured_action"]
+        records.append((id_hand, *cards, *[0] * (5 - len(cards)), card_id(hole[:2]), card_id(hole[2:]), letter))
+    columns = ["id_hand", "card_1", "card_2", "card_3", "card_4", "card_5", "holecard_1", "holecard_2",
+               "measured_action"]
     return pd.DataFrame(records, columns=columns)
 
 
@@ -128,7 +129,7 @@ def test_nan_in_hand_details_becomes_none(monkeypatch):
     hands = spotlight.run_spot("2bp", "ip", "pfr", "- B-?")["hands"]
     assert hands.to_dict(orient="records") == [
         {"id_hand": 1, "amt_won": None, "flop_type": "BLL", "turn_type": "Brick", "river_type": None,
-         "measured_action": "B"}]
+         "hand_type": None, "measured_action": "B"}]
 
 
 MIXED = [(1, "Cs", "KsQd4c"), (2, "Cs", "Ks9d3c"), (3, "Fm", "7s6d2c")]  # 2BWL, BLL, Low
@@ -241,6 +242,63 @@ def test_hand_columns_joined_in_page_order(monkeypatch):
     install(monkeypatch, fake_matches([(1, "B", "Ts9h8d", "Qc")]))
     hands = spotlight.run_spot("2bp", "ip", "pfr", "- B-?")["hands"]
     assert hands.loc[0, "turn_type"] == "SC, BW Q"
+
+
+HOLES = [(1, "Cs", BLL_FLOP, "2h", "KcQd"), (2, "Cs", BLL_FLOP, "2h", "9c8c"),  # Top pair, 2nd pair
+         (3, "Fs", BLL_FLOP, "2h", "7h6h"), (4, "Cs", "7s6d2c", "2h", "KcQd")]  # No made hand, Low flop K high
+
+
+def test_hand_filter_or_within(monkeypatch):
+    install(monkeypatch, fake_matches(HOLES[:3]))
+    hands = spotlight.run_spot("2bp", "oop", "pfc", "vs B?", hand_types=["Top pair", "2nd pair"])["hands"]
+    assert dict(zip(hands["id_hand"], hands["hand_type"])) == {1: "Top pair", 2: "2nd pair"}
+
+
+def test_hand_and_flop_type(monkeypatch):
+    install(monkeypatch, fake_matches(HOLES))
+    hands = spotlight.run_spot("2bp", "oop", "pfc", "vs B?", flop_types=["BLL"],
+                               hand_types=["Top pair", "No made hand"])["hands"]
+    assert set(hands["id_hand"]) == {1, 3}
+
+
+def test_no_hand_types_keeps_every_hand(monkeypatch):
+    install(monkeypatch, fake_matches(HOLES))
+    hands = spotlight.run_spot("2bp", "oop", "pfc", "vs B?")["hands"]
+    assert dict(zip(hands["id_hand"], hands["hand_type"])) == {
+        1: "Top pair", 2: "2nd pair", 3: "No made hand", 4: "No made hand"}
+
+
+def test_hand_types_need_a_flop_decision(monkeypatch):
+    monkeypatch.setattr("spotlight.run_spot_query", no_query)
+    with pytest.raises(SpotInputError, match="Hand type needs a decision on the flop"):
+        spotlight.run_spot("2bp", "ip", "pfr", "- B-?", hand_types=["Top pair"])
+
+
+def test_unknown_hand_type_raises(monkeypatch):
+    monkeypatch.setattr("spotlight.run_spot_query", no_query)
+    with pytest.raises(SpotInputError, match="Unknown hand type: Monster"):
+        spotlight.run_spot("2bp", "oop", "pfc", "vs B?", hand_types=["Monster"])
+
+
+def test_turn_decision_has_no_hand_type(monkeypatch):
+    install(monkeypatch, fake_matches(RUNOUTS))
+    hands = spotlight.run_spot("2bp", "ip", "pfr", "- B-?")["hands"]
+    assert list(hands["hand_type"]) == [None, None, None]
+
+
+def test_hole_cards_not_duplicated_by_details(monkeypatch):
+    details = pd.DataFrame({"id_hand": [1], "holecard_1": [5], "holecard_2": [6]})
+    install(monkeypatch, fake_matches(HOLES[:1]), details)
+    hands = spotlight.run_spot("2bp", "oop", "pfc", "vs B?")["hands"]
+    assert [c for c in hands.columns if c.startswith("holecard")] == ["holecard_1", "holecard_2"]
+
+
+def test_describe_hand_part(monkeypatch):
+    install(monkeypatch, fake_matches(HOLES[:1]))
+    text = spotlight.run_spot("2bp", "oop", "pfc", "vs B?", flop_types=["BLL"],
+                              hand_types=["Top pair", "Overpair", "Top pair"])["interpreted_filter"]
+    assert "· Flop type: BLL · Hand: Top pair, Overpair · Flop: " in text
+    assert "Hand:" not in spotlight.run_spot("2bp", "oop", "pfc", "vs B?")["interpreted_filter"]
 
 
 def test_describe_flop_part_after_dates():
