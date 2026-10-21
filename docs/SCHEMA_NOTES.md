@@ -210,3 +210,12 @@ Base: `3bp_ip_pfc_faced_cbet_flop` + `faced_cbet_turn` (`flg_t_cbet_def_opp = tr
     top card of a paired board; 4 / 5 / 6 (used 2) = bottom / middle / top set
   - Values 7–10 under straight/flush/etc. and the turn/river encodings (4–5 board cards,
     more "middle" ranks) are not decoded yet.
+- **Turn and river (part 2, Session 64), validated** the same way per street
+  (`tests/test_hand_strength_db.py`): 31,229 turn and 20,280 river Hero hands, 0 mismatches.
+  Differences from the flop codes: PT4's 1pair/2pair strengths 1, 2, 4, 5 are a "middle pair"
+  covering our 2nd / 3rd / 4th pair (exact positions are pinned by unit fixtures, not by PT4);
+  `2pair 3 (used 1)` can be Top / 2nd / 3rd; `val_<s>_hole_cards_used = 0` on a made hand
+  (straight, flush, full house, quads, straight flush) means the board plays → our Ace high /
+  No made hand; `2pair 5 (used 0)` is a pocket pair under two board pairs (33 on KK55) → no
+  pair. Sabotage check: non-playing pocket pairs as "Underpair" give 29 turn / 78 river
+  mismatches.
