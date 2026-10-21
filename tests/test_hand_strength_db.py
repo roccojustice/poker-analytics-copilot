@@ -4,6 +4,7 @@ from sqlalchemy import text
 
 from db import engine
 from hand_strength import HAND_TYPES, hand_type
+from spotlight import run_spot
 
 pytestmark = pytest.mark.db
 
@@ -71,3 +72,40 @@ def test_every_flop_hand_agrees_with_pt4(rows):
 def test_every_hand_type_occurs(rows):
     missing = set(HAND_TYPES) - set(rows["ours"]) - {"Straight flush"}
     assert not missing
+
+
+SPOT = ("2bp", "oop", "pfc", "vs B?")
+
+
+@pytest.fixture(scope="module")
+def full():
+    return run_spot(*SPOT)
+
+
+@pytest.fixture(scope="module")
+def by_type():
+    return {t: run_spot(*SPOT, hand_types=[t]) for t in HAND_TYPES}
+
+
+def test_single_hand_types_partition_the_result(full, by_type):
+    sets = {t: set(r["hands"]["id_hand"]) if len(r["hands"]) else set() for t, r in by_type.items()}
+    assert sum(len(s) for s in sets.values()) == len(set().union(*sets.values()))  # pairwise disjoint
+    assert set().union(*sets.values()) == set(full["hands"]["id_hand"])
+    for i, row in enumerate(full["distribution"]):
+        assert sum(r["distribution"][i]["hands"] for r in by_type.values()) == row["hands"]
+
+
+def test_hand_column_matches_the_filter(by_type):
+    for t, result in by_type.items():
+        assert (result["hands"]["hand_type"] == t).all() if len(result["hands"]) else True
+
+
+def test_all_hand_types_equals_any(full):
+    every = run_spot(*SPOT, hand_types=list(HAND_TYPES))
+    assert set(every["hands"]["id_hand"]) == set(full["hands"]["id_hand"])
+
+
+def test_hand_split_rows_sum_to_the_result(full, by_type):
+    rows = {r["hand_type"]: r["hands"] for r in full["hand_split"]}
+    assert sum(rows.values()) == len(full["hands"])
+    assert rows == {t: len(r["hands"]) for t, r in by_type.items() if len(r["hands"])}
