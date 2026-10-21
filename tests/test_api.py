@@ -84,7 +84,7 @@ SPOT_BODY = {"pot": "2bp", "position": "ip", "role": "pfr", "line": "- B-?", "fo
 def install_fake_run_spot(monkeypatch, result):
     calls = []
 
-    def fake_run_spot(pot, position, role, line, formations=(), date_from=None, date_to=None, flop_types=(), turn_types=(), river_types=()):
+    def fake_run_spot(pot, position, role, line, formations=(), date_from=None, date_to=None, flop_types=(), turn_types=(), river_types=(), hand_types=()):
         calls.append((pot, position, role, line, formations))
         return result
 
@@ -97,6 +97,7 @@ FAKE_RESULT = {
     "distribution": [{"action": "B", "label": "B", "name": "Bet", "hands": 1, "pct": 100.0}],
     "hands": pd.DataFrame({"id_hand": [1], "measured_action": ["B"]}),
     "split": None,
+    "hand_split": None,
 }
 
 
@@ -109,6 +110,7 @@ def test_spot_returns_result_shape(monkeypatch):
         "distribution": [{"action": "B", "label": "B", "name": "Bet", "hands": 1, "pct": 100.0}],
         "hands": [{"id_hand": 1, "measured_action": "B"}],
         "split": None,
+        "hand_split": None,
     }
     assert calls == [("2bp", "ip", "pfr", "- B-?", [])]
 
@@ -164,7 +166,7 @@ def test_spot_rejects_the_old_formation_field(monkeypatch):
 def test_spot_passes_dates_through(monkeypatch):
     seen = {}
 
-    def fake_run_spot(pot, position, role, line, formations=(), date_from=None, date_to=None, flop_types=(), turn_types=(), river_types=()):
+    def fake_run_spot(pot, position, role, line, formations=(), date_from=None, date_to=None, flop_types=(), turn_types=(), river_types=(), hand_types=()):
         seen.update(date_from=date_from, date_to=date_to)
         return FAKE_RESULT
 
@@ -176,7 +178,7 @@ def test_spot_passes_dates_through(monkeypatch):
 def test_spot_dates_default_to_none(monkeypatch):
     seen = {}
 
-    def fake_run_spot(pot, position, role, line, formations=(), date_from="unset", date_to="unset", flop_types=(), turn_types=(), river_types=()):
+    def fake_run_spot(pot, position, role, line, formations=(), date_from="unset", date_to="unset", flop_types=(), turn_types=(), river_types=(), hand_types=()):
         seen.update(date_from=date_from, date_to=date_to)
         return FAKE_RESULT
 
@@ -199,7 +201,7 @@ def test_spot_malformed_date_is_422():
 def test_spot_passes_flop_types_through(monkeypatch):
     seen = {}
 
-    def fake_run_spot(pot, position, role, line, formations=(), date_from=None, date_to=None, flop_types="unset", turn_types=(), river_types=()):
+    def fake_run_spot(pot, position, role, line, formations=(), date_from=None, date_to=None, flop_types="unset", turn_types=(), river_types=(), hand_types=()):
         seen["flop_types"] = flop_types
         return FAKE_RESULT
 
@@ -211,7 +213,7 @@ def test_spot_passes_flop_types_through(monkeypatch):
 def test_spot_flop_types_default_to_empty(monkeypatch):
     seen = {}
 
-    def fake_run_spot(pot, position, role, line, formations=(), date_from=None, date_to=None, flop_types="unset", turn_types=(), river_types=()):
+    def fake_run_spot(pot, position, role, line, formations=(), date_from=None, date_to=None, flop_types="unset", turn_types=(), river_types=(), hand_types=()):
         seen["flop_types"] = flop_types
         return FAKE_RESULT
 
@@ -260,3 +262,29 @@ def test_spot_river_types_on_turn_line_is_400():
     response = client.post("/spot", json=SPOT_BODY | {"line": "- B-?", "river_types": ["Brick"]})
     assert response.status_code == 400
     assert "river" in response.json()["error"]
+
+
+def test_spot_passes_hand_split_through(monkeypatch):
+    hand_split = [{"hand_type": "Top pair", "hands": 1, "pct_total": 100.0,
+                   "cells": [{"action": "X", "label": "X", "name": "Check", "hands": 1, "pct": 100.0}]}]
+    install_fake_run_spot(monkeypatch, FAKE_RESULT | {"hand_split": hand_split})
+    assert client.post("/spot", json=SPOT_BODY).json()["hand_split"] == hand_split
+
+
+def test_spot_passes_hand_types_through(monkeypatch):
+    seen = []
+
+    def fake_run_spot(*args, hand_types="unset", **kwargs):
+        seen.append(hand_types)
+        return FAKE_RESULT
+
+    monkeypatch.setattr("api.run_spot", fake_run_spot)
+    client.post("/spot", json=SPOT_BODY | {"hand_types": ["Top pair"]})
+    client.post("/spot", json=SPOT_BODY)
+    assert seen == [["Top pair"], []]
+
+
+def test_spot_hand_types_on_turn_line_is_400():
+    response = client.post("/spot", json=SPOT_BODY | {"line": "- B-?", "hand_types": ["Top pair"]})
+    assert response.status_code == 400
+    assert response.json() == {"error": "Hand type needs a decision on the flop"}
