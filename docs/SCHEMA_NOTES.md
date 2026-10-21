@@ -179,3 +179,30 @@ Base: `3bp_ip_pfc_faced_cbet_flop` + `faced_cbet_turn` (`flg_t_cbet_def_opp = tr
 - Sanity check of the flop types on real data (`2bp oop pfc vs B?`, 4,229 hands): every type
   sits within ~2 points of its theoretical share except `Low` (17.9% vs 22.8%), consistent with
   card removal from a BB defend range full of low cards.
+
+## Hand strength per street (Session 64 spike)
+
+- PT4 stores it in **`cash_hand_player_combinations`** (keyed `id_hand` + `id_player`), per
+  street `f/t/r`: category flags `flg_<s>_highcard/1pair/2pair/threeoak/straight/flush/
+  fullhouse/fouroak/strflush`, `id_<s>_hand_strength`, `id_<s>_kicker_strength`,
+  `val_<s>_hole_cards_used` (0/1/2), plus draw flags (`flg_<s>_flush_draw`, `_straight_draw`,
+  `_gutshot_draw`, `_bflush_draw`… flop/turn only). `chps` has only `id_final_hand`.
+- **Coverage:** every Hero hand that saw a street has a row with that street's strength set;
+  `-1` exactly on streets not seen (93,482 no-flop, 14,742 flop-only, 10,949 to turn, 20,280
+  to river). Hands where Hero folded preflop without a row: 195,934 (none saw the flop).
+- **The category flags are absolute** (best 5 cards, board included): Kh9s on JsJd9h is
+  `flg_f_2pair`. That is why PT4's "two pair" filter looks wrong to the user. What Hero holds
+  comes from `id_<s>_hand_strength` + `val_<s>_hole_cards_used`.
+- **Flop `id_f_hand_strength` meaning, read from ~400 sampled hands per category** (not yet
+  validated against a PT4 export):
+  - high card: number of overcards to the board (0 / 1 / 2)
+  - 1 pair: 0 + used 0 = board pair only; 0 + used 2 = pocket pair under every board card;
+    1 / 2 / 3 (used 1) = bottom / middle / top pair; 4 / 5 / 6 (used 2) = pocket pair above
+    one / two board cards, 6 = overpair
+  - 2 pair: 3 (used 1) = pairs a card of a paired board; 4 / 5 / 6 (used 2) = pocket pair
+    under both / between / over the paired board; 7 / 8 / 9 = bottom two / top and bottom /
+    top two
+  - three of a kind: 0 (used 0) = trips on board; 1 / 3 (used 1) = trips with the bottom /
+    top card of a paired board; 4 / 5 / 6 (used 2) = bottom / middle / top set
+  - Values 7–10 under straight/flush/etc. and the turn/river encodings (4–5 board cards,
+    more "middle" ranks) are not decoded yet.
