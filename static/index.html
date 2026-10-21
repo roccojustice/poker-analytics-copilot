@@ -50,6 +50,7 @@
     td.num { text-align: right; }
     table.dist tr.sub td:first-child { padding-left: 1.6rem; }
     table.dist tr.sub { color: #444; }
+    table.dist th.sub, table.dist td.sub { color: #555; font-size: 0.85rem; }
     .hint { color: #666; font-size: 0.8rem; margin-top: 0.15rem; }
   </style>
 </head>
@@ -92,6 +93,10 @@
       <summary>River: Any</summary>
       <div class="panel"></div>
     </details>
+    <details class="formations" id="hand-types">
+      <summary>Hand: Any</summary>
+      <div class="panel"></div>
+    </details>
     <div class="dates">
       <label>From <input type="date" id="date-from"></label>
       <label>To <input type="date" id="date-to"></label>
@@ -121,7 +126,9 @@
     ],
     "flop_types": ["BLL", "Low", "2BWL", "Low paired", "High paired", "A high", "Monotone", "3BW"],
     "turn_types": ["FC", "SC", "BP high", "BP mid", "BP low", "BW A", "BW K", "BW Q", "BW J", "FDP", "Brick"],
-    "river_types": ["FC", "SC", "BP high", "BP mid", "BP low", "BW A", "BW K", "BW Q", "BW J", "Brick"]
+    "river_types": ["FC", "SC", "BP high", "BP mid", "BP low", "BW A", "BW K", "BW Q", "BW J", "Brick"],
+    "hand_types": ["Straight flush", "Quads", "Full house", "Flush", "Straight", "Set", "Trips", "Two pair",
+                   "Overpair", "Top pair", "2nd pair", "3rd pair", "Underpair", "Ace high", "No made hand"]
   }
   </script>
 
@@ -234,6 +241,7 @@
     const selectedFlopTypes = multiSelect("flop-types", CONFIG.flop_types, values => "Flop: " + joinedOrAny(values));
     const selectedTurnTypes = multiSelect("turn-types", CONFIG.turn_types, values => "Turn: " + joinedOrAny(values), true);
     const selectedRiverTypes = multiSelect("river-types", CONFIG.river_types, values => "River: " + joinedOrAny(values), true);
+    const selectedHandTypes = multiSelect("hand-types", CONFIG.hand_types, values => "Hand: " + joinedOrAny(values));
 
     // Streets in the Line (1 flop, 2 turn, 3 river), split like line_parser._split_tokens
     function lineStreets(line) {
@@ -244,6 +252,7 @@
       const streets = lineStreets(lineEl.value);
       selectedTurnTypes.setEnabled(streets >= 2);
       selectedRiverTypes.setEnabled(streets >= 3);
+      selectedHandTypes.setEnabled(streets === 1);
     }
     refreshRunoutControls();
 
@@ -267,7 +276,7 @@
       const requestId = ++latestRequest;
       const body = {
         ...state, line: lineEl.value.trim(), formations: selectedFormations(), flop_types: selectedFlopTypes(),
-        turn_types: selectedTurnTypes(), river_types: selectedRiverTypes(),
+        turn_types: selectedTurnTypes(), river_types: selectedRiverTypes(), hand_types: selectedHandTypes(),
         date_from: document.getElementById("date-from").value || null,
         date_to: document.getElementById("date-to").value || null,
       };
@@ -305,6 +314,7 @@
       outputEl.innerHTML =
         `<div class="filter-line">${escapeHtml(data.interpreted_filter)}</div>` +
         (data.split ? renderSplit(data.distribution, data.split) : renderDistribution(data.distribution)) +
+        (data.hand_split && data.hand_split.length ? renderHandSplit(data.hand_split) : "") +
         '<h3>Matching hands</h3>' +
         '<div class="hand-filter">Result from ' +
         `<input id="result-min" type="number" step="any" value="${escapeHtml(resultRange.min)}"> to ` +
@@ -340,12 +350,20 @@
       renderHands();
     }
 
+    // A "hand:<type>" pick (row header) or "hand:<type>|<label>" (cell); other picks match the label only
+    function matchesPick(hand, pick) {
+      const labels = groupsOf[hand.measured_action] || [hand.measured_action];
+      if (!pick.startsWith("hand:")) return labels.includes(pick);
+      const [type, label] = pick.slice("hand:".length).split("|");
+      return hand.hand_type === type && (!label || labels.includes(label));
+    }
+
     function renderHands() {
       const a = resultRange.min === "" ? -Infinity : Number(resultRange.min);
       const b = resultRange.max === "" ? Infinity : Number(resultRange.max);
       const [min, max] = [Math.min(a, b), Math.max(a, b)];  // either field order means the same range
       const rows = currentHands.filter(hand =>
-        (!activePick || (groupsOf[hand.measured_action] || [hand.measured_action]).includes(activePick)) &&
+        (!activePick || matchesPick(hand, activePick)) &&
         hand.result_bb >= min && hand.result_bb <= max
       );
       document.getElementById("hand-count").textContent =
@@ -384,6 +402,25 @@
       return html;
     }
 
+    function renderHandSplit(handSplit) {
+      const sub = cell => cell.parent ? ' class="sub"' : "";
+      let html = '<table class="dist"><thead><tr><th>Hand type</th><th>Hands (% total)</th>';
+      handSplit[0].cells.forEach(cell => html += `<th${sub(cell)}>${escapeHtml(cell.label)}</th>`);
+      html += "</tr></thead><tbody>";
+      handSplit.forEach(row => {
+        const pick = `hand:${row.hand_type}`;
+        html += `<tr><td data-pick="${escapeHtml(pick)}">${escapeHtml(row.hand_type)}</td>` +
+          `<td>${row.hands.toLocaleString("en-US")} (${row.pct_total.toFixed(1)}%)</td>`;
+        row.cells.forEach(cell => {
+          html += `<td data-pick="${escapeHtml(`${pick}|${cell.label}`)}"${sub(cell)}>${cell.pct.toFixed(1)}%` +
+            `<small>${cell.hands.toLocaleString("en-US")}</small></td>`;
+        });
+        html += "</tr>";
+      });
+      html += "</tbody></table>";
+      return html;
+    }
+
     const SUIT_SYMBOLS = { c: "♣", d: "♦", h: "♥", s: "♠" };
     const RED_SUITS = new Set(["d", "h"]);
 
@@ -400,6 +437,7 @@
       { label: "Cards", render: cards("hole_cards") },
       { label: "Flop", render: cards("flop") },
       { label: "Flop type", render: text("flop_type") },
+      { label: "Hand type", render: text("hand_type") },
       { label: "Flop action", render: action("f") },
       { label: "Turn", render: cards("turn") },
       { label: "Turn type", render: text("turn_type") },

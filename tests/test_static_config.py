@@ -3,6 +3,7 @@ import re
 from pathlib import Path
 
 from board_types import FLOP_TYPES, RIVER_LABELS, TURN_LABELS
+from hand_strength import HAND_TYPES
 from line_parser import parse_line
 from spot_sql import FORMATIONS
 
@@ -28,6 +29,10 @@ def test_runout_types_match_the_backend():
     config = load_config()
     assert config["turn_types"] == list(TURN_LABELS)
     assert config["river_types"] == list(RIVER_LABELS)
+
+
+def test_hand_types_match_the_backend():
+    assert load_config()["hand_types"] == list(HAND_TYPES)
 
 
 def test_presets_are_the_20_v1_lines_and_all_parse():
