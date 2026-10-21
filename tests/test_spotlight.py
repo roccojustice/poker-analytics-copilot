@@ -129,7 +129,7 @@ def test_nan_in_hand_details_becomes_none(monkeypatch):
     hands = spotlight.run_spot("2bp", "ip", "pfr", "- B-?")["hands"]
     assert hands.to_dict(orient="records") == [
         {"id_hand": 1, "amt_won": None, "flop_type": "BLL", "turn_type": "Brick", "river_type": None,
-         "hand_type": None, "measured_action": "B"}]
+         "hand_type": "No made hand", "measured_action": "B"}]
 
 
 MIXED = [(1, "Cs", "KsQd4c"), (2, "Cs", "Ks9d3c"), (3, "Fm", "7s6d2c")]  # 2BWL, BLL, Low
@@ -268,10 +268,10 @@ def test_no_hand_types_keeps_every_hand(monkeypatch):
         1: "Top pair", 2: "2nd pair", 3: "No made hand", 4: "No made hand"}
 
 
-def test_hand_types_need_a_flop_decision(monkeypatch):
-    monkeypatch.setattr("spotlight.run_spot_query", no_query)
-    with pytest.raises(SpotInputError, match="Hand type needs a decision on the flop"):
-        spotlight.run_spot("2bp", "ip", "pfr", "- B-?", hand_types=["Top pair"])
+def test_hand_types_on_a_turn_decision(monkeypatch):
+    install(monkeypatch, fake_matches(RUNOUTS))  # 7h6h: 3rd pair on 9s7c3h + Kh / 8d, 2nd pair + 2d
+    hands = spotlight.run_spot("2bp", "ip", "pfr", "- B-?", hand_types=["2nd pair"])["hands"]
+    assert list(hands["id_hand"]) == [3]
 
 
 def test_unknown_hand_type_raises(monkeypatch):
@@ -280,10 +280,16 @@ def test_unknown_hand_type_raises(monkeypatch):
         spotlight.run_spot("2bp", "oop", "pfc", "vs B?", hand_types=["Monster"])
 
 
-def test_turn_decision_has_no_hand_type(monkeypatch):
-    install(monkeypatch, fake_matches(RUNOUTS))
+def test_turn_decision_labels_the_turn_board(monkeypatch):
+    install(monkeypatch, fake_matches(RUNOUTS))  # fake rows have card_5 = 0: never read on a turn decision
     hands = spotlight.run_spot("2bp", "ip", "pfr", "- B-?")["hands"]
-    assert list(hands["hand_type"]) == [None, None, None]
+    assert list(hands["hand_type"]) == ["3rd pair", "3rd pair", "2nd pair"]
+
+
+def test_river_decision_labels_the_river_board(monkeypatch):
+    install(monkeypatch, fake_matches([(1, "B", BLL_FLOP, "2c7d")]))  # 7h6h on Ks9d3c 2c 7d
+    hands = spotlight.run_spot("2bp", "ip", "pfr", "- B-B-?")["hands"]
+    assert list(hands["hand_type"]) == ["3rd pair"]
 
 
 def test_hole_cards_not_duplicated_by_details(monkeypatch):
@@ -319,9 +325,11 @@ def test_hand_split_facing_uses_unsized_cells(monkeypatch):
         ("Top pair", [0, 1, 0]), ("2nd pair", [0, 1, 0]), ("No made hand", [1, 0, 0])]
 
 
-def test_hand_split_none_on_turn_decision(monkeypatch):
+def test_hand_split_on_turn_decision(monkeypatch):
     install(monkeypatch, fake_matches(RUNOUTS))
-    assert spotlight.run_spot("2bp", "ip", "pfr", "- B-?")["hand_split"] is None
+    split = spotlight.run_spot("2bp", "ip", "pfr", "- B-?")["hand_split"]
+    assert [(r["hand_type"], r["hands"], r["pct_total"]) for r in split] == [
+        ("2nd pair", 1, 33.3), ("3rd pair", 2, 66.7)]
 
 
 def test_hand_split_empty_list_when_no_hands(monkeypatch):
