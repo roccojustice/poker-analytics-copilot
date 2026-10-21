@@ -193,8 +193,12 @@ Base: `3bp_ip_pfc_faced_cbet_flop` + `faced_cbet_turn` (`flg_t_cbet_def_opp = tr
 - **The category flags are absolute** (best 5 cards, board included): Kh9s on JsJd9h is
   `flg_f_2pair`. That is why PT4's "two pair" filter looks wrong to the user. What Hero holds
   comes from `id_<s>_hand_strength` + `val_<s>_hole_cards_used`.
-- **Flop `id_f_hand_strength` meaning, read from ~400 sampled hands per category** (not yet
-  validated against a PT4 export):
+- **Flop `id_f_hand_strength` meaning, read from ~400 sampled hands per category**, then
+  **validated** (Session 64, `tests/test_hand_strength_db.py`): our `hand_strength.hand_type`
+  agrees with this mapping on all 45,971 Hero flop hands, 0 mismatches. Sabotage check: making
+  pocket pairs under a paired flop "3rd pair" gives 476 mismatches. PT4 does not separate
+  Ace high from No made hand; unit tests pin that split.
+  Mapping:
   - high card: number of overcards to the board (0 / 1 / 2)
   - 1 pair: 0 + used 0 = board pair only; 0 + used 2 = pocket pair under every board card;
     1 / 2 / 3 (used 1) = bottom / middle / top pair; 4 / 5 / 6 (used 2) = pocket pair above
