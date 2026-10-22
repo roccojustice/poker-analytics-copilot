@@ -97,17 +97,22 @@ def test_every_hand_type_occurs(street_rows):
     assert not missing
 
 
-SPOT = ("2bp", "oop", "pfc", "vs B?")
+SPOTS = [("2bp", "oop", "pfc", "vs B?"), ("2bp", "ip", "pfr", "- B-?"), ("2bp", "ip", "pfr", "- B-B-?")]
+
+
+@pytest.fixture(scope="module", params=SPOTS, ids=lambda spot: spot[3])
+def spot(request):
+    return request.param
 
 
 @pytest.fixture(scope="module")
-def full():
-    return run_spot(*SPOT)
+def full(spot):
+    return run_spot(*spot)
 
 
 @pytest.fixture(scope="module")
-def by_type():
-    return {t: run_spot(*SPOT, hand_types=[t]) for t in HAND_TYPES}
+def by_type(spot):
+    return {t: run_spot(*spot, hand_types=[t]) for t in HAND_TYPES}
 
 
 def test_single_hand_types_partition_the_result(full, by_type):
@@ -123,8 +128,8 @@ def test_hand_column_matches_the_filter(by_type):
         assert (result["hands"]["hand_type"] == t).all() if len(result["hands"]) else True
 
 
-def test_all_hand_types_equals_any(full):
-    every = run_spot(*SPOT, hand_types=list(HAND_TYPES))
+def test_all_hand_types_equals_any(spot, full):
+    every = run_spot(*spot, hand_types=list(HAND_TYPES))
     assert set(every["hands"]["id_hand"]) == set(full["hands"]["id_hand"])
 
 
