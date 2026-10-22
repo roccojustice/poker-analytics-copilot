@@ -338,6 +338,26 @@ forms a trio spanning ≤3 (A counts as both 14 and 1). The broad rule (the card
 5-card straight) hit 36.8% of turns, too often to mean "the straight came in". D hits ~22%, and
 the real data showed 20.8%. User's call after reviewing generated examples.
 
+## 2026-10-21 (Session 64) — Hand strength is classified in Python and validated against PT4's own column
+
+PT4 does store per-street hand strength (`cash_hand_player_combinations`), but its categories are
+absolute (Kh9s on JJ9 = "two pair") and its positions are coarser than the user's. We classify
+with the user's rules in `hand_strength.py` and use PT4's `id_<s>_hand_strength` +
+`val_<s>_hole_cards_used` as the oracle on every Hero hand: no hand-list export needed, and
+every mismatch is a stop point.
+
+## 2026-10-21 (Session 64) — Hero's hand counts only when his hole cards play
+
+User's rule, from his examples. Pairs rank against the board's distinct ranks; 4th pair is the
+last position. A pair plays only if it is among the two highest pairs (33 on KK55 = No made hand,
+52 on KK52 = 2nd pair). A board that makes a straight or better by itself, if Hero doesn't beat
+it, is No made hand. Board quads + A = Ace high (assistant's call).
+
+## 2026-10-21 (Session 64) — Hand strength is a filter plus a breakdown table, not bars
+
+The user wants both. A table in the size-split style, with size columns; bars were rejected (and
+the SPEC keeps charts in dashboards). Empty categories are hidden.
+
 ## Earlier decisions (pre-pivot, still in force)
 
 - **Position lives inside the `preflop-context` prefix**, not in `situation`

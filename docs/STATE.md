@@ -2,36 +2,39 @@
 
 *Overwritten every session. Single source of truth for "where are we / what's next."*
 
-**Last updated:** 2026-10-19, Session 63
+**Last updated:** 2026-10-21, Session 64
 
 ## Current milestone
 
-**M7 (breakdown filters) in progress.** Shipped this session, merged and pushed (`a81cf64`):
-- **Runout filters, M7 #6 part 2**: multi-select "Turn" and "River" on the bar (`FC`, `SC`,
-  `BP high/mid/low`, `BW A/K/Q/J`, `FDP` turn only, `Brick`). Labels overlap; OR within a street,
-  AND across Flop/Turn/River. Turn needs a turn/river decision, River needs a river decision
-  (the control is greyed out otherwise). Rules in `specs/2026-10-19-runout-types-design.md`.
-  Real-data check on `2bp IP PFR - B-?` matched theory (SC 20.8%, Brick 42.0%).
+**M7 (breakdown filters) in progress.** Shipped this session, merged to `main` (`81caf93`, `3298938`):
+- **Hand strength, M7 #7 parts 1–2**: `hand_strength.py` labels Hero's made hand on the decision
+  street's board (flop/turn/river) with the user's 16 types (incl. `4th pair`); Hero's hand counts
+  only when his hole cards play. `Hand` multi-select + hand type × action breakdown table (size
+  columns on B/X) + `Hand type` column. Validated vs PT4 `cash_hand_player_combinations` on every
+  Hero hand: 45,971 flop / 31,229 turn / 20,280 river, 0 mismatches. Specs:
+  `specs/2026-10-21-hand-strength-{flop,turn-river}-design.md`.
 
 ## Next
 
-**M7 #7 Hand strength: spike first.** Does PT4 store made-hand strength per street, or only
-`id_final_hand`? Find out before brainstorming (what the turn/river card does to Hero's hand:
-pair, trips, nothing). Then **re-run M6** (real study session, no fallback to PT4).
+1. **User review in the app**: breakdown table width (B/Bs/Bm/Bl/Bo/X columns) and spot-checking
+   labels hand by hand (click a type, read the hand list). Adjust presentation if needed.
+2. **M7 #7 part 3: subcategories** (Flush nut/2nd/3rd…, Set, Two pair), defined one by one with
+   the user. Then **part 4: draws** (Combo, FD nuts, FD, OESD, Gutshot, BDFD 2/1 cards, BDSD, No
+   draw; exclusive by priority, independent of made hands; PT4 has `flg_<s>_*_draw` flags).
+3. Then BB result filter, then **re-run M6**.
 
 ## Open questions / deferred minors
 
-- Runout: a greyed-out Turn/River control keeps its old selection and re-applies it when the
-  Line comes back to that street. `_keep` filters on the joined display string, not the tuples.
-  `board_types.py`: an extra blank line and long lines.
-- Facing split on `- B?`: header says "% faced" but rows bucket Hero's own cbet. Decide the
-  wording before the M6 re-run.
-- Page: `[data-pick]:hover` outranks `.selected`. No automated test for the page click filter.
-- `pt4_diff`: stale comment at line 26; no `--flop-type`/runout flags; wrong `--column` is a bare KeyError.
+- Hand strength: board quads + A in hand = Ace high (assistant's call, user not asked); missing
+  fixtures for SF over board flush, wheels, board trips, three pairs on the river; river hands run
+  21 five-card combos (~2.6 s / 20k); `_rank5(board)` computed twice; `hand_type` raises on a
+  NaN/0 hole card; disabled Turn/River keep a stale selection; hand-table row pick only on the name.
+- Facing split on `- B?`: header says "% faced" but rows bucket Hero's own cbet. Decide before M6.
+- Page: `[data-pick]:hover` outranks `.selected`; no automated test for the page click filter.
+- `pt4_diff`: stale comment at line 26; no board/hand flags; wrong `--column` is a bare KeyError.
 - Sizing: a NULL/zero `amt_pot_<s>` would label `Bo`.
 
 ## Uncommitted work in the tree
 
-- **Parked idea, untracked on purpose:** `docs/reports.md` + `spikes/line_volume.py` (line
-  volume / bb/100 report). The user's call: a separate idea, maybe later. Don't commit, don't delete.
+- **Parked idea, untracked on purpose:** `docs/reports.md` + `spikes/line_volume.py`. Don't commit, don't delete.
 - Run the app: `venv\Scripts\python -m uvicorn api:app --port 8000`.
