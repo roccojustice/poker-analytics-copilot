@@ -97,7 +97,7 @@ FAKE_RESULT = {
     "distribution": [{"action": "B", "label": "B", "name": "Bet", "hands": 1, "pct": 100.0}],
     "hands": pd.DataFrame({"id_hand": [1], "measured_action": ["B"]}),
     "split": None,
-    "hand_split": None,
+    "hand_split": [],
 }
 
 
@@ -110,7 +110,7 @@ def test_spot_returns_result_shape(monkeypatch):
         "distribution": [{"action": "B", "label": "B", "name": "Bet", "hands": 1, "pct": 100.0}],
         "hands": [{"id_hand": 1, "measured_action": "B"}],
         "split": None,
-        "hand_split": None,
+        "hand_split": [],
     }
     assert calls == [("2bp", "ip", "pfr", "- B-?", [])]
 
@@ -284,7 +284,7 @@ def test_spot_passes_hand_types_through(monkeypatch):
     assert seen == [["Top pair"], []]
 
 
-def test_spot_hand_types_on_turn_line_is_400():
-    response = client.post("/spot", json=SPOT_BODY | {"line": "- B-?", "hand_types": ["Top pair"]})
+def test_spot_unknown_hand_type_is_400():
+    response = client.post("/spot", json=SPOT_BODY | {"hand_types": ["Monster"]})
     assert response.status_code == 400
-    assert response.json() == {"error": "Hand type needs a decision on the flop"}
+    assert response.json() == {"error": "Unknown hand type: Monster"}

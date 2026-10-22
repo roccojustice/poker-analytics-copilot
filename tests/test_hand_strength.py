@@ -60,7 +60,7 @@ def test_user_examples(hole, flop, type_):
 
 def test_registry_order():
     assert HAND_TYPES == ("Straight flush", "Quads", "Full house", "Flush", "Straight", "Set", "Trips",
-                          "Two pair", "Overpair", "Top pair", "2nd pair", "3rd pair", "Underpair",
+                          "Two pair", "Overpair", "Top pair", "2nd pair", "3rd pair", "4th pair", "Underpair",
                           "Ace high", "No made hand")
 
 
@@ -79,11 +79,12 @@ def test_priority_and_boundaries(hole, flop, type_):
     assert classify_hand(parse(hole), parse(flop)) == type_
 
 
-def test_invariant_one_type_per_sample():
+@pytest.mark.parametrize("board_size", [3, 4, 5])
+def test_invariant_one_type_per_sample(board_size):
     deck = [(rank, suit) for rank in "23456789TJQKA" for suit in "cdhs"]
     rng = random.Random(64)
     for _ in range(20_000):
-        cards = rng.sample(deck, 5)
+        cards = rng.sample(deck, 2 + board_size)
         assert classify_hand(cards[:2], cards[2:]) in HAND_TYPES
 
 
@@ -94,3 +95,47 @@ def card_id(card):
 def test_hand_type_decodes_pt4_ids():
     ids = [card_id(card) for card in ("Kh", "9s", "Js", "Jd", "9h")]
     assert hand_type(*ids) == "2nd pair"
+
+
+# (hole, board, type): the turn/river spec's examples
+TURN_RIVER_EXAMPLES = [
+    ("5c2h", "KsKd5d2s", "2nd pair"),
+    ("5c2h", "KsKd5d5s", "Full house"),
+    ("3c3h", "KsKd5d5s", "No made hand"),
+    ("AcQh", "KsKd5d5s", "Ace high"),
+    ("7c7h", "KsKd5d5s", "2nd pair"),
+    ("Kc5h", "2s2dKd5s", "Two pair"),
+    ("6c6h", "KsKd5d5s9h", "3rd pair"),
+    ("Tc2d", "5h6s7d8c9h", "Straight"),
+    ("4c2d", "5h6s7d8c9h", "No made hand"),
+    ("AcAd", "5h6s7d8c9h", "No made hand"),
+    ("9c9d", "5h6s7d8c9h", "No made hand"),
+    ("3s4d", "KsTs7s5s2s", "Flush"),
+    ("2s4d", "AsKsQsJs9s", "No made hand"),
+    ("Ac2d", "Kh9s5d2c", "4th pair"),
+    ("3c3h", "Kh9s5d2c", "4th pair"),
+    ("2c2h", "Kh9s5d3c", "Underpair"),
+    ("Ac3d", "Kh9s5d3c2h", "4th pair"),
+    ("Ac2d", "Kh9s5d3c2h", "4th pair"),
+    ("4c4h", "Kh9s5d3c2h", "4th pair"),
+    ("Ac7d", "KsKdKhKc", "Ace high"),
+    ("Ac7d", "KsKdKhKc2h", "Ace high"),
+    ("Qc7d", "KsKdKhKc2h", "No made hand"),
+    ("Ac3d", "KsKd5d5s3h", "Ace high"),
+    ("Ah7d", "KsKdKhKcAs", "No made hand"),
+    ("3c3h", "KsKdKh5d5s", "No made hand"),
+    ("5c2h", "KsKdKh5d5s", "No made hand"),
+    ("6c6h", "KsKdKh5d5s", "Full house"),
+    ("AcAh", "KsKdKh5d5s", "Full house"),
+    ("Kc2h", "KsKdKh5d5s", "Quads"),
+]
+
+
+@pytest.mark.parametrize("hole, board, type_", TURN_RIVER_EXAMPLES)
+def test_turn_river_examples(hole, board, type_):
+    assert classify_hand(parse(hole), parse(board)) == type_
+
+
+def test_hand_type_takes_four_and_five_board_ids():
+    assert hand_type(*[card_id(c) for c in ("Ac", "2d", "Kh", "9s", "5d", "2c")]) == "4th pair"
+    assert hand_type(*[card_id(c) for c in ("Tc", "2d", "5h", "6s", "7d", "8c", "9h")]) == "Straight"

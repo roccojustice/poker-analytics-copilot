@@ -121,14 +121,15 @@ def _with_board_types(matches, street, flop_types, turn_types, river_types):
     return matches[keep]
 
 
+BOARD_SIZE = {"f": 3, "t": 4, "r": 5}
+
+
 def _with_hand_type(matches, street, hand_types):
-    cards = ["holecard_1", "holecard_2", "card_1", "card_2", "card_3"]
-    on_flop = street == "f"
-    matches = matches.assign(hand_type=_board_column(matches, cards, hand_type) if on_flop
-                             else pd.Series(None, index=matches.index, dtype=object))
+    board = [f"card_{i}" for i in range(1, BOARD_SIZE[street] + 1)]  # the decision street's board only
+    matches = matches.assign(hand_type=_board_column(matches, ["holecard_1", "holecard_2", *board], hand_type))
     if hand_types:
         matches = matches[matches["hand_type"].isin(hand_types)]
-    return matches.drop(columns=cards + ["card_4", "card_5"])
+    return matches.drop(columns=["holecard_1", "holecard_2", "card_1", "card_2", "card_3", "card_4", "card_5"])
 
 
 def _checked(values, registry, name):
@@ -153,8 +154,6 @@ def run_spot(pot, position, role, line, formations=(), date_from=None, date_to=N
         raise SpotInputError("Turn type needs a decision on the turn or river")
     if river_types and street != "r":
         raise SpotInputError("River type needs a decision on the river")
-    if hand_types and street != "f":
-        raise SpotInputError("Hand type needs a decision on the flop")
     where, params, measured_sql = build_spot_query(pot, position, role, spec, formations, date_from, date_to)
     matches = run_spot_query(where, params, measured_sql)
     matches = _with_board_types(matches, street, flop_types, turn_types, river_types)
@@ -176,6 +175,6 @@ def run_spot(pot, position, role, line, formations=(), date_from=None, date_to=N
                                        turn_types, river_types, hand_types),
         "distribution": _distribution(unsized, spec.measured, prefix),
         "split": _split(labels, prefix) if split else None,
-        "hand_split": _hand_split(matches["hand_type"], unsized, spec, prefix) if street == "f" else None,
+        "hand_split": _hand_split(matches["hand_type"], unsized, spec, prefix),
         "hands": hands,
     }
