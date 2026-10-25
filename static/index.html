@@ -51,6 +51,7 @@
     table.dist tr.sub td:first-child { padding-left: 1.6rem; }
     table.dist tr.sub { color: #444; }
     table.dist th.sub, table.dist td.sub { color: #555; font-size: 0.85rem; }
+    button.caret { border: none; background: none; cursor: pointer; padding: 0 0.3rem 0 0; font: inherit; }
     .hint { color: #666; font-size: 0.8rem; margin-top: 0.15rem; }
   </style>
 </head>
@@ -127,8 +128,10 @@
     "flop_types": ["BLL", "Low", "2BWL", "Low paired", "High paired", "A high", "Monotone", "3BW"],
     "turn_types": ["FC", "SC", "BP high", "BP mid", "BP low", "BW A", "BW K", "BW Q", "BW J", "FDP", "Brick"],
     "river_types": ["FC", "SC", "BP high", "BP mid", "BP low", "BW A", "BW K", "BW Q", "BW J", "Brick"],
-    "hand_types": ["Straight flush", "Quads", "Full house", "Flush", "Straight", "Set", "Trips", "Two pair",
-                   "Overpair", "Top pair", "2nd pair", "3rd pair", "4th pair", "Underpair", "Ace high", "No made hand"]
+    "hand_types": ["Straight flush", "Quads", "Full house", "Nut flush", "Other flush", "Straight", "Set", "Trips",
+                   "Two pair", "Overpair", "Top pair", "2nd pair", "3rd pair", "4th pair", "Underpair", "Ace high",
+                   "No made hand"],
+    "hand_groups": {"Flush": ["Nut flush", "Other flush"]}
   }
   </script>
 
@@ -177,14 +180,16 @@
     }
 
     // A checkbox dropdown; returns a getter for the checked values (none checked or disabled = Any).
-    // grouped: options sharing a first word ("BP high", "BP low") nest under a parent box ("BP").
+    // grouped: true nests options sharing a first word ("BP high", "BP low") under a parent box ("BP");
+    // an object maps option -> parent explicitly (hand types, where "Straight flush" is not a "Straight").
     function multiSelect(id, options, summaryText, grouped = false) {
       const el = document.getElementById(id);
       const summaryEl = el.querySelector("summary");
       const panelEl = el.querySelector(".panel");
       const head = option => option.split(" ")[0];
-      const groupOf = option =>
-        grouped && options.filter(o => head(o) === head(option)).length > 1 ? head(option) : null;
+      const groupOf = option => grouped === true
+        ? (options.filter(o => head(o) === head(option)).length > 1 ? head(option) : null)
+        : (grouped && grouped[option]) || null;
       const addBox = (text, data, cls) => {
         const label = document.createElement("label");
         const box = document.createElement("input");
@@ -241,7 +246,10 @@
     const selectedFlopTypes = multiSelect("flop-types", CONFIG.flop_types, values => "Flop: " + joinedOrAny(values));
     const selectedTurnTypes = multiSelect("turn-types", CONFIG.turn_types, values => "Turn: " + joinedOrAny(values), true);
     const selectedRiverTypes = multiSelect("river-types", CONFIG.river_types, values => "River: " + joinedOrAny(values), true);
-    const selectedHandTypes = multiSelect("hand-types", CONFIG.hand_types, values => "Hand: " + joinedOrAny(values));
+    const handGroupOf = Object.fromEntries(
+      Object.entries(CONFIG.hand_groups).flatMap(([group, leaves]) => leaves.map(leaf => [leaf, group])));
+    const selectedHandTypes = multiSelect("hand-types", CONFIG.hand_types, values => "Hand: " + joinedOrAny(values),
+      handGroupOf);
 
     // Streets in the Line (1 flop, 2 turn, 3 river), split like line_parser._split_tokens
     function lineStreets(line) {
@@ -322,6 +330,15 @@
       outputEl.querySelectorAll("table.dist [data-pick]").forEach(el => {
         el.addEventListener("click", () => togglePick(el.dataset.pick));
       });
+      outputEl.querySelectorAll("button.caret").forEach(button => {
+        button.addEventListener("click", event => {
+          event.stopPropagation();  // expanding is not a pick
+          const open = button.textContent === "▸";
+          button.textContent = open ? "▾" : "▸";
+          outputEl.querySelectorAll(`tr[data-parent="${CSS.escape(button.dataset.group)}"]`)
+            .forEach(row => row.hidden = !open);
+        });
+      });
       ["min", "max"].forEach(bound => {
         document.getElementById(`result-${bound}`).addEventListener("input", event => {
           resultRange[bound] = event.target.value;
@@ -354,7 +371,7 @@
       const labels = groupsOf[hand.measured_action] || [hand.measured_action];
       if (!pick.startsWith("hand:")) return labels.includes(pick);
       const [type, label] = pick.slice("hand:".length).split("|");
-      return hand.hand_type === type && (!label || labels.includes(label));
+      return (CONFIG.hand_groups[type] || [type]).includes(hand.hand_type) && (!label || labels.includes(label));
     }
 
     function renderHands() {
@@ -408,7 +425,10 @@
       html += "</tr></thead><tbody>";
       handSplit.forEach(row => {
         const pick = `hand:${row.hand_type}`;
-        html += `<tr><td data-pick="${escapeHtml(pick)}">${escapeHtml(row.hand_type)}</td>` +
+        const caret = CONFIG.hand_groups[row.hand_type]
+          ? `<button class="caret" data-group="${escapeHtml(row.hand_type)}">▸</button>` : "";
+        const tr = row.parent ? `<tr class="sub" data-parent="${escapeHtml(row.parent)}" hidden>` : "<tr>";
+        html += `${tr}<td data-pick="${escapeHtml(pick)}">${caret}${escapeHtml(row.hand_type)}</td>` +
           `<td>${row.hands.toLocaleString("en-US")} (${row.pct_total.toFixed(1)}%)</td>`;
         row.cells.forEach(cell => {
           html += `<td data-pick="${escapeHtml(`${pick}|${cell.label}`)}"${sub(cell)}>${cell.pct.toFixed(1)}%` +

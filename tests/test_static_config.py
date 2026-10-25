@@ -3,7 +3,7 @@ import re
 from pathlib import Path
 
 from board_types import FLOP_TYPES, RIVER_LABELS, TURN_LABELS
-from hand_strength import HAND_TYPES
+from hand_strength import HAND_GROUPS, HAND_TYPES
 from line_parser import parse_line
 from spot_sql import FORMATIONS
 
@@ -33,6 +33,10 @@ def test_runout_types_match_the_backend():
 
 def test_hand_types_match_the_backend():
     assert load_config()["hand_types"] == list(HAND_TYPES)
+
+
+def test_hand_groups_match_the_backend():
+    assert load_config()["hand_groups"] == {group: list(leaves) for group, leaves in HAND_GROUPS.items()}
 
 
 def test_presets_are_the_20_v1_lines_and_all_parse():
