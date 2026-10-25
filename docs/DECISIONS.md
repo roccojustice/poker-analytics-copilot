@@ -358,6 +358,15 @@ it, is No made hand. Board quads + A = Ace high (assistant's call).
 The user wants both. A table in the size-split style, with size columns; bars were rejected (and
 the SPEC keeps charts in dashboards). Empty categories are hidden.
 
+## 2026-10-24 (Session 65) — Flush subcategories: two buckets, grouped under a caret
+
+Only `Nut flush` and `Other flush`, no 2nd/3rd nut levels: the user wants to test whether nut
+flushes play differently, not to grade flushes. Nut = Hero's highest suited hole card is the
+highest rank of that suit off the board; paired boards and straight-flush possibilities are
+ignored, which matches PT4's flush strength code (10 = nut). In the table the leaves are sub-rows
+under a `Flush` row with a ▸ caret (user rejected separate rows and hover popups). The API takes
+leaves only (assistant's call).
+
 ## Earlier decisions (pre-pivot, still in force)
 
 - **Position lives inside the `preflop-context` prefix**, not in `situation`
