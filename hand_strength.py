@@ -5,12 +5,14 @@ from board_types import RANKS
 from poker_cards import decode_card_id
 
 # The user's made-hand types, in priority order (page and breakdown order)
-HAND_TYPES = ("Straight flush", "Quads", "Full house", "Flush", "Straight", "Set", "Trips", "Two pair",
-              "Overpair", "Top pair", "2nd pair", "3rd pair", "4th pair", "Underpair", "Ace high",
+HAND_TYPES = ("Straight flush", "Quads", "Full house", "Nut flush", "Other flush", "Straight", "Set", "Trips",
+              "Two pair", "Overpair", "Top pair", "2nd pair", "3rd pair", "4th pair", "Underpair", "Ace high",
               "No made hand")
+HAND_GROUPS = {"Flush": ("Nut flush", "Other flush")}  # group name -> its types (page and breakdown)
 
 PAIR_POSITIONS = ("Top pair", "2nd pair", "3rd pair", "4th pair")
-MADE = {8: "Straight flush", 7: "Quads", 6: "Full house", 5: "Flush", 4: "Straight"}
+MADE = {8: "Straight flush", 7: "Quads", 6: "Full house", 4: "Straight"}
+FLUSH = 5
 STRAIGHT = 4
 
 
@@ -50,6 +52,15 @@ def _best(cards):
     return max(_rank5(five) for five in combinations(cards, 5))
 
 
+def _flush_type(hole, board):
+    """Nut flush if Hero's highest hole card of the flush suit is the highest rank of that suit off the board."""
+    suit = Counter(suit for _, suit in hole + board).most_common(1)[0][0]
+    on_board = {rank for rank, s in board if s == suit}
+    highest = max((_value(rank) for rank, s in hole if s == suit))
+    missing_above = [rank for rank in RANKS if _value(rank) > highest and rank not in on_board]
+    return "Other flush" if missing_above else "Nut flush"
+
+
 def classify_hand(hole, board):
     """Hand type of Hero's two (rank, suit) hole cards on a 3-5 card board; the first type that applies wins."""
     best = _best(hole + board)
@@ -59,6 +70,8 @@ def classify_hand(hole, board):
     counts = Counter(rank for rank, _ in board)
     if 4 in counts.values():
         return "Ace high" if "A" in (h1, h2) else "No made hand"
+    if best[0] == FLUSH:
+        return _flush_type(hole, board)
     if best[0] >= STRAIGHT:
         return MADE[best[0]]
     if h1 == h2 and counts[h1] == 1:

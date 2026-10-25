@@ -10,8 +10,7 @@ pytestmark = pytest.mark.db
 
 NO_PAIR = {"Ace high", "No made hand"}
 CATEGORIES = ["strflush", "fouroak", "fullhouse", "flush", "straight", "threeoak", "2pair", "1pair"]
-MADE = {"strflush": "Straight flush", "fouroak": "Quads", "fullhouse": "Full house", "flush": "Flush",
-        "straight": "Straight"}
+MADE = {"strflush": "Straight flush", "fouroak": "Quads", "fullhouse": "Full house", "straight": "Straight"}
 # PT4 (category, id_<s>_hand_strength, val_<s>_hole_cards_used) -> our allowed types (SCHEMA_NOTES, Session 64)
 FLOP = {
     ("1pair", 0, 0): NO_PAIR,
@@ -52,6 +51,8 @@ BOARD = {"f": 3, "t": 4, "r": 5}
 
 
 def allowed(street, category, strength, used):
+    if category == "flush":  # PT4 flush strength 10 = nut (SCHEMA_NOTES, Session 65)
+        return NO_PAIR if used == 0 else {"Nut flush" if strength == 10 else "Other flush"}
     if category in MADE:
         return NO_PAIR if used == 0 else {MADE[category]}
     if category == "highcard":

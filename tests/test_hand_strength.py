@@ -2,7 +2,7 @@ import random
 
 import pytest
 
-from hand_strength import HAND_TYPES, classify_hand, hand_type
+from hand_strength import HAND_GROUPS, HAND_TYPES, classify_hand, hand_type
 
 # (hole, flop, type): the spec's user-confirmed table, rank-only rows given rainbow suits
 USER_EXAMPLES = [
@@ -44,7 +44,7 @@ USER_EXAMPLES = [
     ("9c9d", "JsJh9s", "Full house"),
     ("AcQd", "QsQh5s", "Trips"),
     ("5c5d", "5s5hTs", "Quads"),
-    ("AhKh", "Qh7h2h", "Flush"),
+    ("AhKh", "Qh7h2h", "Nut flush"),
     ("Ac5d", "4s3h2s", "Straight"),
 ]
 
@@ -59,9 +59,10 @@ def test_user_examples(hole, flop, type_):
 
 
 def test_registry_order():
-    assert HAND_TYPES == ("Straight flush", "Quads", "Full house", "Flush", "Straight", "Set", "Trips",
-                          "Two pair", "Overpair", "Top pair", "2nd pair", "3rd pair", "4th pair", "Underpair",
+    assert HAND_TYPES == ("Straight flush", "Quads", "Full house", "Nut flush", "Other flush", "Straight", "Set",
+                          "Trips", "Two pair", "Overpair", "Top pair", "2nd pair", "3rd pair", "4th pair", "Underpair",
                           "Ace high", "No made hand")
+    assert HAND_GROUPS == {"Flush": ("Nut flush", "Other flush")}
 
 
 @pytest.mark.parametrize("hole, flop, type_", [
@@ -110,7 +111,7 @@ TURN_RIVER_EXAMPLES = [
     ("4c2d", "5h6s7d8c9h", "No made hand"),
     ("AcAd", "5h6s7d8c9h", "No made hand"),
     ("9c9d", "5h6s7d8c9h", "No made hand"),
-    ("3s4d", "KsTs7s5s2s", "Flush"),
+    ("3s4d", "KsTs7s5s2s", "Other flush"),
     ("2s4d", "AsKsQsJs9s", "No made hand"),
     ("Ac2d", "Kh9s5d2c", "4th pair"),
     ("3c3h", "Kh9s5d2c", "4th pair"),
@@ -139,3 +140,25 @@ def test_turn_river_examples(hole, board, type_):
 def test_hand_type_takes_four_and_five_board_ids():
     assert hand_type(*[card_id(c) for c in ("Ac", "2d", "Kh", "9s", "5d", "2c")]) == "4th pair"
     assert hand_type(*[card_id(c) for c in ("Tc", "2d", "5h", "6s", "7d", "8c", "9h")]) == "Straight"
+
+
+# (hole, board, type): the nut flush spec's examples; the highest suited hole card decides
+NUT_FLUSH_EXAMPLES = [
+    ("AhTh", "Kh9h4h", "Nut flush"),
+    ("KhTh", "Ah9h4h", "Nut flush"),
+    ("QhJh", "AhKh7h", "Nut flush"),
+    ("QhTh", "Ah9h4h", "Other flush"),
+    ("KhQh", "9h7h4h", "Other flush"),
+    ("Kh2h", "Ah9h4h", "Nut flush"),
+    ("Ah2c", "Kh9h4h3h", "Nut flush"),
+    ("Kh2c", "Qh9h4h2h", "Other flush"),
+    ("As4d", "KsTs7s5s2s", "Nut flush"),
+    ("3s4d", "KsTs7s5s2s", "Other flush"),
+    ("2s4d", "AsKsQsJs9s", "No made hand"),
+    ("9h8h", "Th7h6h", "Straight flush"),
+]
+
+
+@pytest.mark.parametrize("hole, board, type_", NUT_FLUSH_EXAMPLES)
+def test_nut_flush(hole, board, type_):
+    assert classify_hand(parse(hole), parse(board)) == type_
