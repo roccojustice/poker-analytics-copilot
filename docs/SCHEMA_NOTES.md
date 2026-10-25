@@ -219,3 +219,8 @@ Base: `3bp_ip_pfc_faced_cbet_flop` + `faced_cbet_turn` (`flg_t_cbet_def_opp = tr
   No made hand; `2pair 5 (used 0)` is a pocket pair under two board pairs (33 on KK55) → no
   pair. Sabotage check: non-playing pocket pairs as "Underpair" give 29 turn / 78 river
   mismatches.
+- **Flush strength = nut-ness (Session 65), validated:** under `flg_<s>_flush` with Hero's
+  cards playing, `id_<s>_hand_strength` = 10 − (ranks of the flush suit above Hero's highest
+  suited hole card that are not on the board), a perfect diagonal on every street. 10 = nut
+  flush (our `Nut flush`), 2–9 = `Other flush`. 0 mismatches on 163 flop / 667 turn / 1,107
+  river Hero flush hands; sabotage (nut at ≥ 9) gives 46 / 109 / 191.

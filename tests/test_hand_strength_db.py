@@ -3,15 +3,14 @@ import pytest
 from sqlalchemy import text
 
 from db import engine
-from hand_strength import HAND_TYPES, hand_type
+from hand_strength import HAND_GROUPS, HAND_TYPES, hand_type
 from spotlight import run_spot
 
 pytestmark = pytest.mark.db
 
 NO_PAIR = {"Ace high", "No made hand"}
 CATEGORIES = ["strflush", "fouroak", "fullhouse", "flush", "straight", "threeoak", "2pair", "1pair"]
-MADE = {"strflush": "Straight flush", "fouroak": "Quads", "fullhouse": "Full house", "flush": "Flush",
-        "straight": "Straight"}
+MADE = {"strflush": "Straight flush", "fouroak": "Quads", "fullhouse": "Full house", "straight": "Straight"}
 # PT4 (category, id_<s>_hand_strength, val_<s>_hole_cards_used) -> our allowed types (SCHEMA_NOTES, Session 64)
 FLOP = {
     ("1pair", 0, 0): NO_PAIR,
@@ -52,6 +51,8 @@ BOARD = {"f": 3, "t": 4, "r": 5}
 
 
 def allowed(street, category, strength, used):
+    if category == "flush":  # PT4 flush strength 10 = nut (SCHEMA_NOTES, Session 65)
+        return NO_PAIR if used == 0 else {"Nut flush" if strength == 10 else "Other flush"}
     if category in MADE:
         return NO_PAIR if used == 0 else {MADE[category]}
     if category == "highcard":
@@ -134,6 +135,9 @@ def test_all_hand_types_equals_any(spot, full):
 
 
 def test_hand_split_rows_sum_to_the_result(full, by_type):
-    rows = {r["hand_type"]: r["hands"] for r in full["hand_split"]}
+    rows = {r["hand_type"]: r["hands"] for r in full["hand_split"] if r["hand_type"] not in HAND_GROUPS}
+    for group, leaves in HAND_GROUPS.items():
+        group_rows = [r["hands"] for r in full["hand_split"] if r["hand_type"] == group]
+        assert group_rows == ([sum(rows.get(t, 0) for t in leaves)] if any(t in rows for t in leaves) else [])
     assert sum(rows.values()) == len(full["hands"])
     assert rows == {t: len(r["hands"]) for t, r in by_type.items() if len(r["hands"])}

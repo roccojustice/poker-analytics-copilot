@@ -2,7 +2,7 @@ import pandas as pd
 
 from board_types import FLOP_TYPES, RIVER_LABELS, TURN_LABELS, flop_type, river_labels, turn_labels
 from db import run_spot_query, get_hand_details
-from hand_strength import HAND_TYPES, hand_type
+from hand_strength import HAND_GROUPS, HAND_TYPES, hand_type
 from line_parser import parse_line, STREET_NAMES, SpotInputError
 from sizing import SIZE_BUCKETS, size_text
 from spot_sql import build_spot_query, splits_by_size
@@ -86,9 +86,22 @@ def _split(labels, prefix):
 
 def _hand_split(types, labels, spec, prefix):
     total = len(types)
-    return [{"hand_type": t, "hands": int(n), "pct_total": _pct(int(n), total),
-             "cells": _distribution(labels[types == t], spec.measured, prefix)}
-            for t in HAND_TYPES if (n := (types == t).sum())]
+    group_of = {leaf: group for group, leaves in HAND_GROUPS.items() for leaf in leaves}
+
+    def row(name, members):
+        mask = types.isin(members)
+        return {"hand_type": name, "hands": int(mask.sum()), "pct_total": _pct(int(mask.sum()), total),
+                "cells": _distribution(labels[mask], spec.measured, prefix)}
+
+    rows = []
+    for t in HAND_TYPES:
+        if not (types == t).any():
+            continue
+        group = group_of.get(t)
+        if group and not any(r["hand_type"] == group for r in rows):
+            rows.append(row(group, HAND_GROUPS[group]))  # the group row sits before its first leaf
+        rows.append(row(t, [t]) | ({"parent": group} if group else {}))
+    return rows
 
 
 def _board_column(matches, cards, label):
