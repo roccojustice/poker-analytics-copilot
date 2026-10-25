@@ -3,7 +3,7 @@ import pytest
 from sqlalchemy import text
 
 from db import engine
-from hand_strength import HAND_TYPES, hand_type
+from hand_strength import HAND_GROUPS, HAND_TYPES, hand_type
 from spotlight import run_spot
 
 pytestmark = pytest.mark.db
@@ -135,6 +135,9 @@ def test_all_hand_types_equals_any(spot, full):
 
 
 def test_hand_split_rows_sum_to_the_result(full, by_type):
-    rows = {r["hand_type"]: r["hands"] for r in full["hand_split"]}
+    rows = {r["hand_type"]: r["hands"] for r in full["hand_split"] if r["hand_type"] not in HAND_GROUPS}
+    for group, leaves in HAND_GROUPS.items():
+        group_rows = [r["hands"] for r in full["hand_split"] if r["hand_type"] == group]
+        assert group_rows == ([sum(rows.get(t, 0) for t in leaves)] if any(t in rows for t in leaves) else [])
     assert sum(rows.values()) == len(full["hands"])
     assert rows == {t: len(r["hands"]) for t, r in by_type.items() if len(r["hands"])}

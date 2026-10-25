@@ -337,6 +337,36 @@ def test_hand_split_empty_list_when_no_hands(monkeypatch):
     assert spotlight.run_spot("2bp", "oop", "pfc", "vs B?", hand_types=["Set"])["hand_split"] == []
 
 
+MONOTONE = "Kh9h3h"
+FLUSHES = [(1, "Bs", MONOTONE, "2c", "AhQh"), (2, "X", MONOTONE, "2c", "QhJh"),  # Nut flush, Other flush
+           (3, "X", MONOTONE, "2c", "8h7h"), (4, "Bs", MONOTONE, "2c", "KcQd")]  # Other flush, Top pair
+
+
+def split_rows(split):
+    return [(r["hand_type"], r["hands"], r["pct_total"], r.get("parent")) for r in split]
+
+
+def test_hand_split_flush_group_and_leaves(monkeypatch):
+    install(monkeypatch, fake_matches(FLUSHES))
+    split = spotlight.run_spot("2bp", "ip", "pfr", "- ?")["hand_split"]
+    assert split_rows(split) == [("Flush", 3, 75.0, None), ("Nut flush", 1, 25.0, "Flush"),
+                                 ("Other flush", 2, 50.0, "Flush"), ("Top pair", 1, 25.0, None)]
+    leaves = [c["hands"] for c in split[1]["cells"]], [c["hands"] for c in split[2]["cells"]]
+    assert [c["hands"] for c in split[0]["cells"]] == [a + b for a, b in zip(*leaves)]
+
+
+def test_hand_split_flush_group_with_one_leaf(monkeypatch):
+    install(monkeypatch, fake_matches(FLUSHES[1:3]))
+    split = spotlight.run_spot("2bp", "ip", "pfr", "- ?")["hand_split"]
+    assert split_rows(split) == [("Flush", 2, 100.0, None), ("Other flush", 2, 100.0, "Flush")]
+
+
+def test_flush_group_is_not_a_hand_type_filter(monkeypatch):
+    install(monkeypatch, fake_matches(FLUSHES))
+    with pytest.raises(SpotInputError, match="Unknown hand type: Flush"):
+        spotlight.run_spot("2bp", "ip", "pfr", "- ?", hand_types=["Flush"])
+
+
 def test_describe_flop_part_after_dates():
     spec = parse_line("vs B?", "pfc", "oop")
     text = spotlight.describe("2bp", "oop", "pfc", [], spec, 5, date(2026, 9, 1), None, ["BLL", "Low"])
