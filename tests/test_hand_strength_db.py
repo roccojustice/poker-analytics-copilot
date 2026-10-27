@@ -66,7 +66,7 @@ def leaves(street, names, category, strength, used, kicker):
         elif name in ("Top pair", "2nd pair"):
             suffixes = KICKERS["f" if street == "f" else "later"](kicker)
             out |= {f"{name} {x}" for x in suffixes} if used == 1 else set()
-            out |= {"2nd pair PP"} if name == "2nd pair" and used == 2 else set()
+            out |= {"2nd pair PP"} if name == "2nd pair" and used == 2 and strength == 5 else set()
         else:
             out |= set(HAND_GROUPS.get(name, (name,)))
     return out
