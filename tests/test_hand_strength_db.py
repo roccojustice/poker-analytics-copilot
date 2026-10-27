@@ -50,17 +50,39 @@ TRIPS = {("threeoak", 0, 0): NO_PAIR, **{("threeoak", s, 1): {"Trips"} for s in 
 BOARD = {"f": 3, "t": 4, "r": 5}
 
 
-def allowed(street, category, strength, used):
+SETS = {6: "Top set", 5: "Middle set", 4: "Bottom set"}
+TWO_PAIRS = {9: "Top two", 8: "Top + other", 7: "Bottom two"}
+# PT4 kicker strength -> allowed kicker suffixes: exact on the flop; later PT4 rates the best-five kicker (SCHEMA_NOTES)
+KICKERS = {"f": lambda k: {"Tk"} if k == 1 else {"Gk"} if k <= 3 else {"Nk"},
+           "later": lambda k: {"Tk", "Gk", "Nk"} if k == 1 else {"Gk", "Nk"} if k <= 3 else {"Nk"}}
+
+
+def leaves(street, names, category, strength, used, kicker):
+    """Expand group names to the leaves PT4's codes allow; Trips stays group-level (PT4 measures another kicker)."""
+    out = set()
+    for name in names:
+        if name == "Set":
+            out.add(SETS[strength])
+        elif name in ("Top pair", "2nd pair"):
+            suffixes = KICKERS["f" if street == "f" else "later"](kicker)
+            out |= {f"{name} {x}" for x in suffixes} if used == 1 else set()
+            out |= {"2nd pair PP"} if name == "2nd pair" and used == 2 else set()
+        else:
+            out |= set(HAND_GROUPS.get(name, (name,)))
+    return out
+
+
+def allowed(street, category, strength, used, kicker):
     if category == "flush":  # PT4 flush strength 10 = nut (SCHEMA_NOTES, Session 65)
         return NO_PAIR if used == 0 else {"Nut flush" if strength == 10 else "Other flush"}
     if category in MADE:
         return NO_PAIR if used == 0 else {MADE[category]}
     if category == "highcard":
         return NO_PAIR
-    if category == "2pair" and strength in (7, 8, 9):
-        return {"Two pair"}
+    if category == "2pair" and strength in TWO_PAIRS:
+        return {TWO_PAIRS[strength]}
     mapping = (FLOP if street == "f" else LATER) | TRIPS
-    return mapping.get((category, strength, used), set())
+    return leaves(street, mapping.get((category, strength, used), set()), category, strength, used, kicker)
 
 
 def load(street):
@@ -69,7 +91,8 @@ def load(street):
     query = text(f"""
         SELECT chps.id_hand, chps.holecard_1, chps.holecard_2, {", ".join("chs." + c for c in board)},
                CASE {case} ELSE 'highcard' END AS category,
-               c.id_{street}_hand_strength AS strength, c.val_{street}_hole_cards_used AS used
+               c.id_{street}_hand_strength AS strength, c.val_{street}_hole_cards_used AS used,
+               c.id_{street}_kicker_strength AS kicker
         FROM cash_hand_player_statistics chps
             JOIN cash_hand_summary chs ON chs.id_hand = chps.id_hand
             JOIN cash_hand_player_combinations c ON c.id_hand = chps.id_hand AND c.id_player = chps.id_player
@@ -86,8 +109,8 @@ def street_rows(request):
 
 def test_every_hand_agrees_with_pt4(street_rows):
     street, rows = street_rows
-    ok = [ours in allowed(street, cat, s, u) for ours, cat, s, u in rows[["ours", "category", "strength", "used"]]
-          .itertuples(index=False)]
+    ok = [ours in allowed(street, cat, s, u, k) for ours, cat, s, u, k
+          in rows[["ours", "category", "strength", "used", "kicker"]].itertuples(index=False)]
     bad = rows[[not x for x in ok]]
     assert bad.empty, f"{street}: {len(bad)} of {len(rows)} disagree:\n" + bad.head(30).to_string()
 
