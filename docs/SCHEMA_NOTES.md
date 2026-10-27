@@ -224,3 +224,20 @@ Base: `3bp_ip_pfc_faced_cbet_flop` + `faced_cbet_turn` (`flg_t_cbet_def_opp = tr
   suited hole card that are not on the board), a perfect diagonal on every street. 10 = nut
   flush (our `Nut flush`), 2–9 = `Other flush`. 0 mismatches on 163 flop / 667 turn / 1,107
   river Hero flush hands; sabotage (nut at ≥ 9) gives 46 / 109 / 191.
+- **Subcategories (Session 66), validated per street** (`tests/test_hand_strength_db.py`):
+  - **Set / Two pair positions are exact on every street:** `threeoak` used 2 strength
+    6 / 5 / 4 = Top / Middle / Bottom set; `2pair` 9 / 8 / 7 = Top two / Top + other /
+    Bottom two (e.g. river: 134 / 338 / 93 sets, 321 / 325 / 373 two pairs, 0 off-diagonal).
+  - **`id_<s>_kicker_strength`** (1 = best) for a one-hole-card pair, flop: equals our kicker
+    place among the ranks off the board + 1, a perfect diagonal (1 = `Tk`, 2–3 = `Gk`, ≥ 4 =
+    `Nk`), paired boards included. **Turn / river: PT4 rates the best-five kicker**, which
+    can come from the board (Kd9s on QcKsAhJd: PT4 1 because A Q J play). The user's rule
+    makes a kicker outside the best five `Nk`; with it our `Tk` / `Gk` are exactly PT4 1 /
+    2–3 on every street, and PT4 1–3 also holds our `Nk` hands whose kicker doesn't play
+    (104 turn / 271 river at PT4 1). Sabotage: `Gk` up to the 4th rank gives 1,071 flop /
+    822 turn / 508 river mismatches; ignoring "doesn't play" gives 35 turn / 95 river.
+  - **Trips kicker strength measures something else** (AdKs: 2 on JcAcAh, 6 on As7dAh; no
+    diagonal on any street), so Trips Tk / Gk / Nk is validated at group level only, plus
+    unit fixtures.
+  - A pocket pair that is our `2nd pair` is always `1pair` / `2pair` strength 5 used 2 →
+    `2nd pair PP`; a hole-card pair (used 1) is never `PP`.

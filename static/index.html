@@ -128,10 +128,19 @@
     "flop_types": ["BLL", "Low", "2BWL", "Low paired", "High paired", "A high", "Monotone", "3BW"],
     "turn_types": ["FC", "SC", "BP high", "BP mid", "BP low", "BW A", "BW K", "BW Q", "BW J", "FDP", "Brick"],
     "river_types": ["FC", "SC", "BP high", "BP mid", "BP low", "BW A", "BW K", "BW Q", "BW J", "Brick"],
-    "hand_types": ["Straight flush", "Quads", "Full house", "Nut flush", "Other flush", "Straight", "Set", "Trips",
-                   "Two pair", "Overpair", "Top pair", "2nd pair", "3rd pair", "4th pair", "Underpair", "Ace high",
-                   "No made hand"],
-    "hand_groups": {"Flush": ["Nut flush", "Other flush"]}
+    "hand_types": ["Straight flush", "Quads", "Full house", "Nut flush", "Other flush", "Straight",
+                   "Top set", "Middle set", "Bottom set", "Trips Tk", "Trips Gk", "Trips Nk",
+                   "Top two", "Top + other", "Bottom two", "Overpair", "Top pair Tk", "Top pair Gk", "Top pair Nk",
+                   "2nd pair Tk", "2nd pair Gk", "2nd pair Nk", "2nd pair PP", "3rd pair", "4th pair", "Underpair",
+                   "Ace high", "No made hand"],
+    "hand_groups": {
+      "Flush": ["Nut flush", "Other flush"],
+      "Set": ["Top set", "Middle set", "Bottom set"],
+      "Trips": ["Trips Tk", "Trips Gk", "Trips Nk"],
+      "Two pair": ["Top two", "Top + other", "Bottom two"],
+      "Top pair": ["Top pair Tk", "Top pair Gk", "Top pair Nk"],
+      "2nd pair": ["2nd pair Tk", "2nd pair Gk", "2nd pair Nk", "2nd pair PP"]
+    }
   }
   </script>
 
@@ -148,7 +157,10 @@
 
     let latestRequest = 0;
     let currentHands = [];
-    let activePick = null;
+    let currentData = null;
+    let actionPick = null;  // a distribution / split pick; AND-ed with handPick
+    let handPick = null;  // a hand type or group
+    let openGroups = new Set();  // hand groups whose leaf rows are shown
     let groupsOf = {};  // hand label -> every pick that selects it
     const resultRange = { min: "", max: "" };
 
@@ -316,29 +328,20 @@
 
     function showResult(data) {
       currentHands = data.hands;
-      activePick = null;
+      currentData = data;
+      actionPick = null;
+      handPick = null;
+      openGroups = new Set();
       groupsOf = buildGroups(data.distribution, data.split);
       outputEl.innerHTML =
         `<div class="filter-line">${escapeHtml(data.interpreted_filter)}</div>` +
-        (data.split ? renderSplit(data.distribution, data.split) : renderDistribution(data.distribution)) +
-        (data.hand_split && data.hand_split.length ? renderHandSplit(data.hand_split) : "") +
+        '<div id="tables"></div>' +
         '<h3>Matching hands</h3>' +
         '<div class="hand-filter">Result from ' +
         `<input id="result-min" type="number" step="any" value="${escapeHtml(resultRange.min)}"> to ` +
         `<input id="result-max" type="number" step="any" value="${escapeHtml(resultRange.max)}"> BB ` +
         '· <span id="hand-count"></span></div><div id="hands"></div>';
-      outputEl.querySelectorAll("table.dist [data-pick]").forEach(el => {
-        el.addEventListener("click", () => togglePick(el.dataset.pick));
-      });
-      outputEl.querySelectorAll("button.caret").forEach(button => {
-        button.addEventListener("click", event => {
-          event.stopPropagation();  // expanding is not a pick
-          const open = button.textContent === "▸";
-          button.textContent = open ? "▾" : "▸";
-          outputEl.querySelectorAll(`tr[data-parent="${CSS.escape(button.dataset.group)}"]`)
-            .forEach(row => row.hidden = !open);
-        });
-      });
+      renderTables();
       ["min", "max"].forEach(bound => {
         document.getElementById(`result-${bound}`).addEventListener("input", event => {
           resultRange[bound] = event.target.value;
@@ -358,20 +361,93 @@
       return groups;
     }
 
+    // "hand:<type>" (row header) sets the hand pick, "hand:<type>|<label>" (cell) both; other picks are actions
     function togglePick(pick) {
-      activePick = activePick === pick ? null : pick;
-      outputEl.querySelectorAll("table.dist [data-pick]").forEach(el => {
-        el.classList.toggle("selected", el.dataset.pick === activePick);
-      });
+      if (!pick.startsWith("hand:")) {
+        actionPick = actionPick === pick ? null : pick;
+      } else {
+        const [type, label] = pick.slice("hand:".length).split("|");
+        if (!label) handPick = handPick === type ? null : type;
+        else if (handPick === type && actionPick === label) handPick = actionPick = null;
+        else [handPick, actionPick] = [type, label];
+      }
+      renderTables();
       renderHands();
     }
 
-    // A "hand:<type>" pick (row header) or "hand:<type>|<label>" (cell); other picks match the label only
-    function matchesPick(hand, pick) {
-      const labels = groupsOf[hand.measured_action] || [hand.measured_action];
-      if (!pick.startsWith("hand:")) return labels.includes(pick);
+    const labelsOf = hand => groupsOf[hand.measured_action] || [hand.measured_action];
+    const inActionPick = hand => !actionPick || labelsOf(hand).includes(actionPick);
+    const inHandPick = hand => !handPick || (CONFIG.hand_groups[handPick] || [handPick]).includes(hand.hand_type);
+    const pct = (part, whole) => whole ? Math.round(part / whole * 1000) / 10 : 0;
+    const countLabel = (hands, label) => hands.filter(hand => labelsOf(hand).includes(label)).length;
+
+    // The server's tables recounted over the hands that pass the other table's pick (spotlight._distribution etc.)
+    function recountDistribution(hands) {
+      return currentData.distribution.map(r => {
+        const n = countLabel(hands, r.label);
+        return { ...r, hands: n, pct: pct(n, hands.length) };
+      });
+    }
+
+    function recountSplit(hands) {
+      return currentData.split.map(row => {
+        const rowHands = countLabel(hands, `size:${row.size}`);
+        const cells = row.cells.map(c => {
+          const n = countLabel(hands, c.label);
+          return { ...c, hands: n, pct: pct(n, rowHands) };
+        });
+        return { ...row, hands: rowHands, pct_faced: pct(rowHands, hands.length), cells };
+      });
+    }
+
+    // Columns under the action pick: the picked label and its sub-labels, else the column it falls under
+    function handColumns(cells) {
+      if (!actionPick || actionPick.startsWith("size:")) return cells;
+      const own = cells.filter(c => c.label === actionPick || c.parent === actionPick);
+      return own.length ? own : cells.filter(c => (groupsOf[actionPick] || []).includes(c.label));
+    }
+
+    function recountHandSplit(hands) {
+      return currentData.hand_split.flatMap(row => {
+        const members = CONFIG.hand_groups[row.hand_type] || [row.hand_type];
+        const rowHands = hands.filter(hand => members.includes(hand.hand_type));
+        if (!rowHands.length) return [];
+        const cells = handColumns(row.cells).map(c => {
+          const n = countLabel(rowHands, c.label);
+          return { ...c, hands: n, pct: pct(n, rowHands.length) };
+        });
+        return [{ ...row, hands: rowHands.length, pct_total: pct(rowHands.length, hands.length), cells }];
+      });
+    }
+
+    function isSelected(pick) {
+      if (!pick.startsWith("hand:")) return pick === actionPick;
       const [type, label] = pick.slice("hand:".length).split("|");
-      return (CONFIG.hand_groups[type] || [type]).includes(hand.hand_type) && (!label || labels.includes(label));
+      return type === handPick && (!label || label === actionPick);
+    }
+
+    function renderTables() {
+      const forActions = currentHands.filter(inHandPick);
+      const distribution = recountDistribution(forActions);
+      const handSplit = currentData.hand_split && currentData.hand_split.length
+        ? recountHandSplit(currentHands.filter(inActionPick)) : null;
+      const tablesEl = document.getElementById("tables");
+      tablesEl.innerHTML =
+        (currentData.split ? renderSplit(distribution, recountSplit(forActions)) : renderDistribution(distribution)) +
+        (handSplit === null ? "" : handSplit.length ? renderHandSplit(handSplit)
+          : '<p class="hand-filter">No hand types for this action.</p>');
+      tablesEl.querySelectorAll("table.dist [data-pick]").forEach(el => {
+        el.classList.toggle("selected", isSelected(el.dataset.pick));
+        el.addEventListener("click", () => togglePick(el.dataset.pick));
+      });
+      tablesEl.querySelectorAll("button.caret").forEach(button => {
+        button.addEventListener("click", event => {
+          event.stopPropagation();  // expanding is not a pick
+          const group = button.dataset.group;
+          openGroups.has(group) ? openGroups.delete(group) : openGroups.add(group);
+          renderTables();
+        });
+      });
     }
 
     function renderHands() {
@@ -379,7 +455,7 @@
       const b = resultRange.max === "" ? Infinity : Number(resultRange.max);
       const [min, max] = [Math.min(a, b), Math.max(a, b)];  // either field order means the same range
       const rows = currentHands.filter(hand =>
-        (!activePick || matchesPick(hand, activePick)) &&
+        inActionPick(hand) && inHandPick(hand) &&
         hand.result_bb >= min && hand.result_bb <= max
       );
       document.getElementById("hand-count").textContent =
@@ -425,9 +501,10 @@
       html += "</tr></thead><tbody>";
       handSplit.forEach(row => {
         const pick = `hand:${row.hand_type}`;
-        const caret = CONFIG.hand_groups[row.hand_type]
-          ? `<button class="caret" data-group="${escapeHtml(row.hand_type)}">▸</button>` : "";
-        const tr = row.parent ? `<tr class="sub" data-parent="${escapeHtml(row.parent)}" hidden>` : "<tr>";
+        const caret = CONFIG.hand_groups[row.hand_type] ? `<button class="caret" ` +
+          `data-group="${escapeHtml(row.hand_type)}">${openGroups.has(row.hand_type) ? "▾" : "▸"}</button>` : "";
+        const hidden = row.parent && !openGroups.has(row.parent) ? " hidden" : "";
+        const tr = row.parent ? `<tr class="sub" data-parent="${escapeHtml(row.parent)}"${hidden}>` : "<tr>";
         html += `${tr}<td data-pick="${escapeHtml(pick)}">${caret}${escapeHtml(row.hand_type)}</td>` +
           `<td>${row.hands.toLocaleString("en-US")} (${row.pct_total.toFixed(1)}%)</td>`;
         row.cells.forEach(cell => {
