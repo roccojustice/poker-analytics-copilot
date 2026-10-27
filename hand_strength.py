@@ -68,10 +68,12 @@ def _flush_type(hole, board):
     return "Other flush" if missing_above else "Nut flush"
 
 
-def _kicker(kicker, board):
-    """Tk / Gk / Nk: the kicker's place among the ranks off the board (a kicker on the board is Nk)."""
+def _kicker(hole, index, board):
+    """Tk / Gk / Nk: hole[index]'s place among the ranks off the board; Nk if it is not in Hero's best five."""
+    kicker = hole[index][0]
     off_board = [rank for rank in reversed(RANKS) if rank not in {r for r, _ in board}]
-    place = off_board.index(kicker) if kicker in off_board else len(off_board)
+    plays = len(board) == 3 or _best(hole + board) > _best([hole[1 - index]] + board)
+    place = off_board.index(kicker) if kicker in off_board and plays else len(off_board)
     return "Tk" if place == 0 else "Gk" if place <= 2 else "Nk"
 
 
@@ -102,7 +104,7 @@ def classify_hand(hole, board):
     if h1 == h2 and counts[h1] == 1:
         return _set_type(h1, distinct)
     if any(counts[rank] == 2 for rank in (h1, h2)):
-        return f"Trips {_kicker(h2 if counts[h1] == 2 else h1, board)}"
+        return f"Trips {_kicker(hole, 1 if counts[h1] == 2 else 0, board)}"
 
     hero_pairs = {h1} if h1 == h2 else {rank for rank in (h1, h2) if counts[rank] == 1}
     board_pairs = {rank for rank, n in counts.items() if n == 2}
@@ -120,7 +122,7 @@ def classify_hand(hole, board):
     if playing:
         position = PAIR_POSITIONS[min(distinct.index(playing[0]), 3)]
         if position in HAND_GROUPS:
-            return f"{position} {_kicker(h2 if playing[0] == h1 else h1, board)}"
+            return f"{position} {_kicker(hole, 1 if playing[0] == h1 else 0, board)}"
         return position
     return "Ace high" if "A" in (h1, h2) else "No made hand"
 

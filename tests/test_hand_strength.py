@@ -199,6 +199,11 @@ SUBCATEGORY_EXAMPLES = [
     ("Tc8d", "Ks8h5d", "2nd pair Nk"),
     ("8c8d", "As7h3d", "2nd pair PP"),
     ("Kc5h", "KsQhQd9c5d", "Top pair Nk"),
+    # a kicker outside Hero's best five cards is Nk
+    ("Kd9s", "QcKsAhJd", "2nd pair Nk"),
+    ("Kd9s", "QcKsAh2d", "2nd pair Gk"),
+    ("Kc9d", "KsKhAdQcJh", "Trips Nk"),
+    ("KcJd", "KsKhAd4c2h", "Trips Gk"),
 ]
 
 
