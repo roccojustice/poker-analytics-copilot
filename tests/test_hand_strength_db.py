@@ -52,9 +52,9 @@ BOARD = {"f": 3, "t": 4, "r": 5}
 
 SETS = {6: "Top set", 5: "Middle set", 4: "Bottom set"}
 TWO_PAIRS = {9: "Top two", 8: "Top + other", 7: "Bottom two"}
-# PT4 kicker strength -> allowed kicker suffixes: exact on the flop; later PT4 rates the best-five kicker (SCHEMA_NOTES)
+# PT4 kicker strength -> allowed kicker suffixes: exact on the flop; later PT4 also rates a board kicker (our Nk)
 KICKERS = {"f": lambda k: {"Tk"} if k == 1 else {"Gk"} if k <= 3 else {"Nk"},
-           "later": lambda k: {"Tk", "Gk", "Nk"} if k == 1 else {"Gk", "Nk"} if k <= 3 else {"Nk"}}
+           "later": lambda k: {"Tk", "Nk"} if k == 1 else {"Gk", "Nk"} if k <= 3 else {"Nk"}}
 
 
 def leaves(street, names, category, strength, used, kicker):

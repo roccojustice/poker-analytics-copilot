@@ -43,10 +43,10 @@ pattern is used for five more types.
    pocket pair that is `2nd pair` today (between the board's top two ranks, e.g. 88 on A73)
    is `2nd pair PP`, with no kicker (user: "no hay 2nd pair Gk si mi mano es 88 en A73").
    3rd pair, 4th pair, Overpair and Underpair are unchanged.
-6. **Kicker on the board (assistant's call).** On the river a hole card can pair the board
-   without playing (Hero K5 on KQQ95: top pair, the 5 is on the board). That hand has no
-   real kicker: it is `Nk`. Kickers are ranked by rank only; whether the kicker is among the
-   best five cards is not checked.
+6. **A kicker that doesn't play is `Nk`** (user, after review). On the turn / river Hero's
+   kicker can be outside his best five cards: on the board already (K5 on KQQ95) or beaten by
+   board kickers (Kd9s on QcKsAhJd: A Q J play, not the 9). Either way it is `Nk`. Test: the
+   best hand with the kicker beats the best hand without it. On the flop it always plays.
 7. **Breakdown, page, filter API.** No new mechanism: they are already driven by
    `HAND_GROUPS` (group row before its first leaf, leaf rows with `parent`, ▸ caret collapsed
    on every run, grouped `Hand` dropdown, `hand:<group>` picks match the leaves,

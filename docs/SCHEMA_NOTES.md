@@ -231,9 +231,11 @@ Base: `3bp_ip_pfc_faced_cbet_flop` + `faced_cbet_turn` (`flg_t_cbet_def_opp = tr
   - **`id_<s>_kicker_strength`** (1 = best) for a one-hole-card pair, flop: equals our kicker
     place among the ranks off the board + 1, a perfect diagonal (1 = `Tk`, 2–3 = `Gk`, ≥ 4 =
     `Nk`), paired boards included. **Turn / river: PT4 rates the best-five kicker**, which
-    can come from the board (Kd9s on QcKsAhJd: our 9 = `Gk`, PT4 1 because A Q J play). So
-    the test checks it one way only: our `Tk` ⇒ PT4 1, our `Gk` ⇒ PT4 ≤ 3, PT4 ≥ 4 ⇒ our `Nk`.
-    Sabotage (`Gk` up to the 4th rank): 1,071 flop / 822 turn / 508 river mismatches.
+    can come from the board (Kd9s on QcKsAhJd: PT4 1 because A Q J play). The user's rule
+    makes a kicker outside the best five `Nk`; with it our `Tk` / `Gk` are exactly PT4 1 /
+    2–3 on every street, and PT4 1–3 also holds our `Nk` hands whose kicker doesn't play
+    (104 turn / 271 river at PT4 1). Sabotage: `Gk` up to the 4th rank gives 1,071 flop /
+    822 turn / 508 river mismatches; ignoring "doesn't play" gives 35 turn / 95 river.
   - **Trips kicker strength measures something else** (AdKs: 2 on JcAcAh, 6 on As7dAh; no
     diagonal on any street), so Trips Tk / Gk / Nk is validated at group level only, plus
     unit fixtures.
