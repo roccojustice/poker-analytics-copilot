@@ -128,10 +128,19 @@
     "flop_types": ["BLL", "Low", "2BWL", "Low paired", "High paired", "A high", "Monotone", "3BW"],
     "turn_types": ["FC", "SC", "BP high", "BP mid", "BP low", "BW A", "BW K", "BW Q", "BW J", "FDP", "Brick"],
     "river_types": ["FC", "SC", "BP high", "BP mid", "BP low", "BW A", "BW K", "BW Q", "BW J", "Brick"],
-    "hand_types": ["Straight flush", "Quads", "Full house", "Nut flush", "Other flush", "Straight", "Set", "Trips",
-                   "Two pair", "Overpair", "Top pair", "2nd pair", "3rd pair", "4th pair", "Underpair", "Ace high",
-                   "No made hand"],
-    "hand_groups": {"Flush": ["Nut flush", "Other flush"]}
+    "hand_types": ["Straight flush", "Quads", "Full house", "Nut flush", "Other flush", "Straight",
+                   "Top set", "Middle set", "Bottom set", "Trips Tk", "Trips Gk", "Trips Nk",
+                   "Top two", "Top + other", "Bottom two", "Overpair", "Top pair Tk", "Top pair Gk", "Top pair Nk",
+                   "2nd pair Tk", "2nd pair Gk", "2nd pair Nk", "2nd pair PP", "3rd pair", "4th pair", "Underpair",
+                   "Ace high", "No made hand"],
+    "hand_groups": {
+      "Flush": ["Nut flush", "Other flush"],
+      "Set": ["Top set", "Middle set", "Bottom set"],
+      "Trips": ["Trips Tk", "Trips Gk", "Trips Nk"],
+      "Two pair": ["Top two", "Top + other", "Bottom two"],
+      "Top pair": ["Top pair Tk", "Top pair Gk", "Top pair Nk"],
+      "2nd pair": ["2nd pair Tk", "2nd pair Gk", "2nd pair Nk", "2nd pair PP"]
+    }
   }
   </script>
 

@@ -244,20 +244,20 @@ def test_hand_columns_joined_in_page_order(monkeypatch):
     assert hands.loc[0, "turn_type"] == "SC, BW Q"
 
 
-HOLES = [(1, "Cs", BLL_FLOP, "2h", "KcQd"), (2, "Cs", BLL_FLOP, "2h", "9c8c"),  # Top pair, 2nd pair
+HOLES = [(1, "Cs", BLL_FLOP, "2h", "KcQd"), (2, "Cs", BLL_FLOP, "2h", "9c8c"),  # Top pair Gk, 2nd pair Nk
          (3, "Fs", BLL_FLOP, "2h", "7h6h"), (4, "Cs", "7s6d2c", "2h", "KcQd")]  # No made hand, Low flop K high
 
 
 def test_hand_filter_or_within(monkeypatch):
     install(monkeypatch, fake_matches(HOLES[:3]))
-    hands = spotlight.run_spot("2bp", "oop", "pfc", "vs B?", hand_types=["Top pair", "2nd pair"])["hands"]
-    assert dict(zip(hands["id_hand"], hands["hand_type"])) == {1: "Top pair", 2: "2nd pair"}
+    hands = spotlight.run_spot("2bp", "oop", "pfc", "vs B?", hand_types=["Top pair Gk", "2nd pair Nk"])["hands"]
+    assert dict(zip(hands["id_hand"], hands["hand_type"])) == {1: "Top pair Gk", 2: "2nd pair Nk"}
 
 
 def test_hand_and_flop_type(monkeypatch):
     install(monkeypatch, fake_matches(HOLES))
     hands = spotlight.run_spot("2bp", "oop", "pfc", "vs B?", flop_types=["BLL"],
-                               hand_types=["Top pair", "No made hand"])["hands"]
+                               hand_types=["Top pair Gk", "No made hand"])["hands"]
     assert set(hands["id_hand"]) == {1, 3}
 
 
@@ -265,12 +265,12 @@ def test_no_hand_types_keeps_every_hand(monkeypatch):
     install(monkeypatch, fake_matches(HOLES))
     hands = spotlight.run_spot("2bp", "oop", "pfc", "vs B?")["hands"]
     assert dict(zip(hands["id_hand"], hands["hand_type"])) == {
-        1: "Top pair", 2: "2nd pair", 3: "No made hand", 4: "No made hand"}
+        1: "Top pair Gk", 2: "2nd pair Nk", 3: "No made hand", 4: "No made hand"}
 
 
 def test_hand_types_on_a_turn_decision(monkeypatch):
-    install(monkeypatch, fake_matches(RUNOUTS))  # 7h6h: 3rd pair on 9s7c3h + Kh / 8d, 2nd pair + 2d
-    hands = spotlight.run_spot("2bp", "ip", "pfr", "- B-?", hand_types=["2nd pair"])["hands"]
+    install(monkeypatch, fake_matches(RUNOUTS))  # 7h6h: 3rd pair on 9s7c3h + Kh / 8d, 2nd pair Nk + 2d
+    hands = spotlight.run_spot("2bp", "ip", "pfr", "- B-?", hand_types=["2nd pair Nk"])["hands"]
     assert list(hands["id_hand"]) == [3]
 
 
@@ -283,7 +283,7 @@ def test_unknown_hand_type_raises(monkeypatch):
 def test_turn_decision_labels_the_turn_board(monkeypatch):
     install(monkeypatch, fake_matches(RUNOUTS))  # fake rows have card_5 = 0: never read on a turn decision
     hands = spotlight.run_spot("2bp", "ip", "pfr", "- B-?")["hands"]
-    assert list(hands["hand_type"]) == ["3rd pair", "3rd pair", "2nd pair"]
+    assert list(hands["hand_type"]) == ["3rd pair", "3rd pair", "2nd pair Nk"]
 
 
 def test_river_decision_labels_the_river_board(monkeypatch):
@@ -302,8 +302,8 @@ def test_hole_cards_not_duplicated_by_details(monkeypatch):
 def test_describe_hand_part(monkeypatch):
     install(monkeypatch, fake_matches(HOLES[:1]))
     text = spotlight.run_spot("2bp", "oop", "pfc", "vs B?", flop_types=["BLL"],
-                              hand_types=["Top pair", "Overpair", "Top pair"])["interpreted_filter"]
-    assert "· Flop type: BLL · Hand: Top pair, Overpair · Flop: " in text
+                              hand_types=["Top pair Gk", "Overpair", "Top pair Gk"])["interpreted_filter"]
+    assert "· Flop type: BLL · Hand: Top pair Gk, Overpair · Flop: " in text
     assert "Hand:" not in spotlight.run_spot("2bp", "oop", "pfc", "vs B?")["interpreted_filter"]
 
 
@@ -312,7 +312,7 @@ def test_hand_split_rows_cells_and_pcts(monkeypatch):
                                        (3, "X", BLL_FLOP, "2h", "7h6h")]))
     split = spotlight.run_spot("2bp", "ip", "pfr", "- ?")["hand_split"]
     assert [(r["hand_type"], r["hands"], r["pct_total"]) for r in split] == [
-        ("Top pair", 2, 66.7), ("No made hand", 1, 33.3)]
+        ("Top pair", 2, 66.7), ("Top pair Gk", 2, 66.7), ("No made hand", 1, 33.3)]
     assert [(c["label"], c["hands"], c["pct"]) for c in split[0]["cells"]] == [
         ("B", 1, 50.0), ("Bs", 1, 50.0), ("Bm", 0, 0.0), ("Bl", 0, 0.0), ("Bo", 0, 0.0), ("X", 1, 50.0)]
 
@@ -322,24 +322,25 @@ def test_hand_split_facing_uses_unsized_cells(monkeypatch):
     split = spotlight.run_spot("2bp", "oop", "pfc", "vs B?")["hand_split"]
     assert [c["label"] for c in split[0]["cells"]] == ["XF", "XC", "XR"]
     assert [(r["hand_type"], [c["hands"] for c in r["cells"]]) for r in split] == [
-        ("Top pair", [0, 1, 0]), ("2nd pair", [0, 1, 0]), ("No made hand", [1, 0, 0])]
+        ("Top pair", [0, 1, 0]), ("Top pair Gk", [0, 1, 0]), ("2nd pair", [0, 1, 0]), ("2nd pair Nk", [0, 1, 0]),
+        ("No made hand", [1, 0, 0])]
 
 
 def test_hand_split_on_turn_decision(monkeypatch):
     install(monkeypatch, fake_matches(RUNOUTS))
     split = spotlight.run_spot("2bp", "ip", "pfr", "- B-?")["hand_split"]
     assert [(r["hand_type"], r["hands"], r["pct_total"]) for r in split] == [
-        ("2nd pair", 1, 33.3), ("3rd pair", 2, 66.7)]
+        ("2nd pair", 1, 33.3), ("2nd pair Nk", 1, 33.3), ("3rd pair", 2, 66.7)]
 
 
 def test_hand_split_empty_list_when_no_hands(monkeypatch):
     install(monkeypatch, fake_matches(HOLES[:1]))
-    assert spotlight.run_spot("2bp", "oop", "pfc", "vs B?", hand_types=["Set"])["hand_split"] == []
+    assert spotlight.run_spot("2bp", "oop", "pfc", "vs B?", hand_types=["Top set"])["hand_split"] == []
 
 
 MONOTONE = "Kh9h3h"
 FLUSHES = [(1, "Bs", MONOTONE, "2c", "AhQh"), (2, "X", MONOTONE, "2c", "QhJh"),  # Nut flush, Other flush
-           (3, "X", MONOTONE, "2c", "8h7h"), (4, "Bs", MONOTONE, "2c", "KcQd")]  # Other flush, Top pair
+           (3, "X", MONOTONE, "2c", "8h7h"), (4, "Bs", MONOTONE, "2c", "KcQd")]  # Other flush, Top pair Gk
 
 
 def split_rows(split):
@@ -350,9 +351,17 @@ def test_hand_split_flush_group_and_leaves(monkeypatch):
     install(monkeypatch, fake_matches(FLUSHES))
     split = spotlight.run_spot("2bp", "ip", "pfr", "- ?")["hand_split"]
     assert split_rows(split) == [("Flush", 3, 75.0, None), ("Nut flush", 1, 25.0, "Flush"),
-                                 ("Other flush", 2, 50.0, "Flush"), ("Top pair", 1, 25.0, None)]
+                                 ("Other flush", 2, 50.0, "Flush"), ("Top pair", 1, 25.0, None),
+                                 ("Top pair Gk", 1, 25.0, "Top pair")]
     leaves = [c["hands"] for c in split[1]["cells"]], [c["hands"] for c in split[2]["cells"]]
     assert [c["hands"] for c in split[0]["cells"]] == [a + b for a, b in zip(*leaves)]
+
+
+def test_hand_split_top_pair_group(monkeypatch):
+    install(monkeypatch, fake_matches([(1, "Bs", BLL_FLOP, "2h", "KcQd"), (2, "X", BLL_FLOP, "2h", "AcKd")]))
+    split = spotlight.run_spot("2bp", "ip", "pfr", "- ?")["hand_split"]
+    assert split_rows(split) == [("Top pair", 2, 100.0, None), ("Top pair Tk", 1, 50.0, "Top pair"),
+                                 ("Top pair Gk", 1, 50.0, "Top pair")]
 
 
 def test_hand_split_flush_group_with_one_leaf(monkeypatch):

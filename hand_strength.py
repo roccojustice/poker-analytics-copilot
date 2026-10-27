@@ -5,10 +5,17 @@ from board_types import RANKS
 from poker_cards import decode_card_id
 
 # The user's made-hand types, in priority order (page and breakdown order)
-HAND_TYPES = ("Straight flush", "Quads", "Full house", "Nut flush", "Other flush", "Straight", "Set", "Trips",
-              "Two pair", "Overpair", "Top pair", "2nd pair", "3rd pair", "4th pair", "Underpair", "Ace high",
-              "No made hand")
-HAND_GROUPS = {"Flush": ("Nut flush", "Other flush")}  # group name -> its types (page and breakdown)
+HAND_GROUPS = {  # group name -> its types (page and breakdown)
+    "Flush": ("Nut flush", "Other flush"),
+    "Set": ("Top set", "Middle set", "Bottom set"),
+    "Trips": ("Trips Tk", "Trips Gk", "Trips Nk"),
+    "Two pair": ("Top two", "Top + other", "Bottom two"),
+    "Top pair": ("Top pair Tk", "Top pair Gk", "Top pair Nk"),
+    "2nd pair": ("2nd pair Tk", "2nd pair Gk", "2nd pair Nk", "2nd pair PP"),
+}
+HAND_TYPES = ("Straight flush", "Quads", "Full house", *HAND_GROUPS["Flush"], "Straight", *HAND_GROUPS["Set"],
+              *HAND_GROUPS["Trips"], *HAND_GROUPS["Two pair"], "Overpair", *HAND_GROUPS["Top pair"],
+              *HAND_GROUPS["2nd pair"], "3rd pair", "4th pair", "Underpair", "Ace high", "No made hand")
 
 PAIR_POSITIONS = ("Top pair", "2nd pair", "3rd pair", "4th pair")
 MADE = {8: "Straight flush", 7: "Quads", 6: "Full house", 4: "Straight"}
@@ -61,6 +68,23 @@ def _flush_type(hole, board):
     return "Other flush" if missing_above else "Nut flush"
 
 
+def _kicker(kicker, board):
+    """Tk / Gk / Nk: the kicker's place among the ranks off the board (a kicker on the board is Nk)."""
+    off_board = [rank for rank in reversed(RANKS) if rank not in {r for r, _ in board}]
+    place = off_board.index(kicker) if kicker in off_board else len(off_board)
+    return "Tk" if place == 0 else "Gk" if place <= 2 else "Nk"
+
+
+def _set_type(rank, distinct):
+    return "Top set" if rank == distinct[0] else "Bottom set" if rank == distinct[-1] else "Middle set"
+
+
+def _two_pair_type(ranks, distinct):
+    if set(ranks) == set(distinct[:2]):
+        return "Top two"
+    return "Top + other" if distinct[0] in ranks else "Bottom two"
+
+
 def classify_hand(hole, board):
     """Hand type of Hero's two (rank, suit) hole cards on a 3-5 card board; the first type that applies wins."""
     best = _best(hole + board)
@@ -74,27 +98,30 @@ def classify_hand(hole, board):
         return _flush_type(hole, board)
     if best[0] >= STRAIGHT:
         return MADE[best[0]]
+    distinct = sorted(counts, key=_value, reverse=True)
     if h1 == h2 and counts[h1] == 1:
-        return "Set"
+        return _set_type(h1, distinct)
     if any(counts[rank] == 2 for rank in (h1, h2)):
-        return "Trips"
+        return f"Trips {_kicker(h2 if counts[h1] == 2 else h1, board)}"
 
     hero_pairs = {h1} if h1 == h2 else {rank for rank in (h1, h2) if counts[rank] == 1}
     board_pairs = {rank for rank, n in counts.items() if n == 2}
     top_two = sorted(hero_pairs | board_pairs, key=_value, reverse=True)[:2]
     playing = sorted((rank for rank in hero_pairs if rank in top_two), key=_value, reverse=True)
-    distinct = sorted(counts, key=_value, reverse=True)
     if len(playing) == 2:
-        return "Two pair"
+        return _two_pair_type(playing, distinct)
     if playing and h1 == h2:
         above = sum(_value(rank) > _value(h1) for rank in distinct)
         if above == 0:
             return "Overpair"
         if above == len(distinct):
             return "Underpair"
-        return PAIR_POSITIONS[min(above, 3)]
+        return "2nd pair PP" if above == 1 else PAIR_POSITIONS[min(above, 3)]
     if playing:
-        return PAIR_POSITIONS[min(distinct.index(playing[0]), 3)]
+        position = PAIR_POSITIONS[min(distinct.index(playing[0]), 3)]
+        if position in HAND_GROUPS:
+            return f"{position} {_kicker(h2 if playing[0] == h1 else h1, board)}"
+        return position
     return "Ace high" if "A" in (h1, h2) else "No made hand"
 
 
