@@ -367,6 +367,24 @@ ignored, which matches PT4's flush strength code (10 = nut). In the table the le
 under a `Flush` row with a ▸ caret (user rejected separate rows and hover popups). The API takes
 leaves only (assistant's call).
 
+## 2026-10-26 (Session 66) — Hand subcategories: kicker relative to the board, and it must play
+
+Set, Trips, Two pair, Top pair and 2nd pair became groups (same caret pattern as Flush). The
+kicker is graded by its place among the ranks off the board (1st = Tk, 2nd–3rd = Gk, rest =
+Nk), the user's rule, applied the same to Trips / Top pair / 2nd pair. After seeing that on the
+turn/river a hole-card kicker can be outside the best five (Kd9s on QKAJ: A Q J play), the user
+chose `Nk` for any kicker that doesn't play. A pocket pair that is 2nd pair is `2nd pair PP`, no
+kicker. **The user's rule is authoritative; PT4 validates only where it measures the same
+thing**: Trips' PT4 kicker code shows no pattern, so Trips leaves are validated at group level
+plus unit fixtures.
+
+## 2026-10-26 (Session 66) — Picks accumulate across tables
+
+Replaces "one pick at a time across tables". One action pick AND one hand pick; each table is
+recounted client-side over the hands that pass the other pick (hand table: only rows with hands,
+only the picked action's columns). The user asked for it after using the app: picking B should
+narrow the hand types, and the reverse.
+
 ## Earlier decisions (pre-pivot, still in force)
 
 - **Position lives inside the `preflop-context` prefix**, not in `situation`
