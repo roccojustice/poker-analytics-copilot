@@ -8,6 +8,7 @@ from board_types import RANKS
 from db import engine
 from draws import _straight, draw_parts
 from poker_cards import decode_card_id
+from spotlight import run_spot
 
 pytestmark = pytest.mark.db
 
@@ -84,3 +85,14 @@ def test_backdoor_matches_pt4():
     rows = rows[~rows["board_suit"]]  # PT4 calls a monotone flop a backdoor for every hand
     ours = rows["o_bd"] > 0
     assert (ours == rows["bflush"]).all(), mismatches(rows, ours, rows["bflush"])
+
+
+SPOTS = [("2bp", "oop", "pfc", "vs B?"), ("2bp", "ip", "pfr", "- B-?"), ("2bp", "ip", "pfr", "- B-B-?")]
+
+
+@pytest.mark.parametrize("spot", SPOTS, ids=lambda spot: spot[3])
+def test_draw_split_rows_sum_to_hand_count(spot):
+    result = run_spot(*spot)
+    assert sum(row["hands"] for row in result["draw_split"]) == len(result["hands"])
+    if spot[3] == "- B-B-?":
+        assert [row["draw_type"] for row in result["draw_split"]] == ["No draw"]
