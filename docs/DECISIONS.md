@@ -385,6 +385,16 @@ recounted client-side over the hands that pass the other pick (hand table: only 
 only the picked action's columns). The user asked for it after using the app: picking B should
 narrow the hand types, and the reverse.
 
+## 2026-10-29 (Session 67) — Draw types are GTO Wizard's, with GTO Wizard as the oracle for the rules
+
+The purpose is comparing Hero's frequencies per draw type to the solver's, so the categories and
+their rules are GTO Wizard's (names, priority order, exclusive, independent of the hand type).
+GTO Wizard publishes no definitions; the user classified 20 test hands in the app and they became
+the unit fixtures. PT4's draw flags are the oracle only where they measure the same thing: PT4
+counts board-only draws, clears straight draws under a made flush and calls some turn double
+gutshots a gutshot, so those hands are excluded from the PT4 comparison (the 21 double gutshots
+pinned by `id_hand`).
+
 ## Earlier decisions (pre-pivot, still in force)
 
 - **Position lives inside the `preflop-context` prefix**, not in `situation`
