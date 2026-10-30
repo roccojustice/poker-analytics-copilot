@@ -84,7 +84,7 @@ SPOT_BODY = {"pot": "2bp", "position": "ip", "role": "pfr", "line": "- B-?", "fo
 def install_fake_run_spot(monkeypatch, result):
     calls = []
 
-    def fake_run_spot(pot, position, role, line, formations=(), date_from=None, date_to=None, flop_types=(), turn_types=(), river_types=(), hand_types=()):
+    def fake_run_spot(pot, position, role, line, formations=(), date_from=None, date_to=None, flop_types=(), turn_types=(), river_types=(), hand_types=(), draw_types=()):
         calls.append((pot, position, role, line, formations))
         return result
 
@@ -98,6 +98,7 @@ FAKE_RESULT = {
     "hands": pd.DataFrame({"id_hand": [1], "measured_action": ["B"]}),
     "split": None,
     "hand_split": [],
+    "draw_split": [],
 }
 
 
@@ -111,6 +112,7 @@ def test_spot_returns_result_shape(monkeypatch):
         "hands": [{"id_hand": 1, "measured_action": "B"}],
         "split": None,
         "hand_split": [],
+        "draw_split": [],
     }
     assert calls == [("2bp", "ip", "pfr", "- B-?", [])]
 
@@ -166,7 +168,7 @@ def test_spot_rejects_the_old_formation_field(monkeypatch):
 def test_spot_passes_dates_through(monkeypatch):
     seen = {}
 
-    def fake_run_spot(pot, position, role, line, formations=(), date_from=None, date_to=None, flop_types=(), turn_types=(), river_types=(), hand_types=()):
+    def fake_run_spot(pot, position, role, line, formations=(), date_from=None, date_to=None, flop_types=(), turn_types=(), river_types=(), hand_types=(), draw_types=()):
         seen.update(date_from=date_from, date_to=date_to)
         return FAKE_RESULT
 
@@ -178,7 +180,7 @@ def test_spot_passes_dates_through(monkeypatch):
 def test_spot_dates_default_to_none(monkeypatch):
     seen = {}
 
-    def fake_run_spot(pot, position, role, line, formations=(), date_from="unset", date_to="unset", flop_types=(), turn_types=(), river_types=(), hand_types=()):
+    def fake_run_spot(pot, position, role, line, formations=(), date_from="unset", date_to="unset", flop_types=(), turn_types=(), river_types=(), hand_types=(), draw_types=()):
         seen.update(date_from=date_from, date_to=date_to)
         return FAKE_RESULT
 
@@ -201,7 +203,7 @@ def test_spot_malformed_date_is_422():
 def test_spot_passes_flop_types_through(monkeypatch):
     seen = {}
 
-    def fake_run_spot(pot, position, role, line, formations=(), date_from=None, date_to=None, flop_types="unset", turn_types=(), river_types=(), hand_types=()):
+    def fake_run_spot(pot, position, role, line, formations=(), date_from=None, date_to=None, flop_types="unset", turn_types=(), river_types=(), hand_types=(), draw_types=()):
         seen["flop_types"] = flop_types
         return FAKE_RESULT
 
@@ -213,7 +215,7 @@ def test_spot_passes_flop_types_through(monkeypatch):
 def test_spot_flop_types_default_to_empty(monkeypatch):
     seen = {}
 
-    def fake_run_spot(pot, position, role, line, formations=(), date_from=None, date_to=None, flop_types="unset", turn_types=(), river_types=(), hand_types=()):
+    def fake_run_spot(pot, position, role, line, formations=(), date_from=None, date_to=None, flop_types="unset", turn_types=(), river_types=(), hand_types=(), draw_types=()):
         seen["flop_types"] = flop_types
         return FAKE_RESULT
 
@@ -288,3 +290,29 @@ def test_spot_unknown_hand_type_is_400():
     response = client.post("/spot", json=SPOT_BODY | {"hand_types": ["Monster"]})
     assert response.status_code == 400
     assert response.json() == {"error": "Unknown hand type: Monster"}
+
+
+def test_spot_passes_draw_split_through(monkeypatch):
+    draw_split = [{"draw_type": "OESD", "hands": 1, "pct_total": 100.0,
+                   "cells": [{"action": "X", "label": "X", "name": "Check", "hands": 1, "pct": 100.0}]}]
+    install_fake_run_spot(monkeypatch, FAKE_RESULT | {"draw_split": draw_split})
+    assert client.post("/spot", json=SPOT_BODY).json()["draw_split"] == draw_split
+
+
+def test_spot_passes_draw_types_through(monkeypatch):
+    seen = []
+
+    def fake_run_spot(*args, draw_types="unset", **kwargs):
+        seen.append(draw_types)
+        return FAKE_RESULT
+
+    monkeypatch.setattr("api.run_spot", fake_run_spot)
+    client.post("/spot", json=SPOT_BODY | {"draw_types": ["OESD"]})
+    client.post("/spot", json=SPOT_BODY)
+    assert seen == [["OESD"], []]
+
+
+def test_spot_unknown_draw_type_is_400():
+    response = client.post("/spot", json=SPOT_BODY | {"draw_types": ["Monster"]})
+    assert response.status_code == 400
+    assert response.json() == {"error": "Unknown draw type: Monster"}

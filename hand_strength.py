@@ -59,13 +59,16 @@ def _best(cards):
     return max(_rank5(five) for five in combinations(cards, 5))
 
 
-def _flush_type(hole, board):
-    """Nut flush if Hero's highest hole card of the flush suit is the highest rank of that suit off the board."""
-    suit = Counter(suit for _, suit in hole + board).most_common(1)[0][0]
+def _is_nut(hole, board, suit):
+    """Hero's highest hole card of the suit is the highest rank of that suit off the board."""
     on_board = {rank for rank, s in board if s == suit}
-    highest = max((_value(rank) for rank, s in hole if s == suit))
-    missing_above = [rank for rank in RANKS if _value(rank) > highest and rank not in on_board]
-    return "Other flush" if missing_above else "Nut flush"
+    highest = max(_value(rank) for rank, s in hole if s == suit)
+    return not any(_value(rank) > highest and rank not in on_board for rank in RANKS)
+
+
+def _flush_type(hole, board):
+    suit = Counter(suit for _, suit in hole + board).most_common(1)[0][0]
+    return "Nut flush" if _is_nut(hole, board, suit) else "Other flush"
 
 
 def _kicker(hole, index, board):

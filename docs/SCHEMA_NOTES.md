@@ -241,3 +241,22 @@ Base: `3bp_ip_pfc_faced_cbet_flop` + `faced_cbet_turn` (`flg_t_cbet_def_opp = tr
     unit fixtures.
   - A pocket pair that is our `2nd pair` is always `1pair` / `2pair` strength 5 used 2 →
     `2nd pair PP`; a hole-card pair (used 1) is never `PP`.
+
+## Draws (Session 67)
+
+- `cash_hand_player_combinations` draw columns, flop / turn only: `flg_<s>_flush_draw`,
+  `id_<s>_flush_draw_strength`, `flg_<s>_straight_draw`, `flg_<s>_2gutshot_draw`,
+  `flg_<s>_gutshot_draw`, `flg_f_bflush_draw`, `flg_f_bstraight_draw`, `val_<s>_straight_draw_
+  nut_outs` / `_nonnut_outs`; `wrap` / `low` draws are Omaha / hi-lo (always false here).
+- **Flush draw strength** = nut-ness, two scales: 1–10 = one hole card of the suit, 11–20 = two;
+  10 / 20 = nut (our `Flush draw nuts`). Exact on every Hero flop / turn flush draw.
+- **Validated vs our `draws.draw_parts`** (`tests/test_draws_db.py`, 45,992 flop / 31,246 turn
+  hands), exact after excluding where PT4 defines the draw differently from GTO Wizard:
+  - PT4 counts **board-only draws**: a monotone flop Hero holds none of is `bflush` (1,617
+    hands; AcAd on K♥8♥4♥ is No draw in GTO Wizard), a four-flush turn board is `flush_draw`
+    (209), and a card that straightens the board alone is a straight / gutshot draw.
+  - PT4 **clears straight draws under a made flush** (42 flop hands); we keep them (spec call).
+  - PT4 calls **21 turn double gutshots a gutshot** (e.g. J♣9♣ on Q-5-8-6, outs 7 and T);
+    GTO Wizard calls a double gutshot OESD, so we keep 2 out-ranks. Flop double gutshots agree.
+- Sabotage: made flush as FD, made straight keeping outs, nut ignoring board ranks, backdoor
+  on 2 cards each turn the matching test red.

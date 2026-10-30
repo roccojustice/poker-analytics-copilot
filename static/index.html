@@ -98,6 +98,10 @@
       <summary>Hand: Any</summary>
       <div class="panel"></div>
     </details>
+    <details class="formations" id="draw-types">
+      <summary>Draw: Any</summary>
+      <div class="panel"></div>
+    </details>
     <div class="dates">
       <label>From <input type="date" id="date-from"></label>
       <label>To <input type="date" id="date-to"></label>
@@ -140,7 +144,9 @@
       "Two pair": ["Top two", "Top + other", "Bottom two"],
       "Top pair": ["Top pair Tk", "Top pair Gk", "Top pair Nk"],
       "2nd pair": ["2nd pair Tk", "2nd pair Gk", "2nd pair Nk", "2nd pair PP"]
-    }
+    },
+    "draw_types": ["Combo draw", "Flush draw nuts", "Flush draw", "OESD", "Gutshot", "BDFD 2 cards", "BDFD 1 card",
+                   "No draw"]
   }
   </script>
 
@@ -158,8 +164,8 @@
     let latestRequest = 0;
     let currentHands = [];
     let currentData = null;
-    let actionPick = null;  // a distribution / split pick; AND-ed with handPick
-    let handPick = null;  // a hand type or group
+    let actionPick = null;  // a distribution / split pick; AND-ed with the type picks
+    let typePicks = { hand: null, draw: null };  // a hand type or group, a draw type
     let openGroups = new Set();  // hand groups whose leaf rows are shown
     let groupsOf = {};  // hand label -> every pick that selects it
     const resultRange = { min: "", max: "" };
@@ -262,6 +268,7 @@
       Object.entries(CONFIG.hand_groups).flatMap(([group, leaves]) => leaves.map(leaf => [leaf, group])));
     const selectedHandTypes = multiSelect("hand-types", CONFIG.hand_types, values => "Hand: " + joinedOrAny(values),
       handGroupOf);
+    const selectedDrawTypes = multiSelect("draw-types", CONFIG.draw_types, values => "Draw: " + joinedOrAny(values));
 
     // Streets in the Line (1 flop, 2 turn, 3 river), split like line_parser._split_tokens
     function lineStreets(line) {
@@ -296,6 +303,7 @@
       const body = {
         ...state, line: lineEl.value.trim(), formations: selectedFormations(), flop_types: selectedFlopTypes(),
         turn_types: selectedTurnTypes(), river_types: selectedRiverTypes(), hand_types: selectedHandTypes(),
+        draw_types: selectedDrawTypes(),
         date_from: document.getElementById("date-from").value || null,
         date_to: document.getElementById("date-to").value || null,
       };
@@ -330,7 +338,7 @@
       currentHands = data.hands;
       currentData = data;
       actionPick = null;
-      handPick = null;
+      typePicks = { hand: null, draw: null };
       openGroups = new Set();
       groupsOf = buildGroups(data.distribution, data.split);
       outputEl.innerHTML =
@@ -361,15 +369,20 @@
       return groups;
     }
 
-    // "hand:<type>" (row header) sets the hand pick, "hand:<type>|<label>" (cell) both; other picks are actions
+    const DIMS = ["hand", "draw"];
+    const pickDim = pick => DIMS.find(dim => pick.startsWith(`${dim}:`));
+    const membersOf = (dim, type) => (dim === "hand" && CONFIG.hand_groups[type]) || [type];
+
+    // "<dim>:<type>" (row header) sets that type pick, "<dim>:<type>|<label>" (cell) it and the action; else an action
     function togglePick(pick) {
-      if (!pick.startsWith("hand:")) {
+      const dim = pickDim(pick);
+      if (!dim) {
         actionPick = actionPick === pick ? null : pick;
       } else {
-        const [type, label] = pick.slice("hand:".length).split("|");
-        if (!label) handPick = handPick === type ? null : type;
-        else if (handPick === type && actionPick === label) handPick = actionPick = null;
-        else [handPick, actionPick] = [type, label];
+        const [type, label] = pick.slice(dim.length + 1).split("|");
+        if (!label) typePicks[dim] = typePicks[dim] === type ? null : type;
+        else if (typePicks[dim] === type && actionPick === label) typePicks[dim] = actionPick = null;
+        else [typePicks[dim], actionPick] = [type, label];
       }
       renderTables();
       renderHands();
@@ -377,11 +390,14 @@
 
     const labelsOf = hand => groupsOf[hand.measured_action] || [hand.measured_action];
     const inActionPick = hand => !actionPick || labelsOf(hand).includes(actionPick);
-    const inHandPick = hand => !handPick || (CONFIG.hand_groups[handPick] || [handPick]).includes(hand.hand_type);
+    const inTypePick = (dim, hand) => !typePicks[dim] || membersOf(dim, typePicks[dim]).includes(hand[`${dim}_type`]);
+    // every pick but `skip` ("action", "hand", "draw"; null applies all)
+    const passes = (hand, skip) => (skip === "action" || inActionPick(hand)) &&
+      DIMS.every(dim => dim === skip || inTypePick(dim, hand));
     const pct = (part, whole) => whole ? Math.round(part / whole * 1000) / 10 : 0;
     const countLabel = (hands, label) => hands.filter(hand => labelsOf(hand).includes(label)).length;
 
-    // The server's tables recounted over the hands that pass the other table's pick (spotlight._distribution etc.)
+    // The server's tables recounted over the hands that pass the other tables' picks (spotlight._distribution etc.)
     function recountDistribution(hands) {
       return currentData.distribution.map(r => {
         const n = countLabel(hands, r.label);
@@ -407,10 +423,10 @@
       return own.length ? own : cells.filter(c => (groupsOf[actionPick] || []).includes(c.label));
     }
 
-    function recountHandSplit(hands) {
-      return currentData.hand_split.flatMap(row => {
-        const members = CONFIG.hand_groups[row.hand_type] || [row.hand_type];
-        const rowHands = hands.filter(hand => members.includes(hand.hand_type));
+    function recountTypeSplit(dim, hands) {
+      return currentData[`${dim}_split`].flatMap(row => {
+        const members = membersOf(dim, row[`${dim}_type`]);
+        const rowHands = hands.filter(hand => members.includes(hand[`${dim}_type`]));
         if (!rowHands.length) return [];
         const cells = handColumns(row.cells).map(c => {
           const n = countLabel(rowHands, c.label);
@@ -421,21 +437,24 @@
     }
 
     function isSelected(pick) {
-      if (!pick.startsWith("hand:")) return pick === actionPick;
-      const [type, label] = pick.slice("hand:".length).split("|");
-      return type === handPick && (!label || label === actionPick);
+      const dim = pickDim(pick);
+      if (!dim) return pick === actionPick;
+      const [type, label] = pick.slice(dim.length + 1).split("|");
+      return type === typePicks[dim] && (!label || label === actionPick);
     }
 
     function renderTables() {
-      const forActions = currentHands.filter(inHandPick);
+      const forActions = currentHands.filter(hand => passes(hand, "action"));
       const distribution = recountDistribution(forActions);
-      const handSplit = currentData.hand_split && currentData.hand_split.length
-        ? recountHandSplit(currentHands.filter(inActionPick)) : null;
+      const typeTable = dim => {
+        if (!currentData[`${dim}_split`] || !currentData[`${dim}_split`].length) return "";
+        const split = recountTypeSplit(dim, currentHands.filter(hand => passes(hand, dim)));
+        return split.length ? renderTypeSplit(dim, split) : `<p class="hand-filter">No ${dim} types for these picks.</p>`;
+      };
       const tablesEl = document.getElementById("tables");
       tablesEl.innerHTML =
         (currentData.split ? renderSplit(distribution, recountSplit(forActions)) : renderDistribution(distribution)) +
-        (handSplit === null ? "" : handSplit.length ? renderHandSplit(handSplit)
-          : '<p class="hand-filter">No hand types for this action.</p>');
+        DIMS.map(typeTable).join("");
       tablesEl.querySelectorAll("table.dist [data-pick]").forEach(el => {
         el.classList.toggle("selected", isSelected(el.dataset.pick));
         el.addEventListener("click", () => togglePick(el.dataset.pick));
@@ -455,7 +474,7 @@
       const b = resultRange.max === "" ? Infinity : Number(resultRange.max);
       const [min, max] = [Math.min(a, b), Math.max(a, b)];  // either field order means the same range
       const rows = currentHands.filter(hand =>
-        inActionPick(hand) && inHandPick(hand) &&
+        passes(hand, null) &&
         hand.result_bb >= min && hand.result_bb <= max
       );
       document.getElementById("hand-count").textContent =
@@ -494,18 +513,20 @@
       return html;
     }
 
-    function renderHandSplit(handSplit) {
+    function renderTypeSplit(dim, typeSplit) {
       const sub = cell => cell.parent ? ' class="sub"' : "";
-      let html = '<table class="dist"><thead><tr><th>Hand type</th><th>Hands (% total)</th>';
-      handSplit[0].cells.forEach(cell => html += `<th${sub(cell)}>${escapeHtml(cell.label)}</th>`);
+      let html = `<table class="dist"><thead><tr><th>${dim === "hand" ? "Hand" : "Draw"} type</th>` +
+        "<th>Hands (% total)</th>";
+      typeSplit[0].cells.forEach(cell => html += `<th${sub(cell)}>${escapeHtml(cell.label)}</th>`);
       html += "</tr></thead><tbody>";
-      handSplit.forEach(row => {
-        const pick = `hand:${row.hand_type}`;
-        const caret = CONFIG.hand_groups[row.hand_type] ? `<button class="caret" ` +
-          `data-group="${escapeHtml(row.hand_type)}">${openGroups.has(row.hand_type) ? "▾" : "▸"}</button>` : "";
+      typeSplit.forEach(row => {
+        const type = row[`${dim}_type`];
+        const pick = `${dim}:${type}`;
+        const caret = dim === "hand" && CONFIG.hand_groups[type] ? `<button class="caret" ` +
+          `data-group="${escapeHtml(type)}">${openGroups.has(type) ? "▾" : "▸"}</button>` : "";
         const hidden = row.parent && !openGroups.has(row.parent) ? " hidden" : "";
         const tr = row.parent ? `<tr class="sub" data-parent="${escapeHtml(row.parent)}"${hidden}>` : "<tr>";
-        html += `${tr}<td data-pick="${escapeHtml(pick)}">${caret}${escapeHtml(row.hand_type)}</td>` +
+        html += `${tr}<td data-pick="${escapeHtml(pick)}">${caret}${escapeHtml(type)}</td>` +
           `<td>${row.hands.toLocaleString("en-US")} (${row.pct_total.toFixed(1)}%)</td>`;
         row.cells.forEach(cell => {
           html += `<td data-pick="${escapeHtml(`${pick}|${cell.label}`)}"${sub(cell)}>${cell.pct.toFixed(1)}%` +
@@ -534,6 +555,7 @@
       { label: "Flop", render: cards("flop") },
       { label: "Flop type", render: text("flop_type") },
       { label: "Hand type", render: text("hand_type") },
+      { label: "Draw type", render: text("draw_type") },
       { label: "Flop action", render: action("f") },
       { label: "Turn", render: cards("turn") },
       { label: "Turn type", render: text("turn_type") },
