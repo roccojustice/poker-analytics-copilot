@@ -13,6 +13,8 @@ from spotlight import run_spot
 pytestmark = pytest.mark.db
 
 BOARD = {"f": 3, "t": 4}
+TURN_DOUBLE_GUTSHOTS = {3631, 7895, 35296, 44056, 74068, 84363, 102619, 102869, 104147, 112988, 156284, 174156,
+                        181080, 229514, 231183, 232525, 245272, 248678, 317430, 385111, 390757}
 NUT_FLUSH_DRAW = {10, 20}  # PT4 flush draw strength: one-card / two-card nut (SCHEMA_NOTES, Session 67)
 
 
@@ -75,8 +77,8 @@ def test_straight_draws_match_pt4(street_rows):
     street, rows = street_rows
     rows = rows[~rows["made_flush"] & ~rows["board_straight"]]  # PT4 clears draws under a flush, counts board ones
     pt4 = pd.Series(0, index=rows.index).mask(rows["gut"], 1).mask(rows["sd"] | rows["gut2"], 2)
-    if street == "t":  # PT4 calls some turn double gutshots a gutshot (SCHEMA_NOTES, Session 67)
-        pt4 = pt4.mask((rows["o_outs"] == 2) & rows["gut"], 2)
+    if street == "t":  # PT4 calls these turn double gutshots a gutshot (SCHEMA_NOTES, Session 67)
+        pt4 = pt4.mask(rows["id_hand"].isin(TURN_DOUBLE_GUTSHOTS), 2)
     assert (rows["o_outs"] == pt4).all(), mismatches(rows, rows["o_outs"], pt4)
 
 
