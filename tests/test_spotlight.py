@@ -129,7 +129,7 @@ def test_nan_in_hand_details_becomes_none(monkeypatch):
     hands = spotlight.run_spot("2bp", "ip", "pfr", "- B-?")["hands"]
     assert hands.to_dict(orient="records") == [
         {"id_hand": 1, "amt_won": None, "flop_type": "BLL", "turn_type": "Brick", "river_type": None,
-         "hand_type": "No made hand", "measured_action": "B"}]
+         "hand_type": "No made hand", "draw_type": "No draw", "measured_action": "B"}]
 
 
 MIXED = [(1, "Cs", "KsQd4c"), (2, "Cs", "Ks9d3c"), (3, "Fm", "7s6d2c")]  # 2BWL, BLL, Low
@@ -456,3 +456,75 @@ def test_describe_middle_bucket_shows_both_bounds():
 def test_describe_decision_without_prior_actions_has_no_dangling_comma(line, expected):
     spec = parse_line(line, "pfr", "oop")
     assert expected in spotlight.describe("2bp", "oop", "pfr", [], spec, 5)
+
+
+DRAWS = [(1, "Bs", "Jh8h3c", "2s", "Ah5h"), (2, "X", "Jh8h3c", "2s", "Ts9s"),  # Flush draw nuts, OESD
+         (3, "X", "Jh8h3c", "2s", "AsKd"), (4, "Bs", "Jh8h3c", "2s", "AcKc")]  # No draw, BDFD 2 cards
+
+
+def draws_by_id(hands):
+    return dict(zip(hands["id_hand"], hands["draw_type"]))
+
+
+def test_draw_type_on_flop_decision(monkeypatch):
+    install(monkeypatch, fake_matches(DRAWS))
+    hands = spotlight.run_spot("2bp", "ip", "pfr", "- ?")["hands"]
+    assert draws_by_id(hands) == {1: "Flush draw nuts", 2: "OESD", 3: "No draw", 4: "BDFD 2 cards"}
+
+
+def test_draw_type_on_turn_decision(monkeypatch):
+    install(monkeypatch, fake_matches(DRAWS))
+    hands = spotlight.run_spot("2bp", "ip", "pfr", "- B-?")["hands"]
+    assert draws_by_id(hands) == {1: "Combo draw", 2: "OESD", 3: "No draw", 4: "No draw"}
+
+
+def test_draw_type_on_river_decision(monkeypatch):
+    install(monkeypatch, fake_matches([(1, "B", "Jh8h3c", "2s5d", "AhKh")]))
+    hands = spotlight.run_spot("2bp", "ip", "pfr", "- B-B-?")["hands"]
+    assert draws_by_id(hands) == {1: "No draw"}
+
+
+def test_draw_filter_or_within(monkeypatch):
+    install(monkeypatch, fake_matches(DRAWS))
+    hands = spotlight.run_spot("2bp", "ip", "pfr", "- ?", draw_types=["OESD", "BDFD 2 cards"])["hands"]
+    assert set(hands["id_hand"]) == {2, 4}
+
+
+def test_draw_and_hand_type(monkeypatch):
+    install(monkeypatch, fake_matches(DRAWS))
+    hands = spotlight.run_spot("2bp", "ip", "pfr", "- ?", hand_types=["Ace high"], draw_types=["No draw"])["hands"]
+    assert set(hands["id_hand"]) == {3}
+
+
+def test_draw_filter_on_river_is_allowed(monkeypatch):
+    install(monkeypatch, fake_matches([(1, "B", "Jh8h3c", "2s5d", "AhKh")]))
+    hands = spotlight.run_spot("2bp", "ip", "pfr", "- B-B-?", draw_types=["No draw"])["hands"]
+    assert list(hands["id_hand"]) == [1]
+
+
+def test_unknown_draw_type_raises(monkeypatch):
+    monkeypatch.setattr("spotlight.run_spot_query", no_query)
+    with pytest.raises(SpotInputError, match="Unknown draw type: Monster"):
+        spotlight.run_spot("2bp", "ip", "pfr", "- ?", draw_types=["Monster"])
+
+
+def test_describe_draw_part(monkeypatch):
+    install(monkeypatch, fake_matches(DRAWS))
+    text = spotlight.run_spot("2bp", "ip", "pfr", "- ?", hand_types=["Ace high"],
+                              draw_types=["OESD", "No draw", "OESD"])["interpreted_filter"]
+    assert "· Hand: Ace high · Draw: OESD, No draw · Flop: " in text
+    assert "Draw:" not in spotlight.run_spot("2bp", "ip", "pfr", "- ?")["interpreted_filter"]
+
+
+def test_draw_split_rows_cells_and_pcts(monkeypatch):
+    install(monkeypatch, fake_matches(DRAWS))
+    split = spotlight.run_spot("2bp", "ip", "pfr", "- ?")["draw_split"]
+    assert [(r["draw_type"], r["hands"], r["pct_total"]) for r in split] == [
+        ("Flush draw nuts", 1, 25.0), ("OESD", 1, 25.0), ("BDFD 2 cards", 1, 25.0), ("No draw", 1, 25.0)]
+    assert [(c["label"], c["hands"], c["pct"]) for c in split[0]["cells"]] == [
+        ("B", 1, 100.0), ("Bs", 1, 100.0), ("Bm", 0, 0.0), ("Bl", 0, 0.0), ("Bo", 0, 0.0), ("X", 0, 0.0)]
+
+
+def test_draw_split_empty_list_when_no_hands(monkeypatch):
+    install(monkeypatch, fake_matches(DRAWS))
+    assert spotlight.run_spot("2bp", "ip", "pfr", "- ?", draw_types=["Gutshot"])["draw_split"] == []
