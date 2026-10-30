@@ -67,6 +67,7 @@ class SpotRequest(BaseModel):
     turn_types: list[str] = []
     river_types: list[str] = []
     hand_types: list[str] = []
+    draw_types: list[str] = []
 
 
 @app.post("/spot")
@@ -76,7 +77,7 @@ def spot(request: SpotRequest):
             request.pot, request.position, request.role, request.line, request.formations,
             date_from=request.date_from, date_to=request.date_to, flop_types=request.flop_types,
             turn_types=request.turn_types, river_types=request.river_types,
-            hand_types=request.hand_types,
+            hand_types=request.hand_types, draw_types=request.draw_types,
         )
     except SpotInputError as exc:
         return JSONResponse(status_code=400, content={"error": str(exc)})
@@ -86,6 +87,7 @@ def spot(request: SpotRequest):
         "hands": result["hands"].to_dict(orient="records"),
         "split": result["split"],
         "hand_split": result["hand_split"],
+        "draw_split": result["draw_split"],
     }
 
 
