@@ -21,6 +21,17 @@
    (SPEC). Brainstorm with the user first (the page already has a client-side Result from/to).
 2. Then **re-run M6** (a real study session on the tool instead of PT4).
 
+3. **After the M6 run: rethink the Line vocabulary.** The user finds the whole notation awkward
+   and rejected `D`. Trigger: `2bp ip pfr`, flop `XR` called, villain bets the turn can't be
+   written (`- BC-?` means villain checks; `line_parser.py:121-122` drops every bet before Hero
+   when pfr + IP + no letters). Redesign with the user, don't patch a new letter in. M6 run 2
+   fell back to PT4 for it, plus `3bp ip pfr vs XR-B` and `2bp ip pfr vs turn probe`. Lead to
+   test: the user writes these as `vs` + villain's letters even as PFR (parser rejects that).
+   User likes the rule. Scratch prototype: villain letters only, Hero decides right after the
+   last letter, resolved all 100 lines of the user's list and the 20 SPEC Lines, 0 ambiguous
+   across every legal combination. Parser level only: no SQL, no sizes yet. Result filter
+   confirmed on the page: 691 of 1,065.
+
 ## Open questions / deferred minors
 
 - Draws: three spec calls not confirmed in GTO Wizard (board-only straight outs don't count,
