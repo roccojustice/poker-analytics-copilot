@@ -73,7 +73,7 @@
       <button data-value="pfr">PFR</button>
     </div>
     <div class="line-box">
-      <input id="line" list="line-presets" placeholder="Line, e.g. vs Bs?" autocomplete="off" spellcheck="false">
+      <input id="line" list="line-presets" placeholder="Line, e.g. vs XR-B" autocomplete="off" spellcheck="false">
       <datalist id="line-presets"></datalist>
       <div id="line-error"></div>
       <div class="hint">Size per street: s &lt;45% · m 45–70% · l 70–105% · o ≥105%</div>
@@ -185,6 +185,7 @@
         state[seg.dataset.key] = button.dataset.value;
         seg.querySelectorAll("button").forEach(b => b.classList.toggle("on", b === button));
         refreshPresets();
+        refreshRunoutControls();
       });
     });
 
@@ -270,13 +271,17 @@
       handGroupOf);
     const selectedDrawTypes = multiSelect("draw-types", CONFIG.draw_types, values => "Draw: " + joinedOrAny(values));
 
-    // Streets in the Line (1 flop, 2 turn, 3 river), split like line_parser._split_tokens
-    function lineStreets(line) {
-      return line.replace(/\s+/g, "").replace(/^(-|vs)/i, "").split("-").length;
+    // The decision street (1 flop, 2 turn, 3 river): OOP, a last street the villain closes moves it one on
+    function lineStreets(line, position) {
+      const text = line.replace(/\s+/g, "").replace(/^vs/i, "");
+      if (/^strat$/i.test(text)) return 1;
+      const tokens = text.split("-");
+      const closes = /[cx]$/i.test(tokens[tokens.length - 1].replace(/[smlo]$/i, ""));
+      return tokens.length + (position === "oop" && closes ? 1 : 0);
     }
 
     function refreshRunoutControls() {
-      const streets = lineStreets(lineEl.value);
+      const streets = lineStreets(lineEl.value, state.position);
       selectedTurnTypes.setEnabled(streets >= 2);
       selectedRiverTypes.setEnabled(streets >= 3);
     }
@@ -498,7 +503,7 @@
       const cell = (pick, pct, hands) => `<td data-pick="${escapeHtml(pick)}">${pct.toFixed(1)}%` +
         `<small>${hands.toLocaleString("en-US")}</small></td>`;
       const faced = (hands, pct) => `<td>${hands.toLocaleString("en-US")} (${pct.toFixed(1)}%)</td>`;
-      let html = '<table class="dist"><thead><tr><th>Size</th><th>Hands (% faced)</th>';
+      let html = '<table class="dist"><thead><tr><th>Size</th><th>Hands (%)</th>';
       distribution.forEach(r => html += `<th>${escapeHtml(r.label)}</th>`);
       html += "</tr></thead><tbody><tr><td>All</td>" + faced(total, total ? 100 : 0);
       distribution.forEach(r => html += cell(r.label, r.pct, r.hands));
