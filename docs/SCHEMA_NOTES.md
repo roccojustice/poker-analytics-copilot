@@ -275,3 +275,9 @@ Base: `3bp_ip_pfc_faced_cbet_flop` + `faced_cbet_turn` (`flg_t_cbet_def_opp = tr
 - **PT4's result filter dropped one split pot**: `HD2836311182`, `[Split Pot]`, `BB Won` -5.30,
   `flg_won_hand` true with `amt_won` negative. Spotlight keeps it. One hand, so the rule behind
   PT4's drop is not established; 22 spot hands are won with a negative result (rake on a chop).
+
+## Line grammar validation (Session 68)
+
+- `D` rule = PT4's donk: `flg_t/r_donk_def_opp` true on every `XC-D` / `XC-XC-D` hand and false on
+  every `XR-B`, `X-B`, `XC-X-B` hand, 2bp and 3bp (`tests/test_donk_db.py`). A villain who
+  check-raised the flop and bets the turn is not donking.
