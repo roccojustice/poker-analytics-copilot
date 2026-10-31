@@ -102,6 +102,13 @@ def test_get_hand_details_adds_stake_and_amounts_in_bb(monkeypatch):
     assert row.get("pot_bb") == pytest.approx(26.5)
     assert row.get("result_bb") == pytest.approx(-10.0)
 
+@pytest.mark.parametrize("amt_won, amt_bb, expected", [(0.30, 0.10, 3.0), (-0.30, 0.10, -3.0), (-0.60, 0.10, -6.0)])
+def test_get_hand_details_result_bb_is_exact_at_whole_bb(monkeypatch, amt_won, amt_bb, expected):
+    row = {**HAND_ROW, "amt_won": amt_won, "amt_bb": amt_bb}
+    monkeypatch.setattr("db.pd.read_sql", lambda query, engine, params=None: pd.DataFrame([row]))
+
+    assert get_hand_details([1]).iloc[0]["result_bb"] == expected  # no approx: the page filters with >= / <=
+
 def test_get_hand_details_bet_size_is_pct_of_pot_at_street_start(monkeypatch):
     monkeypatch.setattr("db.pd.read_sql", lambda query, engine, params=None: pd.DataFrame([HAND_ROW]))
 

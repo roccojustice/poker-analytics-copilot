@@ -178,7 +178,7 @@ def get_hand_details(id_hands, id_player=10):
     df["winning_hand"] = df["winning_hand_group"] + ", " + df["winning_hand_details"]
     df["stake"] = df["limit_name"]
     df["pot_bb"] = df["amt_pot"] / df["amt_bb"]
-    df["result_bb"] = df["amt_won"] / df["amt_bb"]
+    df["result_bb"] = (df["amt_won"] / df["amt_bb"]).round(6)  # 0.30 / 0.10 must be 3.0: the page filters on it
     size_inputs = []
     for street in ("f", "t", "r"):
         made, facing, pot = f"amt_{street}_bet_made", f"amt_{street}_bet_facing", f"amt_pot_{street}"
