@@ -16,6 +16,10 @@ def _street_text(spec_street, actors, tail=()):
     return f"{STREET_NAMES[spec_street.street].capitalize()}: " + ", ".join(actors + size + list(tail))
 
 
+def _villain_text(spec_street):
+    return f"villain {'donk ' * spec_street.donk}{spec_street.villain}"
+
+
 def describe(pot, position, role, formations, spec, n_hands, date_from=None, date_to=None, flop_types=(),
              turn_types=(), river_types=(), hand_types=(), draw_types=()):
     parts = [pot.upper(), position.upper(), role.upper(), ", ".join(formations) or "Any"]
@@ -36,9 +40,9 @@ def describe(pot, position, role, formations, spec, n_hands, date_from=None, dat
     if draw_types:
         parts.append("Draw: " + ", ".join(draw_types))
     for s in spec.completed:
-        parts.append(_street_text(s, [f"Hero {s.hero}", f"villain {s.villain}"]))
+        parts.append(_street_text(s, [f"Hero {s.hero}", _villain_text(s)]))
     d = spec.decision
-    seen = [f"Hero {d.hero}"] * bool(d.hero) + [f"villain {d.villain}"] * bool(d.villain)
+    seen = [f"Hero {d.hero}"] * bool(d.hero) + [_villain_text(d)] * bool(d.villain)
     measuring = "measuring " + " / ".join(d.hero + action for action in spec.measured)
     parts.append(_street_text(d, seen, [measuring]))
     parts.append(f"{n_hands:,} hands")

@@ -121,7 +121,7 @@ def test_every_hand_type_occurs(street_rows):
     assert not missing
 
 
-SPOTS = [("2bp", "oop", "pfc", "vs B?"), ("2bp", "ip", "pfr", "- B-?"), ("2bp", "ip", "pfr", "- B-B-?")]
+SPOTS = [("2bp", "oop", "pfc", "B"), ("2bp", "ip", "pfr", "XC-X"), ("2bp", "ip", "pfr", "XC-XC-X")]
 
 
 @pytest.fixture(scope="module", params=SPOTS, ids=lambda spot: spot[3])

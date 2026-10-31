@@ -9,8 +9,8 @@ A **local web app** that replaces PokerTracker 4's *analysis* role in the user's
 study routine. It runs alongside a solver as core study infrastructure.
 
 Interaction is **Spotlight**, a selection bar modeled on SnapMDA's. The user picks pot type,
-position, role and optional seat formations, then types a **Line** in poker shorthand
-(e.g. `3bp ip pfc vs B?`). The app returns:
+position, role and optional seat formations, then types a **Line**: the villain's actions
+(e.g. `3bp ip pfc vs B`). The app shows how Hero reacted to them:
 
 1. the **interpreted filter**, in one readable line
 2. the **action-frequency distribution** as numbers (not charts)
@@ -49,9 +49,11 @@ Three layers, mapped onto the Spotlight bar:
 
 - **preflop-context**: `{2bp, 3bp} × {ip, oop} × {pfr, pfc}`, from the bar's toggles.
   Formulas are in `SCHEMA_NOTES.md`.
-- **situation**: the Line. Letters always belong to the preflop raiser: PFR lines start with
-  `-` (Hero's letters), PFC lines with `vs` (the villain's letters). `?` marks the decision.
-- **hero-response**: Hero's next action at the `?`, measured from his action string.
+- **situation**: the Line: the villain's actions by street, whoever the PFR is; `vs` is
+  optional. Hero's actions are implied, `D` marks a donk, `Strat` is Hero's first decision as
+  OOP PFR (`docs/superpowers/specs/2026-10-30-villain-line-grammar-design.md`).
+- **hero-response**: Hero's next action, right after the villain's last one, measured from
+  his action string.
 
 Plus optional **formations** (seat pairs, OOP seat first, e.g. `BB vs BTN`), multi-select:
 none = all hands, several = their hands pooled.
@@ -64,31 +66,31 @@ Ordered by the user's review priority. They are also the Line input's suggestion
 
 | # | preflop-context | Line | Measured |
 |---|---|---|---|
-| 1 | 3bp ip pfc | `vs B?` | F / C / R |
-| 2 | 2bp oop pfc | `vs B?` | F / C / R |
-| 3 | 2bp ip pfr | `- B-?` | B / X |
-| 4 | 3bp oop pfr | `- B-?` | B / X |
-| 5 | 2bp oop pfr | `- B-?` | B / X |
-| 6 | 3bp ip pfc | `vs B-B?` | F / C / R |
-| 7 | 3bp ip pfr | `- B-?` | B / X |
-| 8 | 3bp oop pfc | `vs B?` | F / C / R |
-| 9 | 2bp ip pfc | `vs B?` | F / C / R |
-| 10 | 2bp ip pfc | `vs X?` | B / X |
+| 1 | 3bp ip pfc | `B` | F / C / R |
+| 2 | 2bp oop pfc | `B` | F / C / R |
+| 3 | 2bp ip pfr | `XC-X` | B / X |
+| 4 | 3bp oop pfr | `C` | B / X |
+| 5 | 2bp oop pfr | `C` | B / X |
+| 6 | 3bp ip pfc | `B-B` | F / C / R |
+| 7 | 3bp ip pfr | `XC-X` | B / X |
+| 8 | 3bp oop pfc | `B` | F / C / R |
+| 9 | 2bp ip pfc | `B` | F / C / R |
+| 10 | 2bp ip pfc | `X` | B / X |
 
 ### River (10)
 
 | # | preflop-context | Line | Measured |
 |---|---|---|---|
-| 1 | 3bp oop pfr | `- B-B-?` | B / X |
-| 2 | 2bp ip pfr | `- B-B-?` | B / X |
-| 3 | 3bp oop pfr | `- B-X-?` | B / X |
-| 4 | 2bp oop pfc | `vs B-X-?` | B / X |
-| 5 | 2bp oop pfc | `vs X-C-?` | B / X |
-| 6 | 2bp oop pfr | `- X-B-?` | B / X |
-| 7 | 3bp ip pfr | `- B-B-?` | B / X |
-| 8 | 3bp oop pfc | `vs B-X-?` | B / X |
-| 9 | 2bp ip pfr | `- X-B-?` | B / X |
-| 10 | 3bp ip pfc | `vs B-XC-X?` | B / X |
+| 1 | 3bp oop pfr | `C-C` | B / X |
+| 2 | 2bp ip pfr | `XC-XC-X` | B / X |
+| 3 | 3bp oop pfr | `C-X` | B / X |
+| 4 | 2bp oop pfc | `B-X` | B / X |
+| 5 | 2bp oop pfc | `X-C` | B / X |
+| 6 | 2bp oop pfr | `X-C` | B / X |
+| 7 | 3bp ip pfr | `XC-XC-X` | B / X |
+| 8 | 3bp oop pfc | `B-X` | B / X |
+| 9 | 2bp ip pfr | `X-XC-X` | B / X |
+| 10 | 3bp ip pfc | `B-XC-X` | B / X |
 
 ### Breakdown filters (added Session 60, from the first M6 run)
 
@@ -96,7 +98,7 @@ The first real study session fell back to PT4 for these. Each narrows any Line's
 and its distribution:
 
 - **Bet sizing** of the bet Hero faces or makes (small / medium / large / overbet), in the
-  Line (`vs Bs?`) and as a per-sizing distribution
+  Line (`Bs`, `Cs`, `XRs`) and as a per-sizing distribution
 - **Board / runout**: flop texture, flush completes on turn/river, turn pairs a flop card,
   etc. Computed from the card ids (`poker_cards.py` encoding), not from PT4 flags
 - **Hand strength** at the decision street (air, K-high, A-high, low pair, …)
@@ -135,7 +137,6 @@ and its distribution:
 
 - NL refinement over a Spotlight result ("only the folds" beyond the client-side click
   filter); board texture and bet sizing moved into v1 as breakdown filters (Session 60)
-- Donk notation (`D`); PT4 has `flg_<street>_donk*` flags to validate it against
 - Multiway, `LIMP` / `4BP`, and a precomputed replayed-sequence table (needed for multiway;
   feasibility shown in the Session 57 spike, `spikes/`)
 - Stake/`cash_limit` filtering (schema gap, Session 17; showing the stake per hand is in scope)

@@ -7,6 +7,7 @@ from draws import DRAW_TYPES
 from hand_strength import HAND_GROUPS, HAND_TYPES
 from line_parser import parse_line
 from spot_sql import FORMATIONS
+from test_line_parser import USER_LIST
 
 INDEX = Path(__file__).resolve().parent.parent / "static" / "index.html"
 
@@ -44,9 +45,12 @@ def test_draw_types_match_the_backend():
     assert load_config()["draw_types"] == list(DRAW_TYPES)
 
 
-def test_presets_are_the_20_v1_lines_and_all_parse():
+def test_presets_are_the_user_list_plus_two_spec_lines_and_all_parse():
     presets = load_config()["presets"]
-    assert sum(len(lines) for lines in presets.values()) == 20
+    expected = {" ".join(key): set(lines.split()) for key, lines in USER_LIST.items()}
+    expected["2bp oop pfr"].add("C")
+    expected["2bp ip pfr"].add("X-XC-X")
+    assert {key: set(lines) for key, lines in presets.items()} == expected
     for context, lines in presets.items():
         pot, position, role = context.split()
         assert pot in ("2bp", "3bp")

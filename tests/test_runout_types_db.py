@@ -6,8 +6,8 @@ from spotlight import run_spot
 pytestmark = pytest.mark.db
 
 MADE = ["FC", "SC", "BP high", "BP mid", "BP low", "BW A", "BW K", "BW Q", "BW J"]
-TURN_LINE = ("2bp", "ip", "pfr", "- B-?")
-RIVER_LINE = ("2bp", "ip", "pfr", "- B-B-?")
+TURN_LINE = ("2bp", "ip", "pfr", "XC-X")
+RIVER_LINE = ("2bp", "ip", "pfr", "XC-XC-X")
 
 
 def ids(*args, **kwargs):

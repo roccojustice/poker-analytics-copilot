@@ -12,15 +12,15 @@ from spotlight import run_spot
 pytestmark = pytest.mark.db
 
 ORACLE = [
-    ("2bp_ip_pfr_turn_cbet_opp", "2bp", "ip", "pfr", "- B-?"),
-    ("2bp_oop_pfr_turn_cbet_opp", "2bp", "oop", "pfr", "- B-?"),
-    ("3bp_ip_pfr_turn_cbet_opp", "3bp", "ip", "pfr", "- B-?"),
-    ("3bp_oop_pfr_turn_cbet_opp", "3bp", "oop", "pfr", "- B-?"),
-    ("2bp_ip_pfc_faced_cbet_flop", "2bp", "ip", "pfc", "vs B?"),
-    ("2bp_oop_pfc_faced_cbet_flop", "2bp", "oop", "pfc", "vs B?"),
-    ("3bp_ip_pfc_faced_cbet_flop", "3bp", "ip", "pfc", "vs B?"),
-    ("3bp_oop_pfc_faced_cbet_flop", "3bp", "oop", "pfc", "vs B?"),
-    ("3bp_ip_pfc_faced_barrel_turn", "3bp", "ip", "pfc", "vs B-B?"),
+    ("2bp_ip_pfr_turn_cbet_opp", "2bp", "ip", "pfr", "XC-X"),
+    ("2bp_oop_pfr_turn_cbet_opp", "2bp", "oop", "pfr", "C"),
+    ("3bp_ip_pfr_turn_cbet_opp", "3bp", "ip", "pfr", "XC-X"),
+    ("3bp_oop_pfr_turn_cbet_opp", "3bp", "oop", "pfr", "C"),
+    ("2bp_ip_pfc_faced_cbet_flop", "2bp", "ip", "pfc", "B"),
+    ("2bp_oop_pfc_faced_cbet_flop", "2bp", "oop", "pfc", "B"),
+    ("3bp_ip_pfc_faced_cbet_flop", "3bp", "ip", "pfc", "B"),
+    ("3bp_oop_pfc_faced_cbet_flop", "3bp", "oop", "pfc", "B"),
+    ("3bp_ip_pfc_faced_barrel_turn", "3bp", "ip", "pfc", "B-B"),
 ]
 NAME_TO_LETTER = {"bet": "B", "check": "X", "raise": "R", "call": "C", "fold": "F"}
 JUSTIFIED_EXCEPTIONS = {}  # recipe -> {"extra": set(), "missing": set()}, each documented in SCHEMA_NOTES.md
@@ -50,7 +50,7 @@ def test_spotlight_matches_recipe(recipe, pot, position, role, line):
 
 
 def test_formations_pool_as_union_of_single_formations():
-    spec = parse_line("vs B?", "pfc", "oop")
+    spec = parse_line("B", "pfc", "oop")
 
     def hands(formations):
         where, params, measured_sql = build_spot_query("2bp", "oop", "pfc", spec, formations)
@@ -63,11 +63,11 @@ def test_formations_pool_as_union_of_single_formations():
 
 def test_date_range_matches_filtering_the_full_result_by_day():
     date_from, date_to = date(2026, 7, 1), date(2026, 8, 5)
-    full = run_spot("2bp", "oop", "pfc", "vs B?")["hands"]
+    full = run_spot("2bp", "oop", "pfc", "B")["hands"]
     days = pd.to_datetime(full["date_played"]).dt.date
     expected = set(full.loc[(days >= date_from) & (days <= date_to), "id_hand"])
 
-    ranged = run_spot("2bp", "oop", "pfc", "vs B?", [], date_from, date_to)
+    ranged = run_spot("2bp", "oop", "pfc", "B", [], date_from, date_to)
 
     assert set(ranged["hands"]["id_hand"]) == expected
     assert sum(row["hands"] for row in ranged["distribution"]) == len(expected)

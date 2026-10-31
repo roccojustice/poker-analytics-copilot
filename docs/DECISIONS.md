@@ -244,6 +244,8 @@ Rejecting them would also block legitimate PFC leads such as `vs X-C-?` (R5). Th
 place a donk is filtered is the ambiguous case: pfr + Hero IP + `-?`, where `?` means "no
 bet before Hero".
 
+**Superseded 2026-10-30 (Session 68):** see "The Line is the villain's actions", below.
+
 ## 2026-10-13 (Session 59) — The Line is typed; presets are suggestions
 
 The Line is an `<input>` with a native `<datalist>`, not a dropdown. Suggestions are the v1
@@ -414,3 +416,12 @@ pinned by `id_hand`).
 - **All SQL uses parameter binding**; never interpolate user/LLM-derived values.
 - **Config-driven registries over `if/elif` chains** — extend behavior by adding a dict
   entry (`METRIC_CONFIGS`, `FILTER_RECIPES`, `AVAILABLE_QUERIES`).
+
+## 2026-10-30 (Session 68) — The Line is the villain's actions
+
+M6 run 2 fell back to PT4 for spots with Hero PFR and IP where the villain bets first
+(`XR-B`, turn probe): the `-` / `?` grammar couldn't write them, and `- B-?` meant different spots
+by position. The user's own study list already wrote everything as `Vs` + villain letters, so
+that became the grammar: Hero decides right after the last letter, his actions are implied, the
+old form is an error. Every legal combination resolves unambiguously. `D` returns (cut in Session
+58) as a real donk only, matching `flg_<s>_donk_def_opp`; `Strat` stays for OOP PFR. User's call.
