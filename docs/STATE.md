@@ -11,17 +11,14 @@
   float fix, `pt4_diff --result-min / --result-max`. Full diff on `3bp ip pfc vs B`; 691 of 1,065
   confirmed on the page (`SCHEMA_NOTES.md`, "Result in BB").
 - **M6 run 2** fell back to PT4 for spots with Hero PFR and IP where the villain bets first.
-- **Villain Line grammar** built on branch `m7-villain-grammar`, **not merged**: a Line is the
-  villain's actions; `D` donk, `Strat` OOP PFR. Spec/plan `2026-10-30-villain-line-grammar*`.
-  Oracle exact, `D` matches PT4's donk flags, branch reviewed (no Critical).
+- **Villain Line grammar** merged to local `main`, not pushed: a Line is the villain's actions;
+  `D` donk, `Strat` OOP PFR. Spec/plan `2026-10-30-villain-line-grammar*`. Oracle exact, `D`
+  matches PT4's donk flags, 5 PT4 diffs exact (`SCHEMA_NOTES.md`, "Line grammar validation").
 
 ## Next
 
-1. **PT4 diffs on the branch**, exact set membership, in `exports/`: `2bp ip pfr XR-B` (413
-   Spotlight hands), `3bp ip pfr XR-B` (83), `2bp ip pfr X-B` (810), `2bp ip pfr XC-D` (244),
-   `2bp ip pfr XRs-B` (410). The sized one is the only proof `street_bet_sql` holds on a raised
-   bet; `test_sized_labels_equal_the_suffixed_line` can't catch that. Record in `SCHEMA_NOTES.md`.
-2. Merge the branch, then **re-run M6**.
+1. **Re-run M6** (a real study session on the tool instead of PT4), with the villain Line. Note
+   every fallback to PT4; it decides whether M7 closes.
 
 ## Open questions / deferred minors
 
