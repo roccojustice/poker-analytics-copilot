@@ -78,7 +78,7 @@ def test_handle_unexpected_exception(monkeypatch):
     assert response.json() == {"error": "Something went wrong processing your question. Please try again."}
 
 
-SPOT_BODY = {"pot": "2bp", "position": "ip", "role": "pfr", "line": "- B-?", "formations": []}
+SPOT_BODY = {"pot": "2bp", "position": "ip", "role": "pfr", "line": "XC-X", "formations": []}
 
 
 def install_fake_run_spot(monkeypatch, result):
@@ -114,7 +114,7 @@ def test_spot_returns_result_shape(monkeypatch):
         "hand_split": [],
         "draw_split": [],
     }
-    assert calls == [("2bp", "ip", "pfr", "- B-?", [])]
+    assert calls == [("2bp", "ip", "pfr", "XC-X", [])]
 
 
 def test_spot_passes_split_through(monkeypatch):
@@ -147,16 +147,16 @@ def test_spot_input_error_is_400_with_message(monkeypatch):
     assert response.json() == {"error": "Unknown formation: BTN vs BB"}
 
 
-def test_spot_line_role_mismatch_is_400():
-    response = client.post("/spot", json=SPOT_BODY | {"line": "vs B?"})
+def test_spot_old_grammar_is_400():
+    response = client.post("/spot", json=SPOT_BODY | {"line": "- B-"})
     assert response.status_code == 400
-    assert response.json() == {"error": "With PFR the Line starts with '-' (your letters)"}
+    assert response.json() == {"error": "A Line is the villain's actions: no leading '-'"}
 
 
 def test_spot_real_parser_error_is_400():
-    response = client.post("/spot", json=SPOT_BODY | {"line": "- B-"})
+    response = client.post("/spot", json=SPOT_BODY | {"line": "XC"})
     assert response.status_code == 400
-    assert "Missing '?'" in response.json()["error"]
+    assert "villain acts next" in response.json()["error"]
 
 
 def test_spot_rejects_the_old_formation_field(monkeypatch):
@@ -255,13 +255,13 @@ def test_spot_runout_types_default_to_empty(monkeypatch):
 
 
 def test_spot_unknown_turn_type_is_400():
-    response = client.post("/spot", json=SPOT_BODY | {"line": "- B-?", "turn_types": ["fc"]})
+    response = client.post("/spot", json=SPOT_BODY | {"line": "XC-X", "turn_types": ["fc"]})
     assert response.status_code == 400
     assert "fc" in response.json()["error"]
 
 
 def test_spot_river_types_on_turn_line_is_400():
-    response = client.post("/spot", json=SPOT_BODY | {"line": "- B-?", "river_types": ["Brick"]})
+    response = client.post("/spot", json=SPOT_BODY | {"line": "XC-X", "river_types": ["Brick"]})
     assert response.status_code == 400
     assert "river" in response.json()["error"]
 

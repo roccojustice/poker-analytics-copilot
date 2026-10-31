@@ -89,12 +89,12 @@ def test_backdoor_matches_pt4():
     assert (ours == rows["bflush"]).all(), mismatches(rows, ours, rows["bflush"])
 
 
-SPOTS = [("2bp", "oop", "pfc", "vs B?"), ("2bp", "ip", "pfr", "- B-?"), ("2bp", "ip", "pfr", "- B-B-?")]
+SPOTS = [("2bp", "oop", "pfc", "B"), ("2bp", "ip", "pfr", "XC-X"), ("2bp", "ip", "pfr", "XC-XC-X")]
 
 
 @pytest.mark.parametrize("spot", SPOTS, ids=lambda spot: spot[3])
 def test_draw_split_rows_sum_to_hand_count(spot):
     result = run_spot(*spot)
     assert sum(row["hands"] for row in result["draw_split"]) == len(result["hands"])
-    if spot[3] == "- B-B-?":
+    if spot[3] == "XC-XC-X":
         assert [row["draw_type"] for row in result["draw_split"]] == ["No draw"]

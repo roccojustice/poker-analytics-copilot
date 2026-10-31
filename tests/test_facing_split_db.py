@@ -4,7 +4,7 @@ from spotlight import run_spot
 
 pytestmark = pytest.mark.db
 
-SPOTS = [("2bp", "oop", "pfc", "vs B?"), ("2bp", "ip", "pfr", "- B?"), ("3bp", "ip", "pfc", "vs B-B?")]
+SPOTS = [("2bp", "oop", "pfc", "B"), ("2bp", "ip", "pfr", "XR"), ("3bp", "ip", "pfc", "B-B")]
 ACTIONS = ("F", "C", "R")
 
 
@@ -26,7 +26,7 @@ def test_split_cells_sum_to_the_distribution(pot, position, role, line):
 def test_sized_labels_equal_the_suffixed_line(pot, position, role, line, key):
     prefix = parse_line(line, role, position).decision.hero
     unsized = run_spot(pot, position, role, line)["hands"]
-    suffixed = run_spot(pot, position, role, line.replace("?", f"{key}?"))["hands"]
+    suffixed = run_spot(pot, position, role, line + key)["hands"]
     for action in ACTIONS:
         split_ids = ids_labelled(unsized, prefix + action + key) if len(unsized) else set()
         line_ids = ids_labelled(suffixed, prefix + action) if len(suffixed) else set()

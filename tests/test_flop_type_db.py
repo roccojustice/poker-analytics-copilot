@@ -5,7 +5,7 @@ from spotlight import run_spot
 
 pytestmark = pytest.mark.db
 
-SPOT = ("2bp", "oop", "pfc", "vs B?")
+SPOT = ("2bp", "oop", "pfc", "B")
 
 
 @pytest.fixture(scope="module")

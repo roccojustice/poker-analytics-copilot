@@ -13,8 +13,8 @@ def hand_ids(line, role="pfc", position="oop"):
 
 
 def test_size_suffixes_partition_the_unsized_line():
-    full = hand_ids("vs B?")
-    parts = [hand_ids(f"vs B{k}?") for k in RANGES]
+    full = hand_ids("B")
+    parts = [hand_ids(f"B{k}") for k in RANGES]
     assert all(parts)
     assert set().union(*parts) == full
     assert sum(len(p) for p in parts) == len(full)
@@ -23,12 +23,12 @@ def test_size_suffixes_partition_the_unsized_line():
 @pytest.mark.parametrize("k", RANGES)
 def test_faced_bet_bucket_agrees_with_the_hand_table_size(k):
     lo, hi = RANGES[k]
-    sizes = run_spot("2bp", "oop", "pfc", f"vs B{k}?")["hands"]["f_size"]
+    sizes = run_spot("2bp", "oop", "pfc", f"B{k}")["hands"]["f_size"]
     assert ((sizes >= lo - EPS) & (sizes < hi + EPS)).all()
 
 
 def test_hero_bet_label_agrees_with_the_hand_table_size():
-    result = run_spot("2bp", "ip", "pfr", "- ?")
+    result = run_spot("2bp", "ip", "pfr", "X")
     bets = result["hands"][result["hands"]["measured_action"].str.startswith("B")]
     assert len(bets) > 0
     for label, size in zip(bets["measured_action"], bets["f_size"]):
