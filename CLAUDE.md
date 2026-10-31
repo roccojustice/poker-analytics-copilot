@@ -12,7 +12,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - Run a single test file: `pytest tests/test_db.py`
 - Run a single test: `pytest tests/test_query_router.py::<test_name>`
 - Run the DB oracle tests (need Postgres): `pytest -m db` (excluded from the default run)
-- Diff a Spotlight result against a PT4 hand-list export by `hand_no` (both directions): `python pt4_diff.py <export.csv> <pot> <position> <role> "<line>" [--formation "BB vs BTN" ...] [--column "Hand #"] [--label Bs]` (`--label` diffs one distribution row) — export straight from PT4; don't round-trip the CSV through Excel (it drops leading zeros and can turn hand numbers into scientific notation).
+- Diff a Spotlight result against a PT4 hand-list export by `hand_no` (both directions): `python pt4_diff.py <export.csv> <pot> <position> <role> "<line>" [--formation "BB vs BTN" ...] [--column "Hand #"] [--label Bs] [--result-min -5] [--result-max 5]` (`--label` diffs one distribution row, the result flags are inclusive BB bounds) — export straight from PT4; don't round-trip the CSV through Excel (it drops leading zeros and can turn hand numbers into scientific notation).
 - Lint: `ruff check .` (no `[tool.ruff]` config yet — runs on the 88-char default)
 - Required env vars (`.env`, gitignored, never commit): `OPENAI_API_KEY`, `POSTGRES_HOST`, `POSTGRES_PORT`, `POSTGRES_DB`, `POSTGRES_USER`, `POSTGRES_PASSWORD`
 

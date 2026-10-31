@@ -260,3 +260,18 @@ Base: `3bp_ip_pfc_faced_cbet_flop` + `faced_cbet_turn` (`flg_t_cbet_def_opp = tr
     GTO Wizard calls a double gutshot OESD, so we keep 2 out-ranks. Flop double gutshots agree.
 - Sabotage: made flush as FD, made straight keeping outs, nut ignoring board ranks, backdoor
   on 2 cards each turn the matching test red.
+
+## Result in BB (Session 68)
+
+- `result_bb` = `amt_won / amt_bb`, rounded to 6 decimals: raw float division leaves 1,043 of
+  Hero's whole-BB hands at N ± epsilon (0.30 / 0.10 = 2.9999999999999996), which `>=` / `<=`
+  would drop. Equals PT4's `BB Won` on all 1,063 hands of `3bp ip pfc vs B?`, gap 0.0.
+- **Validated by full diff on that spot** (`pt4_diff.py --result-min / --result-max`, PT4 exports):
+  ≥ 5 BB 327/327 exact; ≤ -5 BB 688 of 691, every difference explained below. -5.00 is
+  inclusive on both sides; no hand sits at exactly +5.00, so that edge rests on the same rule.
+- **PT4's `Raise Opportunity 2Bet (First Flop Raise)` filter drops hands where Hero cannot
+  raise**: bet faced >= Hero's stack behind (`amt_before - amt_bet_p`). Exactly 2 of 1,065 hands;
+  both are folds with `flg_f_cbet_def_opp` true. Spotlight keeps them: Hero did face the bet.
+- **PT4's result filter dropped one split pot**: `HD2836311182`, `[Split Pot]`, `BB Won` -5.30,
+  `flg_won_hand` true with `amt_won` negative. Spotlight keeps it. One hand, so the rule behind
+  PT4's drop is not established; 22 spot hands are won with a negative result (rake on a chop).
