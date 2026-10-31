@@ -27,6 +27,14 @@ def filter_by_label(hands, label):
     return hands[hands["measured_action"].isin(labels)]
 
 
+def filter_by_result(hands, low, high):
+    if hands.empty:
+        return hands
+    low = float("-inf") if low is None else low
+    high = float("inf") if high is None else high
+    return hands[hands["result_bb"].between(low, high)]
+
+
 def export_hand_nos(csv_path, column):
     df = pd.read_csv(csv_path, dtype=str)
     return {normalize_hand_no(v) for v in df[column].dropna()}
@@ -53,10 +61,13 @@ def main():
     parser.add_argument("--formation", action="append", default=[])
     parser.add_argument("--column", default="Hand #")
     parser.add_argument("--label")
+    parser.add_argument("--result-min", type=float)
+    parser.add_argument("--result-max", type=float)
     args = parser.parse_args()
 
     result = run_spot(args.pot, args.position, args.role, args.line, args.formation)
     hands = filter_by_label(result["hands"], args.label)
+    hands = filter_by_result(hands, args.result_min, args.result_max)
     spot = spot_hand_nos([] if hands.empty else [int(i) for i in hands["id_hand"]])
     export = export_hand_nos(args.csv, args.column)
     diff = diff_hand_sets(spot, export)
