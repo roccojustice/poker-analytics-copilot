@@ -7,11 +7,11 @@
 ## Current milestone
 
 **M7 (breakdown filters) in progress.** Session 68:
-- **BB result filter validated** and merged to local `main` (`c869c23`, not pushed): `result_bb`
+- **BB result filter validated** and merged and pushed (`c869c23`): `result_bb`
   float fix, `pt4_diff --result-min / --result-max`. Full diff on `3bp ip pfc vs B`; 691 of 1,065
   confirmed on the page (`SCHEMA_NOTES.md`, "Result in BB").
 - **M6 run 2** fell back to PT4 for spots with Hero PFR and IP where the villain bets first.
-- **Villain Line grammar** merged to local `main`, not pushed: a Line is the villain's actions;
+- **Villain Line grammar** merged and pushed: a Line is the villain's actions;
   `D` donk, `Strat` OOP PFR. Spec/plan `2026-10-30-villain-line-grammar*`. Oracle exact, `D`
   matches PT4's donk flags, 5 PT4 diffs exact (`SCHEMA_NOTES.md`, "Line grammar validation").
 

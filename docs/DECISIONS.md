@@ -425,3 +425,10 @@ by position. The user's own study list already wrote everything as `Vs` + villai
 that became the grammar: Hero decides right after the last letter, his actions are implied, the
 old form is an error. Every legal combination resolves unambiguously. `D` returns (cut in Session
 58) as a real donk only, matching `flg_<s>_donk_def_opp`; `Strat` stays for OOP PFR. User's call.
+
+## 2026-10-30 (Session 68) — Spotlight keeps hands a PT4 filter drops
+
+When a PT4 filter defines a spot by an opportunity (`Raise Opportunity`) rather than by what
+happened, Spotlight follows what happened. If the bet covers Hero and he folds, the hand counts in
+`vs B`. A hand with no turn action doesn't count in `XR-B`. Differences against PT4 are accepted
+only when each one has an identified cause. User's call.
