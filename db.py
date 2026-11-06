@@ -1,4 +1,5 @@
 import os
+from functools import cache
 import pandas as pd
 from dotenv import load_dotenv
 from sqlalchemy import create_engine
@@ -6,6 +7,18 @@ from poker_cards import decode_card_id
 
 load_dotenv()
 engine = create_engine(f'postgresql+psycopg2://{os.getenv("POSTGRES_USER")}:{os.getenv("POSTGRES_PASSWORD")}@{os.getenv("POSTGRES_HOST")}:{os.getenv("POSTGRES_PORT")}/{os.getenv("POSTGRES_DB")}')
+
+@cache
+def hero_id():
+    """Hero's id_player, looked up by HERO_NAME: PT4 renumbers players on every rebuild."""
+    name = os.getenv("HERO_NAME")
+    if not name:
+        raise RuntimeError("HERO_NAME is not set in .env")
+    df = pd.read_sql("SELECT id_player FROM player WHERE player_name = %(hero_name)s",
+                     engine, params={"hero_name": name})
+    if len(df) != 1:
+        raise RuntimeError(f"HERO_NAME {name!r} matches {len(df)} players, expected 1")
+    return int(df["id_player"].iloc[0])
 
 def get_hero_hands():
 
@@ -21,12 +34,12 @@ def get_hero_hands():
             cash_hand_summary chs ON chps.id_hand = chs.id_hand
         JOIN
             lookup_sites ls ON chs.id_site = ls.id_site
-        WHERE chps.id_player IN (10, 9580)"""
+        WHERE chps.id_player = %(id_player)s"""
 
-    df = pd.read_sql(query, engine)
+    df = pd.read_sql(query, engine, params={"id_player": hero_id()})
     return df
 
-def run_filter_query(where_clause, params, id_player=10, limit=None, since_date=None):
+def run_filter_query(where_clause, params, id_player=None, limit=None, since_date=None):
 
     query = """
         WITH hand_raise_totals AS (
@@ -41,7 +54,7 @@ def run_filter_query(where_clause, params, id_player=10, limit=None, since_date=
         WHERE chps.id_player = %(id_player)s
             """ + where_clause
 
-    params = params | {"id_player": id_player}
+    params = params | {"id_player": hero_id() if id_player is None else id_player}
     if since_date is not None:
         query += " AND chps.date_played >= %(since_date)s"
         params["since_date"] = since_date
@@ -55,7 +68,7 @@ def run_filter_query(where_clause, params, id_player=10, limit=None, since_date=
     df = pd.read_sql(query, engine, params=params)
     return df
 
-def run_distribution_query(where_clause, params, conditions, id_player=10, since_date=None):
+def run_distribution_query(where_clause, params, conditions, id_player=None, since_date=None):
 
     select_columns = [
         f"COUNT(*) FILTER (WHERE {condition}) AS {action_name}"
@@ -75,7 +88,7 @@ def run_distribution_query(where_clause, params, conditions, id_player=10, since
         WHERE chps.id_player = %(id_player)s
             """ + where_clause
 
-    params = params | {"id_player": id_player}
+    params = params | {"id_player": hero_id() if id_player is None else id_player}
     if since_date is not None:
         query += " AND chps.date_played >= %(since_date)s"
         params["since_date"] = since_date
@@ -83,7 +96,7 @@ def run_distribution_query(where_clause, params, conditions, id_player=10, since
     df = pd.read_sql(query, engine, params=params)
     return df
 
-def run_spot_query(where_clause, params, measured_sql, id_player=10):
+def run_spot_query(where_clause, params, measured_sql, id_player=None):
 
     query = f"""
         SELECT chps.id_hand, chs.card_1, chs.card_2, chs.card_3, chs.card_4, chs.card_5,
@@ -102,10 +115,10 @@ def run_spot_query(where_clause, params, measured_sql, id_player=10):
             """ + where_clause + """
         ORDER BY chps.id_hand"""
 
-    params = params | {"id_player": id_player}
+    params = params | {"id_player": hero_id() if id_player is None else id_player}
     return pd.read_sql(query, engine, params=params)
 
-def get_hand_details(id_hands, id_player=10):
+def get_hand_details(id_hands, id_player=None):
 
     query = """
         SELECT
@@ -159,7 +172,7 @@ def get_hand_details(id_hands, id_player=10):
           AND chps.id_player = %(id_player)s
         ORDER BY chps.date_played DESC"""
 
-    params = {"id_hands": list(id_hands), "id_player": id_player}
+    params = {"id_hands": list(id_hands), "id_player": hero_id() if id_player is None else id_player}
     df = pd.read_sql(query, engine, params=params)
 
     def decode(card_id):

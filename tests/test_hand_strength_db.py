@@ -2,7 +2,7 @@ import pandas as pd
 import pytest
 from sqlalchemy import text
 
-from db import engine
+from db import engine, hero_id
 from hand_strength import HAND_GROUPS, HAND_TYPES, hand_type
 from spotlight import run_spot
 
@@ -96,8 +96,8 @@ def load(street):
         FROM cash_hand_player_statistics chps
             JOIN cash_hand_summary chs ON chs.id_hand = chps.id_hand
             JOIN cash_hand_player_combinations c ON c.id_hand = chps.id_hand AND c.id_player = chps.id_player
-        WHERE chps.id_player = 10 AND chps.flg_{street}_saw""")
-    df = pd.read_sql(query, engine)
+        WHERE chps.id_player = :hero AND chps.flg_{street}_saw""")
+    df = pd.read_sql(query, engine, params={"hero": hero_id()})
     df["ours"] = [hand_type(*r) for r in df[["holecard_1", "holecard_2", *board]].itertuples(index=False)]
     return df
 

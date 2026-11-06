@@ -5,7 +5,7 @@ import pytest
 from sqlalchemy import text
 
 from board_types import RANKS
-from db import engine
+from db import engine, hero_id
 from draws import _straight, draw_parts
 from poker_cards import decode_card_id
 from spotlight import run_spot
@@ -13,8 +13,10 @@ from spotlight import run_spot
 pytestmark = pytest.mark.db
 
 BOARD = {"f": 3, "t": 4}
-TURN_DOUBLE_GUTSHOTS = {3631, 7895, 35296, 44056, 74068, 84363, 102619, 102869, 104147, 112988, 156284, 174156,
-                        181080, 229514, 231183, 232525, 245272, 248678, 317430, 385111, 390757}
+TURN_DOUBLE_GUTSHOTS = {  # hand_no, not id_hand: PT4 renumbers id_hand on a rebuild
+    "257243793517", "257252396520", "257541340157", "257607495930", "257905319044", "257995755742", "258623984228",
+    "HD2603502692", "HD2603543747", "HD2604600170", "HD2651119814", "HD2828004891", "HD2832657699", "HD2837169640",
+    "HD2837170626", "RC4032525145", "RC4220301655", "RC4231460398", "RC4335412205", "RC4342862760", "RC4489184433"}
 NUT_FLUSH_DRAW = {10, 20}  # PT4 flush draw strength: one-card / two-card nut (SCHEMA_NOTES, Session 67)
 
 
@@ -22,15 +24,15 @@ def load(street):
     board = [f"card_{i}" for i in range(1, BOARD[street] + 1)]
     backdoor = ", c.flg_f_bflush_draw AS bflush" if street == "f" else ""
     query = text(f"""
-        SELECT chps.id_hand, chps.holecard_1, chps.holecard_2, {", ".join("chs." + c for c in board)},
+        SELECT chps.id_hand, chs.hand_no, chps.holecard_1, chps.holecard_2, {", ".join("chs." + c for c in board)},
                c.flg_{street}_flush_draw AS fd, c.id_{street}_flush_draw_strength AS fd_strength,
                c.flg_{street}_straight_draw AS sd, c.flg_{street}_2gutshot_draw AS gut2,
                c.flg_{street}_gutshot_draw AS gut{backdoor}
         FROM cash_hand_player_statistics chps
             JOIN cash_hand_summary chs ON chs.id_hand = chps.id_hand
             JOIN cash_hand_player_combinations c ON c.id_hand = chps.id_hand AND c.id_player = chps.id_player
-        WHERE chps.id_player = 10 AND chps.flg_{street}_saw""")
-    df = pd.read_sql(query, engine)
+        WHERE chps.id_player = :hero AND chps.flg_{street}_saw""")
+    df = pd.read_sql(query, engine, params={"hero": hero_id()})
     rows = []
     for r in df[["holecard_1", "holecard_2", *board]].itertuples(index=False):
         hole, cards = [decode_card_id(int(c)) for c in r[:2]], [decode_card_id(int(c)) for c in r[2:]]
@@ -78,7 +80,7 @@ def test_straight_draws_match_pt4(street_rows):
     rows = rows[~rows["made_flush"] & ~rows["board_straight"]]  # PT4 clears draws under a flush, counts board ones
     pt4 = pd.Series(0, index=rows.index).mask(rows["gut"], 1).mask(rows["sd"] | rows["gut2"], 2)
     if street == "t":  # PT4 calls these turn double gutshots a gutshot (SCHEMA_NOTES, Session 67)
-        pt4 = pt4.mask(rows["id_hand"].isin(TURN_DOUBLE_GUTSHOTS), 2)
+        pt4 = pt4.mask(rows["hand_no"].isin(TURN_DOUBLE_GUTSHOTS), 2)
     assert (rows["o_outs"] == pt4).all(), mismatches(rows, rows["o_outs"], pt4)
 
 

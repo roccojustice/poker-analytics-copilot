@@ -7,6 +7,12 @@ from db import (
     run_spot_query,
 )
 
+@pytest.fixture(autouse=True)
+def stub_hero(request, monkeypatch):
+    if "fresh_hero" not in request.fixturenames and not request.node.get_closest_marker("db"):
+        monkeypatch.setattr("db.hero_id", lambda: 42)
+
+
 def fake_read_sql(query, engine, params=None):
     captured = {}
     captured["query"] = query
@@ -120,8 +126,8 @@ def test_get_hand_details_bet_size_is_pct_of_pot_at_street_start(monkeypatch):
 
 @pytest.mark.db
 @pytest.mark.parametrize("hand_no, expected", [
-    ("261654386261", "UTG"),    # code 3, 6-handed
-    ("261654433397", "MP"),     # code 2, 6-handed
+    ("257065315616", "UTG"),    # code 3, 6-handed
+    ("257065326686", "MP"),     # code 2, 6-handed
     ("257721989956", "MP+1"),   # code 3, 9-handed
 ])
 def test_get_hand_details_position_name_depends_on_table_size(hand_no, expected):
@@ -138,14 +144,14 @@ def test_get_hand_details_position_name_depends_on_table_size(hand_no, expected)
 def test_get_hand_details_real_hand_sizes_and_stake():
     from db import engine
     id_hand = pd.read_sql(
-        "SELECT id_hand FROM cash_hand_summary WHERE hand_no = '261654385495'", engine
+        "SELECT id_hand FROM cash_hand_summary WHERE hand_no = '258023576081'", engine
     )["id_hand"].item()
 
     row = get_hand_details([id_hand]).iloc[0]
 
-    assert row["stake"] == "$0.02 NL (6 max)"
-    assert row["f_size"] == pytest.approx(100 * 0.06 / 0.13)  # XC vs 0.06 into 0.13
-    assert row["t_size"] == pytest.approx(100 * 0.14 / 0.25)  # faced 0.14 into 0.25
+    assert row["stake"] == "$0.02 NL FAST (6 max)"
+    assert row["f_size"] == pytest.approx(100 * 0.04 / 0.11)  # XC vs 0.04 into 0.11
+    assert row["t_size"] == pytest.approx(100 * 0.13 / 0.19)  # faced 0.13 into 0.19
 
 def test_run_distribution_query_builds_count_filter_per_action(monkeypatch):
     monkeypatch.setattr("db.pd.read_sql", fake_read_sql)
@@ -191,3 +197,67 @@ def test_run_spot_query_builds_skeleton_and_binds_params(monkeypatch):
     assert query.rstrip().endswith("ORDER BY chps.id_hand")
     assert " AND h_f.action = %(h_f)s" in query
     assert result["params"] == {"h_f": "B", "id_player": 42}
+
+
+@pytest.fixture
+def fresh_hero(monkeypatch):
+    import db
+    db.hero_id.cache_clear()
+    monkeypatch.setenv("HERO_NAME", "RoccoJustice")
+    yield db
+    db.hero_id.cache_clear()
+
+
+def test_hero_id_resolves_name_with_bound_param(monkeypatch, fresh_hero):
+    seen = {}
+
+    def fake(query, engine, params=None):
+        seen.update(query=query, params=params)
+        return pd.DataFrame({"id_player": [148938]})
+
+    monkeypatch.setattr("db.pd.read_sql", fake)
+    assert fresh_hero.hero_id() == 148938
+    assert "%(hero_name)s" in seen["query"] and "RoccoJustice" not in seen["query"]
+    assert seen["params"] == {"hero_name": "RoccoJustice"}
+
+
+def test_hero_id_is_cached(monkeypatch, fresh_hero):
+    calls = []
+    monkeypatch.setattr("db.pd.read_sql",
+                        lambda q, e, params=None: calls.append(1) or pd.DataFrame({"id_player": [5]}))
+    fresh_hero.hero_id()
+    fresh_hero.hero_id()
+    assert len(calls) == 1
+
+
+@pytest.mark.parametrize("ids", [[], [1, 2]])
+def test_hero_id_fails_unless_exactly_one_player(monkeypatch, fresh_hero, ids):
+    monkeypatch.setattr("db.pd.read_sql", lambda q, e, params=None: pd.DataFrame({"id_player": ids}))
+    with pytest.raises(RuntimeError, match="RoccoJustice"):
+        fresh_hero.hero_id()
+
+
+def test_hero_id_fails_without_hero_name(monkeypatch, fresh_hero):
+    monkeypatch.delenv("HERO_NAME")
+    with pytest.raises(RuntimeError, match="HERO_NAME"):
+        fresh_hero.hero_id()
+
+
+def test_queries_default_to_hero_id(monkeypatch):
+    import db
+    monkeypatch.setattr("db.hero_id", lambda: 77)
+    monkeypatch.setattr("db.pd.read_sql", fake_read_sql)
+    assert db.run_spot_query(" AND x", {}, "m")["params"]["id_player"] == 77
+    assert db.run_filter_query(" AND x", {})["params"]["id_player"] == 77
+    assert db.run_distribution_query(" AND x", {}, [("b", "x")])["params"]["id_player"] == 77
+    assert db.get_hero_hands()["params"] == {"id_player": 77}
+    seen = {}
+
+    def capture(q, e, params=None):
+        seen.update(params)
+        raise LookupError
+
+    monkeypatch.setattr("db.pd.read_sql", capture)
+    with pytest.raises(LookupError):
+        db.get_hand_details([1])
+    assert seen["id_player"] == 77

@@ -1,7 +1,7 @@
 import pandas as pd
 import pytest
 
-from db import engine
+from db import engine, hero_id
 from spotlight import run_spot
 
 pytestmark = pytest.mark.db
@@ -11,9 +11,9 @@ def donk_flags(hands, street):
     ids = [int(i) for i in hands["id_hand"]]
     flags = pd.read_sql(
         f"SELECT flg_{street}_donk_def_opp AS flag FROM cash_hand_player_statistics"
-        " WHERE id_player = 10 AND id_hand = ANY(%(ids)s)",
+        " WHERE id_player = %(hero)s AND id_hand = ANY(%(ids)s)",
         engine,
-        params={"ids": ids},
+        params={"ids": ids, "hero": hero_id()},
     )
     return flags["flag"]
 

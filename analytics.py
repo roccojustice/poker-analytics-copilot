@@ -55,7 +55,7 @@ METRIC_CONFIGS = {
 }
 
 
-def compute_distribution(where_clause, params, hero_response_name, id_player=10, since_date=None):
+def compute_distribution(where_clause, params, hero_response_name, id_player=None, since_date=None):
     hero_response = get_hero_response(hero_response_name)
     counts_df = run_distribution_query(
         where_clause,
