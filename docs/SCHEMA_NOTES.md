@@ -4,7 +4,7 @@ Empirical findings about PokerTracker 4's Postgres schema — none of this is do
 
 ## Connection / identity
 - DB: `PT4_2026_02_19_191823`, local Postgres, `localhost:5432`.
-- Hero: `id_player IN (10, 9580)` — two usernames (`RoccoJustice`, `Hero`) map to the same person. Hardcoded — this is a single-user MVP.
+- Hero: resolved by `player_name` (`HERO_NAME` in `.env`), not by id. PT4 renumbers `id_player` and `id_hand` on a DB rebuild: in `PT4_2026_11_04_092329` (Session 70) `RoccoJustice` = 148938 and id 10 is another player. `hand_no` is stable. (Before: `id_player IN (10, 9580)`, hardcoded.)
 - Main table: `cash_hand_player_statistics` (aliased `chps` throughout the codebase).
 
 ## Sentinel values (PT4's "no data" convention)
