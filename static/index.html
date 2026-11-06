@@ -15,7 +15,7 @@
     #line { width: 14rem; padding: 0.4rem; font-size: 1rem; font-family: monospace; }
     #line-error { color: #b3261e; font-size: 0.85rem; margin-top: 0.25rem; min-height: 1rem; max-width: 28rem; }
     details.formations { position: relative; }
-    details.formations summary { list-style: none; padding: 0.4rem 0.8rem; border: 1px solid #bbb; cursor: pointer; min-width: 9rem; max-width: 22rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    details.formations summary { list-style: none; padding: 0.4rem 0.8rem; border: 1px solid #bbb; cursor: pointer; width: 9rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     details.formations summary::after { content: " ▾"; }
     details.formations .panel { position: absolute; z-index: 10; background: #fff; border: 1px solid #bbb; padding: 0.4rem 0.6rem; max-height: 24rem; overflow-y: auto; }
     details.formations label { display: block; padding: 0.15rem 0; white-space: nowrap; cursor: pointer; }
@@ -26,6 +26,11 @@
     .dates input { padding: 0.3rem; font-size: 0.95rem; }
     #output { margin-top: 1.25rem; }
     .filter-line { font-weight: bold; margin-bottom: 0.75rem; }
+    .result { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 1.5rem; align-items: start; }
+    .hands-pane { position: sticky; top: 0.5rem; max-height: calc(100vh - 1rem); overflow: auto; }
+    .hands-pane h3 { margin-top: 0; }
+    .hands-pane .table-scroll { overflow: visible; }
+    #hands th { position: sticky; top: 0; z-index: 1; }
     table { border-collapse: collapse; width: 100%; margin-bottom: 1rem; font-size: 0.78rem; }
     th, td { border: 1px solid #ddd; padding: 0.25rem 0.4rem; text-align: left; white-space: nowrap; }
     th { background: #f4f4f4; }
@@ -243,7 +248,7 @@
           parent.checked = kids.every(box => box.checked);
           parent.indeterminate = !parent.checked && kids.some(box => box.checked);
         });
-        summaryEl.textContent = summaryText(shown());
+        summaryEl.textContent = summaryEl.title = summaryText(shown());
       });
       summaryEl.addEventListener("click", event => {
         if (el.classList.contains("off")) event.preventDefault();
@@ -348,12 +353,12 @@
       groupsOf = buildGroups(data.distribution, data.split);
       outputEl.innerHTML =
         `<div class="filter-line">${escapeHtml(data.interpreted_filter)}</div>` +
-        '<div id="tables"></div>' +
+        '<div class="result"><div id="tables"></div><div class="hands-pane">' +
         '<h3>Matching hands</h3>' +
         '<div class="hand-filter">Result from ' +
         `<input id="result-min" type="number" step="any" value="${escapeHtml(resultRange.min)}"> to ` +
         `<input id="result-max" type="number" step="any" value="${escapeHtml(resultRange.max)}"> BB ` +
-        '· <span id="hand-count"></span></div><div id="hands"></div>';
+        '· <span id="hand-count"></span></div><div id="hands"></div></div></div>';
       renderTables();
       ["min", "max"].forEach(bound => {
         document.getElementById(`result-${bound}`).addEventListener("input", event => {
