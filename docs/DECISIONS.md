@@ -432,3 +432,11 @@ When a PT4 filter defines a spot by an opportunity (`Raise Opportunity`) rather 
 happened, Spotlight follows what happened. If the bet covers Hero and he folds, the hand counts in
 `vs B`. A hand with no turn action doesn't count in `XR-B`. Differences against PT4 are accepted
 only when each one has an identified cause. User's call.
+
+## 2026-11-05 (Session 70) — Hero is resolved by name, not by id
+
+After the DB was rebuilt again, PT4 had renumbered `id_player` and `id_hand`: id 10 became another
+player (110 hands). Just changing the DB name would have shown that player's hands as Hero's
+without any error. Hero is now looked up by `HERO_NAME` in `.env` (`db.hero_id()`: cached, fails
+loud unless exactly one player matches). Test fixtures key hands by `hand_no`, which stays the same
+across rebuilds. Supersedes "Hero = `id_player IN (10, 9580)`". User's call.
