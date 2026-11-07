@@ -169,8 +169,8 @@
     let latestRequest = 0;
     let currentHands = [];
     let currentData = null;
-    let actionPick = null;  // a distribution / split pick; AND-ed with the type picks
-    let typePicks = { hand: null, draw: null };  // a hand type or group, a draw type
+    let actionPicks = new Set();  // distribution / split picks: OR within, AND with the type picks
+    let typePicks = { hand: new Set(), draw: new Set() };  // hand types or groups, draw types
     let openGroups = new Set();  // hand groups whose leaf rows are shown
     let groupsOf = {};  // hand label -> every pick that selects it
     const resultRange = { min: "", max: "" };
@@ -347,8 +347,8 @@
     function showResult(data) {
       currentHands = data.hands;
       currentData = data;
-      actionPick = null;
-      typePicks = { hand: null, draw: null };
+      actionPicks = new Set();
+      typePicks = { hand: new Set(), draw: new Set() };
       openGroups = new Set();
       groupsOf = buildGroups(data.distribution, data.split);
       outputEl.innerHTML =
@@ -383,24 +383,32 @@
     const pickDim = pick => DIMS.find(dim => pick.startsWith(`${dim}:`));
     const membersOf = (dim, type) => (dim === "hand" && CONFIG.hand_groups[type]) || [type];
 
-    // "<dim>:<type>" (row header) sets that type pick, "<dim>:<type>|<label>" (cell) it and the action; else an action
+    const toggle = (set, value) => set.has(value) ? set.delete(value) : set.add(value);
+
+    // "<dim>:<type>" (row header) toggles that type, "<dim>:<type>|<label>" (cell) the type and the action; else an action
     function togglePick(pick) {
       const dim = pickDim(pick);
       if (!dim) {
-        actionPick = actionPick === pick ? null : pick;
+        toggle(actionPicks, pick);
       } else {
         const [type, label] = pick.slice(dim.length + 1).split("|");
-        if (!label) typePicks[dim] = typePicks[dim] === type ? null : type;
-        else if (typePicks[dim] === type && actionPick === label) typePicks[dim] = actionPick = null;
-        else [typePicks[dim], actionPick] = [type, label];
+        if (!label) toggle(typePicks[dim], type);
+        else if (typePicks[dim].has(type) && actionPicks.has(label)) {
+          typePicks[dim].delete(type);
+          actionPicks.delete(label);
+        } else {
+          typePicks[dim].add(type);
+          actionPicks.add(label);
+        }
       }
       renderTables();
       renderHands();
     }
 
     const labelsOf = hand => groupsOf[hand.measured_action] || [hand.measured_action];
-    const inActionPick = hand => !actionPick || labelsOf(hand).includes(actionPick);
-    const inTypePick = (dim, hand) => !typePicks[dim] || membersOf(dim, typePicks[dim]).includes(hand[`${dim}_type`]);
+    const inActionPick = hand => !actionPicks.size || labelsOf(hand).some(label => actionPicks.has(label));
+    const inTypePick = (dim, hand) => !typePicks[dim].size ||
+      [...typePicks[dim]].some(type => membersOf(dim, type).includes(hand[`${dim}_type`]));
     // every pick but `skip` ("action", "hand", "draw"; null applies all)
     const passes = (hand, skip) => (skip === "action" || inActionPick(hand)) &&
       DIMS.every(dim => dim === skip || inTypePick(dim, hand));
@@ -426,11 +434,18 @@
       });
     }
 
-    // Columns under the action pick: the picked label and its sub-labels, else the column it falls under
+    // Columns under one action pick: the picked label and its sub-labels, else the column it falls under
+    function pickColumns(cells, pick) {
+      if (pick.startsWith("size:")) return cells;
+      const own = cells.filter(c => c.label === pick || c.parent === pick);
+      return own.length ? own : cells.filter(c => (groupsOf[pick] || []).includes(c.label));
+    }
+
+    // Every action pick's columns, in table order
     function handColumns(cells) {
-      if (!actionPick || actionPick.startsWith("size:")) return cells;
-      const own = cells.filter(c => c.label === actionPick || c.parent === actionPick);
-      return own.length ? own : cells.filter(c => (groupsOf[actionPick] || []).includes(c.label));
+      if (!actionPicks.size) return cells;
+      const keep = new Set([...actionPicks].flatMap(pick => pickColumns(cells, pick).map(c => c.label)));
+      return cells.filter(c => keep.has(c.label));
     }
 
     function recountTypeSplit(dim, hands) {
@@ -448,9 +463,9 @@
 
     function isSelected(pick) {
       const dim = pickDim(pick);
-      if (!dim) return pick === actionPick;
+      if (!dim) return actionPicks.has(pick);
       const [type, label] = pick.slice(dim.length + 1).split("|");
-      return type === typePicks[dim] && (!label || label === actionPick);
+      return typePicks[dim].has(type) && (!label || actionPicks.has(label));
     }
 
     function renderTables() {
