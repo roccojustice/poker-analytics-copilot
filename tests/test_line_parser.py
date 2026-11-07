@@ -50,6 +50,12 @@ def streets(spec):
     ("D", "pfc", "ip", "flop: not a donk"),
     ("D", "pfr", "oop", "flop: not a donk"),
     ("C-D", "pfr", "oop", "turn: not a donk"),
+    ("B", "pfr", "ip", "flop: that's a donk, write D \\(for your own bet, write X\\)"),
+    ("XC-B", "pfr", "ip", "turn: that's a donk, write D"),
+    ("XC-XC-B", "pfr", "ip", "river: that's a donk, write D"),
+    ("XC-B", "pfc", "ip", "turn: that's a donk, write D"),
+    ("XC-BC-X", "pfr", "ip", "turn: that's a donk, write D"),
+    ("vs xc-b", "pfr", "ip", "turn: that's a donk, write D"),
     ("XD", "pfr", "ip", "flop: D goes first"),
     ("XC-X-X-X", "pfr", "ip", "at most 3 streets"),
     ("Z", "pfr", "ip", "flop: unknown letter 'Z'"),
@@ -142,7 +148,6 @@ def test_measured_set(line, role, position, measured):
 @pytest.mark.parametrize("line, role, donk", [
     ("D", "pfr", True),
     ("XC-D", "pfr", True),
-    ("XC-B", "pfr", True),
     ("XC-XC-D", "pfr", True),
     ("B", "pfc", False),
     ("XR-B", "pfr", False),
@@ -151,10 +156,6 @@ def test_measured_set(line, role, position, measured):
 ])
 def test_donk_flag_on_the_decision_street(line, role, donk):
     assert parse_line(line, role, "ip").decision.donk is donk
-
-
-def test_d_and_b_resolve_the_same_streets():
-    assert streets(parse_line("XC-D", "pfr", "ip")) == streets(parse_line("XC-B", "pfr", "ip"))
 
 
 def test_donk_called_on_a_completed_street():

@@ -440,3 +440,10 @@ player (110 hands). Just changing the DB name would have shown that player's han
 without any error. Hero is now looked up by `HERO_NAME` in `.env` (`db.hero_id()`: cached, fails
 loud unless exactly one player matches). Test fixtures key hands by `hand_no`, which stays the same
 across rebuilds. Supersedes "Hero = `id_player IN (10, 9580)`". User's call.
+
+## 2026-11-07 (Session 71) — `B` never means a donk
+
+`B` in a donk's place used to be accepted as `D`. In Session 69 the user typed `2bp ip pfr B`
+meaning his own cbet (`X`) and silently got the villain's flop donks. A `B` where only a donk fits
+(`B`, `XC-B`, `XC-XC-B` as IP PFR, `XC-B` as IP PFC) now errors with `that's a donk, write D (for
+your own bet, write X)`. Reverses the Session 68 "`B` accepted in a donk's place". User's call.

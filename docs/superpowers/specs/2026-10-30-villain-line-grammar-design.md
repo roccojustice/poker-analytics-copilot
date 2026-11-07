@@ -73,8 +73,9 @@ last aggressor of the previous street**, or of preflop on the flop (Hero PFR).
 - Valid: `D` (2bp ip pfr), `XC-D`, `XC-Ds`, `XC-XC-D`, and `XC-D` as PFC IP (Hero bet the flop).
 - Error: `XR-D` (the villain was last aggressor), `X-D` and `XC-X-D` (checked through), `D` as
   PFC IP (that's a cbet), and any `D` with Hero OOP (the villain doesn't act first).
-- `B` in a donk's place is accepted and means the same. Only the first letter of a street can be
-  `D`; `DC` works like `BC`.
+- `B` in a donk's place is an error: `that's a donk, write D (for your own bet, write X)`
+  (reversed Session 71; it used to be accepted). Only the first letter of a street can be `D`;
+  `DC` works like `BC`.
 
 ### Sizes
 
@@ -152,7 +153,7 @@ be typed; presets are suggestions.
 
 - `?` and the old `-` start are rejected, not tolerated: `vs B?` would mean the same, but
   `vs B-X-?` wouldn't, and one grammar is the point.
-- `B` accepted in a donk's place.
+- `B` accepted in a donk's place. Reversed by the user, Session 71: now an error.
 - `D` requires aggression on the previous street, matching PT4's donk definition (to confirm in
   the diff).
 - Table header change, `lineStreets` rule, the two added presets.

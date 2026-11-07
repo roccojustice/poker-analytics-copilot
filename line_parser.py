@@ -156,6 +156,8 @@ def parse_line(line, role, position):
         donk = _is_donk(seq, previous, hero_seat, role)
         if letters[0] == "D" and not donk:
             raise SpotInputError(f"{name}: not a donk; write B")
+        if letters[0] == "B" and donk:
+            raise SpotInputError(f"{name}: that's a donk, write D (for your own bet, write X)")
         strings = _seat_strings(seq)
         spec = StreetSpec(street, strings[hero_seat], strings[1 - hero_seat], size, donk)
         if is_last and not closed:

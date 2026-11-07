@@ -212,7 +212,7 @@ def no_query(*args):
 
 
 @pytest.mark.parametrize("line, kwargs", [
-    ("B", {"turn_types": ["FC"]}),
+    ("D", {"turn_types": ["FC"]}),
     ("XC-X", {"river_types": ["Brick"]}),
 ])
 def test_runout_types_need_their_street(monkeypatch, line, kwargs):
