@@ -447,3 +447,12 @@ across rebuilds. Supersedes "Hero = `id_player IN (10, 9580)`". User's call.
 meaning his own cbet (`X`) and silently got the villain's flop donks. A `B` where only a donk fits
 (`B`, `XC-B`, `XC-XC-B` as IP PFR, `XC-B` as IP PFC) now errors with `that's a donk, write D (for
 your own bet, write X)`. Reverses the Session 68 "`B` accepted in a donk's place". User's call.
+
+## 2026-11-07 (Session 71) — Table picks are crossed sets; the Hand / Draw dropdowns go
+
+The user compares how Hero plays groups of hands (e.g. bluff vs. value candidates) across the
+actions of one size bucket (Bs vs XCs vs XFs). Exact (type, action) pairs were considered and
+dropped in favour of crossed sets: actions, hand types and draw types are three independent sets,
+OR within, AND across. A type cell adds its type and its action to their sets. The table picks
+cover what the Hand / Draw dropdowns did, so the dropdowns were removed; `/spot` keeps
+`hand_types` / `draw_types`. User's call.
