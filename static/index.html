@@ -26,6 +26,8 @@
     .dates input { padding: 0.3rem; font-size: 0.95rem; }
     #output { margin-top: 1.25rem; }
     .filter-line { font-weight: bold; margin-bottom: 0.75rem; }
+    #picks { margin: -0.4rem 0 0.75rem; font-size: 0.95rem; }
+    #picks button { margin-left: 0.5rem; }
     .result { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 1.5rem; align-items: start; }
     .hands-pane { position: sticky; top: 0.5rem; max-height: calc(100vh - 1rem); overflow: auto; }
     .hands-pane h3 { margin-top: 0; }
@@ -99,14 +101,6 @@
       <summary>River: Any</summary>
       <div class="panel"></div>
     </details>
-    <details class="formations" id="hand-types">
-      <summary>Hand: Any</summary>
-      <div class="panel"></div>
-    </details>
-    <details class="formations" id="draw-types">
-      <summary>Draw: Any</summary>
-      <div class="panel"></div>
-    </details>
     <div class="dates">
       <label>From <input type="date" id="date-from"></label>
       <label>To <input type="date" id="date-to"></label>
@@ -137,11 +131,6 @@
     "flop_types": ["BLL", "Low", "2BWL", "Low paired", "High paired", "A high", "Monotone", "3BW"],
     "turn_types": ["FC", "SC", "BP high", "BP mid", "BP low", "BW A", "BW K", "BW Q", "BW J", "FDP", "Brick"],
     "river_types": ["FC", "SC", "BP high", "BP mid", "BP low", "BW A", "BW K", "BW Q", "BW J", "Brick"],
-    "hand_types": ["Straight flush", "Quads", "Full house", "Nut flush", "Other flush", "Straight",
-                   "Top set", "Middle set", "Bottom set", "Trips Tk", "Trips Gk", "Trips Nk",
-                   "Top two", "Top + other", "Bottom two", "Overpair", "Top pair Tk", "Top pair Gk", "Top pair Nk",
-                   "2nd pair Tk", "2nd pair Gk", "2nd pair Nk", "2nd pair PP", "3rd pair", "4th pair", "Underpair",
-                   "Ace high", "No made hand"],
     "hand_groups": {
       "Flush": ["Nut flush", "Other flush"],
       "Set": ["Top set", "Middle set", "Bottom set"],
@@ -149,9 +138,7 @@
       "Two pair": ["Top two", "Top + other", "Bottom two"],
       "Top pair": ["Top pair Tk", "Top pair Gk", "Top pair Nk"],
       "2nd pair": ["2nd pair Tk", "2nd pair Gk", "2nd pair Nk", "2nd pair PP"]
-    },
-    "draw_types": ["Combo draw", "Flush draw nuts", "Flush draw", "OESD", "Gutshot", "BDFD 2 cards", "BDFD 1 card",
-                   "No draw"]
+    }
   }
   </script>
 
@@ -204,16 +191,14 @@
     }
 
     // A checkbox dropdown; returns a getter for the checked values (none checked or disabled = Any).
-    // grouped: true nests options sharing a first word ("BP high", "BP low") under a parent box ("BP");
-    // an object maps option -> parent explicitly (hand types, where "Straight flush" is not a "Straight").
+    // grouped nests options sharing a first word ("BP high", "BP low") under a parent box ("BP").
     function multiSelect(id, options, summaryText, grouped = false) {
       const el = document.getElementById(id);
       const summaryEl = el.querySelector("summary");
       const panelEl = el.querySelector(".panel");
       const head = option => option.split(" ")[0];
-      const groupOf = option => grouped === true
-        ? (options.filter(o => head(o) === head(option)).length > 1 ? head(option) : null)
-        : (grouped && grouped[option]) || null;
+      const groupOf = option =>
+        grouped && options.filter(o => head(o) === head(option)).length > 1 ? head(option) : null;
       const addBox = (text, data, cls) => {
         const label = document.createElement("label");
         const box = document.createElement("input");
@@ -270,11 +255,6 @@
     const selectedFlopTypes = multiSelect("flop-types", CONFIG.flop_types, values => "Flop: " + joinedOrAny(values));
     const selectedTurnTypes = multiSelect("turn-types", CONFIG.turn_types, values => "Turn: " + joinedOrAny(values), true);
     const selectedRiverTypes = multiSelect("river-types", CONFIG.river_types, values => "River: " + joinedOrAny(values), true);
-    const handGroupOf = Object.fromEntries(
-      Object.entries(CONFIG.hand_groups).flatMap(([group, leaves]) => leaves.map(leaf => [leaf, group])));
-    const selectedHandTypes = multiSelect("hand-types", CONFIG.hand_types, values => "Hand: " + joinedOrAny(values),
-      handGroupOf);
-    const selectedDrawTypes = multiSelect("draw-types", CONFIG.draw_types, values => "Draw: " + joinedOrAny(values));
 
     // The decision street (1 flop, 2 turn, 3 river): OOP, a last street the villain closes moves it one on
     function lineStreets(line, position) {
@@ -312,8 +292,7 @@
       const requestId = ++latestRequest;
       const body = {
         ...state, line: lineEl.value.trim(), formations: selectedFormations(), flop_types: selectedFlopTypes(),
-        turn_types: selectedTurnTypes(), river_types: selectedRiverTypes(), hand_types: selectedHandTypes(),
-        draw_types: selectedDrawTypes(),
+        turn_types: selectedTurnTypes(), river_types: selectedRiverTypes(),
         date_from: document.getElementById("date-from").value || null,
         date_to: document.getElementById("date-to").value || null,
       };
@@ -352,7 +331,7 @@
       openGroups = new Set();
       groupsOf = buildGroups(data.distribution, data.split);
       outputEl.innerHTML =
-        `<div class="filter-line">${escapeHtml(data.interpreted_filter)}</div>` +
+        `<div class="filter-line">${escapeHtml(data.interpreted_filter)}</div><div id="picks"></div>` +
         '<div class="result"><div id="tables"></div><div class="hands-pane">' +
         '<h3>Matching hands</h3>' +
         '<div class="hand-filter">Result from ' +
@@ -468,7 +447,33 @@
       return typePicks[dim].has(type) && (!label || actionPicks.has(label));
     }
 
+    const actionName = pick => pick.startsWith("size:")
+      ? (currentData.split || []).find(row => `size:${row.size}` === pick)?.name || pick : pick;
+
+    // The picks in click order and the hands they keep (before the Result range); hidden with none
+    function renderPicks() {
+      const picksEl = document.getElementById("picks");
+      const parts = [["Action", [...actionPicks].map(actionName)], ["Hand", [...typePicks.hand]], ["Draw", [...typePicks.draw]]]
+        .filter(([, names]) => names.length)
+        .map(([name, names]) => `${name}: ${names.map(escapeHtml).join(", ")}`);
+      if (!parts.length) {
+        picksEl.innerHTML = "";
+        return;
+      }
+      const kept = currentHands.filter(hand => passes(hand, null)).length;
+      picksEl.innerHTML = parts.join(" · ") +
+        ` — ${kept.toLocaleString("en-US")} of ${currentHands.length.toLocaleString("en-US")} hands` +
+        '<button id="clear-picks">Clear</button>';
+      document.getElementById("clear-picks").addEventListener("click", () => {
+        actionPicks.clear();
+        DIMS.forEach(dim => typePicks[dim].clear());
+        renderTables();
+        renderHands();
+      });
+    }
+
     function renderTables() {
+      renderPicks();
       const forActions = currentHands.filter(hand => passes(hand, "action"));
       const distribution = recountDistribution(forActions);
       const typeTable = dim => {
