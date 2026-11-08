@@ -150,3 +150,24 @@ def test_hand_pick_filters_both_sides(sides, details):
 def test_unknown_line_id_errors(sides, details):
     with pytest.raises(SpotInputError):
         dashboards.line_detail("2bp_ip_pfr", "nope")
+
+
+def test_user_side_is_reused_for_ten_minutes(monkeypatch):
+    queries = []
+    monkeypatch.setattr("dashboards.run_spot_query",
+                        lambda where, params, measured_sql: queries.append(1) or frame_cards())
+    now = [1000.0]
+    monkeypatch.setattr("dashboards.time.monotonic", lambda: now[0])
+    dashboards._user_cache.clear()
+    board = dashboards.DASHBOARDS["2bp_ip_pfr"]
+    dashboards.user_matches(board, "X")
+    dashboards.user_matches(board, "X")
+    assert len(queries) == 1
+    now[0] += 601
+    dashboards.user_matches(board, "X")
+    assert len(queries) == 2
+
+
+def frame_cards():
+    from test_spotlight import fake_matches
+    return fake_matches([(1, "Bs")])

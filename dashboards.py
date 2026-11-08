@@ -1,4 +1,6 @@
 """GTO dashboards: per spot, the user's frequencies next to the GTO bot DB's, line by line."""
+import time
+
 from board_types import FLOP_TYPES, RIVER_LABELS, TURN_LABELS
 from db import get_hand_details, gto_engine, gto_hero_id, run_spot_query
 from gto_cache import line_matches
@@ -10,6 +12,8 @@ from hand_strength import HAND_TYPES
 from spotlight import _checked, _distribution, _draw_split, _hand_split, _split, classify, filter_types
 
 GTO_HANDS_SHOWN = 200
+USER_CACHE_SECONDS = 600  # new imports show up within 10 min
+_user_cache = {}
 
 DASHBOARDS = {
     "2bp_ip_pfr": {
@@ -35,7 +39,16 @@ def dashboard(dashboard_id):
 
 
 def user_matches(board, line, date_from=None, date_to=None):
-    """The user's hands for a Line, live from the user DB, classified like the GTO side."""
+    """The user's hands for a Line from the user DB, classified like the GTO side; reused for 10 min."""
+    key = (board["name"], line, date_from, date_to)
+    stamp, matches = _user_cache.get(key, (None, None))
+    if stamp is None or time.monotonic() - stamp > USER_CACHE_SECONDS:
+        matches = _query_user(board, line, date_from, date_to)
+        _user_cache[key] = (time.monotonic(), matches)
+    return matches
+
+
+def _query_user(board, line, date_from, date_to):
     spec = parse_line(line, board["role"], board["position"])
     where, params, measured_sql = build_spot_query(board["pot"], board["position"], board["role"], spec,
                                                    board["formations"], date_from, date_to)
