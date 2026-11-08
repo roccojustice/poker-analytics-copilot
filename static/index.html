@@ -45,9 +45,13 @@
     .table-scroll { overflow-x: auto; }
     .wrap { white-space: normal; max-width: 14rem; }
     .error { background: #fdecea; border: 1px solid #f5c2c0; padding: 0.75rem; border-radius: 4px; }
-    .card { display: inline-block; padding: 0 4px; margin: 0 1px; border: 1px solid #ccc; border-radius: 3px; background: #fff; font-weight: bold; }
-    .card-red { color: #d32f2f; }
-    .card-black { color: #222; }
+    .card { position: relative; display: inline-block; width: 1.4em; height: 1.75em; line-height: 1.75em; margin: 0 1px; border-radius: 3px; overflow: hidden; text-align: center; vertical-align: middle; color: #fff; font-weight: bold; font-size: 1.05em; }
+    .card::after { content: attr(data-sym); position: absolute; right: -0.3em; bottom: -0.35em; font-size: 2.2em; line-height: 1; opacity: 0.3; }
+    .card .rank { position: relative; z-index: 1; }
+    .card-s { background: #4a4a4a; }
+    .card-h { background: #b01c1c; }
+    .card-d { background: #2b3fc4; }
+    .card-c { background: #169c2c; }
     tr.win td { background: #c8e6c9; }
     tr.loss td { background: #ffcdd2; }
     tr.win td.num:last-child { color: #1b5e20; font-weight: bold; }
@@ -569,7 +573,6 @@
     }
 
     const SUIT_SYMBOLS = { c: "♣", d: "♦", h: "♥", s: "♠" };
-    const RED_SUITS = new Set(["d", "h"]);
 
     const text = key => row => formatCell(row[key]);
     const cards = key => row => renderCards(row[key]);
@@ -607,9 +610,9 @@
       return cardStr.trim().split(/\s+/).map(card => {
         const rank = card[0];
         const suit = card[1];
-        const colorClass = RED_SUITS.has(suit) ? "card-red" : "card-black";
-        return `<span class="card ${colorClass}">${escapeHtml(rank)}${SUIT_SYMBOLS[suit] || suit}</span>`;
-      }).join(" ");
+        const symbol = SUIT_SYMBOLS[suit] || escapeHtml(suit);
+        return `<span class="card card-${escapeHtml(suit)}" data-sym="${symbol}" title="${escapeHtml(card)}"><span class="rank">${escapeHtml(rank)}</span></span>`;
+      }).join("");
     }
 
     function formatCell(value) {
