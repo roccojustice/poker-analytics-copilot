@@ -129,14 +129,26 @@ def _keep(column, selected):
     return column.map(lambda labels: bool(set(labels.split(", ")) & set(selected)))
 
 
-def _with_board_types(matches, street, flop_types, turn_types, river_types):
+BOARD_SIZE = {"f": 3, "t": 4, "r": 5}
+CARD_COLUMNS = ["holecard_1", "holecard_2", "card_1", "card_2", "card_3", "card_4", "card_5"]
+
+
+def classify(matches, street):
+    """Adds the board, hand and draw types of every hand at the decision street; drops the card ids."""
     cards = ["card_1", "card_2", "card_3", "card_4", "card_5"]
     none = pd.Series(None, index=matches.index, dtype=object)
+    hand_cards = ["holecard_1", "holecard_2", *cards[:BOARD_SIZE[street]]]
     matches = matches.assign(
         flop_type=_board_column(matches, cards[:3], flop_type),
         turn_type=_labels_column(matches, cards[:4], turn_labels) if street in ("t", "r") else none,
         river_type=_labels_column(matches, cards, river_labels) if street == "r" else none,
+        hand_type=_board_column(matches, hand_cards, hand_type),
+        draw_type=_board_column(matches, hand_cards, draw_type),
     )
+    return matches.drop(columns=CARD_COLUMNS)
+
+
+def filter_types(matches, flop_types=(), turn_types=(), river_types=(), hand_types=(), draw_types=()):
     keep = pd.Series(True, index=matches.index)
     if flop_types:
         keep &= matches["flop_type"].isin(flop_types)
@@ -144,21 +156,11 @@ def _with_board_types(matches, street, flop_types, turn_types, river_types):
         keep &= _keep(matches["turn_type"], turn_types)
     if river_types:
         keep &= _keep(matches["river_type"], river_types)
-    return matches[keep]
-
-
-BOARD_SIZE = {"f": 3, "t": 4, "r": 5}
-
-
-def _with_hand_and_draw(matches, street, hand_types, draw_types):
-    cards = ["holecard_1", "holecard_2", *[f"card_{i}" for i in range(1, BOARD_SIZE[street] + 1)]]  # decision street
-    matches = matches.assign(hand_type=_board_column(matches, cards, hand_type),
-                             draw_type=_board_column(matches, cards, draw_type))
     if hand_types:
-        matches = matches[matches["hand_type"].isin(hand_types)]
+        keep &= matches["hand_type"].isin(hand_types)
     if draw_types:
-        matches = matches[matches["draw_type"].isin(draw_types)]
-    return matches.drop(columns=["holecard_1", "holecard_2", "card_1", "card_2", "card_3", "card_4", "card_5"])
+        keep &= matches["draw_type"].isin(draw_types)
+    return matches[keep]
 
 
 def _checked(values, registry, name):
@@ -186,8 +188,7 @@ def run_spot(pot, position, role, line, formations=(), date_from=None, date_to=N
         raise SpotInputError("River type needs a decision on the river")
     where, params, measured_sql = build_spot_query(pot, position, role, spec, formations, date_from, date_to)
     matches = run_spot_query(where, params, measured_sql)
-    matches = _with_board_types(matches, street, flop_types, turn_types, river_types)
-    matches = _with_hand_and_draw(matches, street, hand_types, draw_types)
+    matches = filter_types(classify(matches, street), flop_types, turn_types, river_types, hand_types, draw_types)
     prefix = spec.decision.hero
     matches = matches.assign(measured_action=prefix + matches["measured_action"])  # letter -> label
     split = splits_by_size(spec)

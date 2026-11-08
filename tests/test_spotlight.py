@@ -538,3 +538,19 @@ def test_draw_split_rows_cells_and_pcts(monkeypatch):
 def test_draw_split_empty_list_when_no_hands(monkeypatch):
     install(monkeypatch, fake_matches(DRAWS))
     assert spotlight.run_spot("2bp", "ip", "pfr", "X", draw_types=["Gutshot"])["draw_split"] == []
+
+
+def test_classify_keeps_every_hand_and_adds_five_columns():
+    matches = fake_matches([(1, "B"), (2, "X"), (3, "B", "AhKh2c")])
+    out = spotlight.classify(matches, "t")
+    assert list(out["id_hand"]) == [1, 2, 3]
+    assert {"flop_type", "turn_type", "river_type", "hand_type", "draw_type"} <= set(out.columns)
+    assert not {"card_1", "holecard_1"} & set(out.columns)
+    assert out["river_type"].isna().all() and out["turn_type"].notna().all()
+
+
+def test_filter_types_turn_labels_overlap():
+    frame = pd.DataFrame({"id_hand": [1], "flop_type": ["x"], "turn_type": ["FC, BP high"], "river_type": [None],
+                          "hand_type": ["Air"], "draw_type": ["No draw"]})
+    assert len(spotlight.filter_types(frame, turn_types=["BP high"])) == 1
+    assert len(spotlight.filter_types(frame, turn_types=["Brick"])) == 0
