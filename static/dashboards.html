@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Spotlight Dashboards</title>
+  <style>
+    body { font-family: sans-serif; margin: 2rem auto; padding: 0 1.5rem; max-width: 1800px; }
+    nav { margin-bottom: 0.5rem; font-size: 0.95rem; }
+    nav a { color: #2b5fab; }
+    .bar { display: flex; flex-wrap: wrap; gap: 0.75rem; align-items: center; }
+    select { padding: 0.4rem; font-size: 0.95rem; }
+    .seg { display: inline-flex; align-items: center; gap: 0.4rem; }
+    .seg button { padding: 0.4rem 0.8rem; border: 1px solid #bbb; background: #fff; cursor: pointer; font-size: 0.95rem; }
+    .seg button + button { margin-left: -0.4rem; border-left: none; }
+    .seg button.on { background: #2b5fab; color: #fff; border-color: #2b5fab; }
+    details.formations { position: relative; }
+    details.formations summary { list-style: none; padding: 0.4rem 0.8rem; border: 1px solid #bbb; cursor: pointer; width: 9rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    details.formations summary::after { content: " ▾"; }
+    details.formations .panel { position: absolute; z-index: 10; background: #fff; border: 1px solid #bbb; padding: 0.4rem 0.6rem; max-height: 24rem; overflow-y: auto; }
+    details.formations label { display: block; padding: 0.15rem 0; white-space: nowrap; cursor: pointer; }
+    details.formations label.child { padding-left: 1.2rem; }
+    .dates { display: flex; gap: 0.5rem; align-items: center; }
+    .dates input { padding: 0.3rem; font-size: 0.95rem; }
+    #output { margin-top: 1.25rem; }
+    .filter-line { font-weight: bold; margin-bottom: 0.75rem; }
+    .legend { color: #666; font-size: 0.85rem; margin-bottom: 0.5rem; }
+    table { border-collapse: collapse; margin-bottom: 1.25rem; font-size: 0.85rem; }
+    th, td { border: 1px solid #ddd; padding: 0.3rem 0.5rem; text-align: left; white-space: nowrap; }
+    th { background: #f4f4f4; }
+    td.num, th.num { text-align: right; }
+    table.dash td.cell { text-align: center; min-width: 6.5rem; }
+    .yours { font-weight: bold; }
+    .gto { color: #555; }
+    .gap { display: block; font-size: 0.78rem; }
+    .gap.pos { color: #1b5e20; }
+    .gap.neg { color: #b71c1c; }
+    .muted { color: #aaa; }
+    tr.line-row { cursor: pointer; }
+    tr.line-row:hover td { background: #eef3fb; }
+    tr.sub td:first-child { padding-left: 1.6rem; color: #444; }
+    tr.pickable { cursor: pointer; }
+    tr.pickable:hover td { background: #eef3fb; }
+    tr.selected td { background: #dbe7f8; font-weight: bold; }
+    h2 { margin: 1.25rem 0 0.5rem; font-size: 1.15rem; }
+    h3 { margin: 1rem 0 0.4rem; font-size: 1rem; }
+    #back { padding: 0.3rem 0.8rem; margin-bottom: 0.75rem; }
+    #picks button { margin-left: 0.5rem; }
+    .cols { display: flex; flex-wrap: wrap; gap: 2rem; align-items: flex-start; }
+    .table-scroll { overflow-x: auto; }
+    .error { background: #fdecea; border: 1px solid #f5c2c0; padding: 0.75rem; border-radius: 4px; }
+    .card { position: relative; display: inline-block; width: 1.4em; height: 1.75em; line-height: 1.75em; margin: 0 1px; border-radius: 3px; overflow: hidden; text-align: center; vertical-align: middle; color: #fff; font-weight: bold; font-size: 1.05em; }
+    .card::after { content: attr(data-sym); position: absolute; right: -0.3em; bottom: -0.35em; font-size: 2.2em; line-height: 1; opacity: 0.3; }
+    .card .rank { position: relative; z-index: 1; }
+    .card-s { background: #4a4a4a; } .card-h { background: #b01c1c; } .card-d { background: #2b3fc4; } .card-c { background: #169c2c; }
+    tr.win td { background: #c8e6c9; }
+    tr.loss td { background: #ffcdd2; }
+  </style>
+</head>
+<body>
+  <nav><a href="/">Manos</a> · <b>Dashboards</b></nav>
+  <h1>Dashboards</h1>
+  <div class="bar">
+    <select id="dashboard"></select>
+    <details class="formations" id="flop-types"><summary>Flop: Any</summary><div class="panel"></div></details>
+    <details class="formations" id="turn-types"><summary>Turn: Any</summary><div class="panel"></div></details>
+    <details class="formations" id="river-types"><summary>River: Any</summary><div class="panel"></div></details>
+    <div class="seg" id="sizes"><span>Faced size</span></div>
+    <div class="dates">
+      <label>Your hands from <input type="date" id="date-from"></label>
+      <label>to <input type="date" id="date-to"></label>
+    </div>
+  </div>
+  <div id="output"></div>
+
+  <script>
+    const outputEl = document.getElementById("output");
+    const dashboardEl = document.getElementById("dashboard");
+    let CONFIG = null;
+    let view = { line: null };  // null = level 1, else the line id shown in level 2
+    let picks = { hand: new Set(), draw: new Set() };
+    let latestRequest = 0;
+    let groupLeaves = {};  // hand group -> its leaf types, filled when the hand table renders
+
+    const escapeHtml = str => { const div = document.createElement("div"); div.textContent = str; return div.innerHTML; };
+
+    // A checkbox dropdown (same as the hands page); returns a getter for the checked values.
+    function multiSelect(id, options, summaryText, grouped, onChange) {
+      const el = document.getElementById(id);
+      const summaryEl = el.querySelector("summary");
+      const panelEl = el.querySelector(".panel");
+      const head = option => option.split(" ")[0];
+      const groupOf = option => grouped && options.filter(o => head(o) === head(option)).length > 1 ? head(option) : null;
+      const addBox = (text, data, cls) => {
+        const label = document.createElement("label");
+        const box = document.createElement("input");
+        box.type = "checkbox";
+        Object.assign(box.dataset, data);
+        if (cls) label.className = cls;
+        label.append(box, " " + text);
+        panelEl.append(label);
+      };
+      options.forEach(option => {
+        const group = groupOf(option);
+        if (group && !panelEl.querySelector(`[data-group="${group}"]`)) addBox(group, { group });
+        addBox(option, group ? { value: option, parent: group } : { value: option }, group && "child");
+      });
+      const children = group => [...panelEl.querySelectorAll(`[data-parent="${group}"]`)];
+      const checked = () => [...panelEl.querySelectorAll("input[data-value]")].filter(b => b.checked).map(b => b.dataset.value);
+      panelEl.addEventListener("change", event => {
+        const group = event.target.dataset.group;
+        if (group) children(group).forEach(box => box.checked = event.target.checked);
+        panelEl.querySelectorAll("[data-group]").forEach(parent => {
+          const kids = children(parent.dataset.group);
+          parent.checked = kids.every(box => box.checked);
+          parent.indeterminate = !parent.checked && kids.some(box => box.checked);
+        });
+        summaryEl.textContent = summaryEl.title = summaryText(checked());
+        onChange();
+      });
+      document.addEventListener("click", event => { if (!el.contains(event.target)) el.open = false; });
+      return checked;
+    }
+
+    const joinedOrAny = values => values.length ? values.join(", ") : "Any";
+    let selectedFlop, selectedTurn, selectedRiver;
+    const sizes = new Set();
+
+    function filters() {
+      return {
+        dashboard: dashboardEl.value,
+        flop_types: selectedFlop(), turn_types: selectedTurn(), river_types: selectedRiver(),
+        faced_sizes: [...sizes],
+        date_from: document.getElementById("date-from").value || null,
+        date_to: document.getElementById("date-to").value || null,
+      };
+    }
+
+    function filterLine() {
+      const f = filters();
+      const board = CONFIG.dashboards.find(d => d.id === f.dashboard);
+      const parts = [board.name, board.formations.join(", ")];
+      if (f.flop_types.length) parts.push("Flop: " + f.flop_types.join(", "));
+      if (f.turn_types.length) parts.push("Turn: " + f.turn_types.join(", "));
+      if (f.river_types.length) parts.push("River: " + f.river_types.join(", "));
+      if (f.faced_sizes.length) parts.push("Faced: " + f.faced_sizes.join(""));
+      if (f.date_from || f.date_to) parts.push(`Your hands ${f.date_from || "…"} → ${f.date_to || "…"}`);
+      return parts.join(" · ");
+    }
+
+    async function post(url, body) {
+      const request = ++latestRequest;
+      outputEl.style.opacity = 0.5;
+      try {
+        const response = await fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+        const data = await response.json();
+        if (request !== latestRequest) return null;
+        outputEl.style.opacity = 1;
+        if (!response.ok) { outputEl.innerHTML = `<div class="error">${escapeHtml(data.error || "Request failed")}</div>`; return null; }
+        return data;
+      } catch (err) {
+        if (request === latestRequest) { outputEl.style.opacity = 1; outputEl.innerHTML = `<div class="error">${escapeHtml(err.message)}</div>`; }
+        return null;
+      }
+    }
+
+    function refresh() { view.line ? loadDetail() : loadRows(); }
+
+    // --- Cells ---
+
+    const pctText = value => value === null || value === undefined ? "—" : value.toFixed(1) + "%";
+
+    function compareCell(yours, gto, gap) {
+      if (yours === undefined && gto === undefined) return '<td class="cell muted">—</td>';
+      const gapHtml = gap === null || gap === undefined ? '<span class="gap muted">—</span>'
+        : `<span class="gap ${gap > 0 ? "pos" : gap < 0 ? "neg" : ""}">${gap > 0 ? "+" : ""}${gap.toFixed(1)}</span>`;
+      return `<td class="cell"><span class="yours">${pctText(yours)}</span> · <span class="gto">${pctText(gto)}</span>${gapHtml}</td>`;
+    }
+
+    const byAction = rows => Object.fromEntries((rows || []).map(r => [r.action, r]));
+
+    // --- Level 1 ---
+
+    const BET_COLUMNS = ["B", "Bs", "Bm", "Bl", "Bo", "X"];
+    const RESPONSE_COLUMNS = ["F", "C", "R"];
+
+    async function loadRows() {
+      const data = await post("/dashboard", filters());
+      if (data) renderRows(data.rows);
+    }
+
+    function renderRows(rows) {
+      const section = (title, columns, list) => {
+        if (!list.length) return "";
+        let html = `<h2>${title}</h2><div class="table-scroll"><table class="dash"><thead><tr><th>Line</th><th class="num">Hands (you · GTO)</th>`;
+        columns.forEach(c => html += `<th class="cell">${c}</th>`);
+        html += "</tr></thead><tbody>";
+        list.forEach(row => {
+          html += `<tr class="line-row" data-line="${row.id}"><td>${escapeHtml(row.name)} <small class="muted">${escapeHtml(row.line)}</small></td>`;
+          if (row.reason) {
+            html += `<td class="num muted" title="${escapeHtml(row.reason)}">—</td>` + columns.map(() => `<td class="cell muted" title="${escapeHtml(row.reason)}">—</td>`).join("");
+          } else {
+            html += `<td class="num">${row.user.hands.toLocaleString()} · ${row.gto.hands.toLocaleString()}</td>`;
+            const mine = byAction(row.user.distribution), theirs = byAction(row.gto.distribution);
+            columns.forEach(c => {
+              const label = (mine[c] || theirs[c] || {}).label;
+              const cell = compareCell(mine[c] && mine[c].pct, theirs[c] && theirs[c].pct, label ? row.gap[label] : null);
+              html += row.size_filter_ignored ? cell.replace('class="cell"', 'class="cell muted" title="Faced size applies to response lines only"') : cell;
+            });
+          }
+          html += "</tr>";
+        });
+        return html + "</tbody></table></div>";
+      };
+      const bets = rows.filter(r => r.measured.includes("B"));
+      const responses = rows.filter(r => !r.measured.includes("B"));
+      outputEl.innerHTML = `<div class="filter-line">${escapeHtml(filterLine())}</div>`
+        + '<div class="legend">Each cell: <b>you</b> · GTO, then the gap (you − GTO, points). Click a line for its detail.</div>'
+        + section("Your bets", BET_COLUMNS, bets) + section("Facing a bet", RESPONSE_COLUMNS, responses);
+      outputEl.querySelectorAll("tr.line-row").forEach(tr => tr.addEventListener("click", () => {
+        view.line = tr.dataset.line;
+        picks = { hand: new Set(), draw: new Set() };
+        loadDetail();
+      }));
+    }
+
+    // --- Level 2 ---
+
+    async function loadDetail() {
+      const hands = [...picks.hand].flatMap(name => groupLeaves[name] || [name]);  // a group is sent as its leaves
+      const data = await post("/dashboard/line", { ...filters(), line_id: view.line, hand_types: [...new Set(hands)], draw_types: [...picks.draw] });
+      if (data) renderDetail(data);
+    }
+
+    function distributionTable(user, gto) {
+      const theirs = Object.fromEntries(gto.distribution.map(r => [r.label, r]));
+      let html = '<table class="dash"><thead><tr><th>Action</th><th class="cell">you · GTO</th><th class="num">Hands (you · GTO)</th></tr></thead><tbody>';
+      user.distribution.forEach(r => {
+        const g = theirs[r.label];
+        const gap = user.hands_total && gto.hands_total ? Math.round((r.pct - g.pct) * 10) / 10 : null;
+        html += `<tr class="${r.parent ? "sub" : ""}"><td>${escapeHtml(r.name)}</td>${compareCell(r.pct, g.pct, gap)}<td class="num">${r.hands} · ${g.hands.toLocaleString()}</td></tr>`;
+      });
+      return html + "</tbody></table>";
+    }
+
+    function splitTable(user, gto) {
+      if (!user.split) return "";
+      let html = '<h3>By faced size</h3><table class="dash"><thead><tr><th>Size</th><th class="num">Faced (you · GTO)</th>';
+      ["Fold", "Call", "Raise"].forEach(a => html += `<th class="cell">${a}</th>`);
+      html += "</tr></thead><tbody>";
+      user.split.forEach((row, i) => {
+        const g = gto.split[i];
+        html += `<tr><td>${escapeHtml(row.name)}</td><td class="num">${pctText(row.pct_faced)} · ${pctText(g.pct_faced)}</td>`;
+        row.cells.forEach((cell, j) => {
+          const gap = row.hands && g.hands ? Math.round((cell.pct - g.cells[j].pct) * 10) / 10 : null;
+          html += compareCell(cell.pct, g.cells[j].pct, gap);
+        });
+        html += "</tr>";
+      });
+      return html + "</tbody></table>";
+    }
+
+    function typeTable(dim, key, title, user, gto) {
+      const mine = Object.fromEntries(user.map(r => [r[key], r]));
+      const theirs = Object.fromEntries(gto.map(r => [r[key], r]));
+      const names = [...new Set([...gto.map(r => r[key]), ...user.map(r => r[key])])];
+      const actions = ((gto[0] || user[0] || { cells: [] }).cells).filter(c => !c.parent);
+      const leavesOf = name => [...new Set(user.concat(gto).filter(r => r.parent === name).map(r => r[key]))];
+      names.forEach(name => { if (leavesOf(name).length) groupLeaves[name] = leavesOf(name); });
+      let html = `<h3>${title}</h3><table class="dash"><thead><tr><th>${dim === "hand" ? "Hand" : "Draw"}</th><th class="num">Share (you · GTO)</th>`;
+      actions.forEach(a => html += `<th class="cell">${escapeHtml(a.name)}</th>`);
+      html += "</tr></thead><tbody>";
+      names.forEach(name => {
+        const m = mine[name], t = theirs[name];
+        const parent = (m || t).parent;
+        const selected = picks[dim].has(name) || (parent && picks[dim].has(parent));
+        html += `<tr class="pickable ${parent ? "sub" : ""} ${selected ? "selected" : ""}" data-dim="${dim}" data-name="${escapeHtml(name)}">`;
+        html += `<td>${escapeHtml(name)}</td><td class="num">${m ? pctText(m.pct_total) + " (" + m.hands + ")" : "—"} · ${t ? pctText(t.pct_total) : "—"}</td>`;
+        actions.forEach(a => {
+          const mc = m && m.cells.find(c => c.label === a.label), tc = t && t.cells.find(c => c.label === a.label);
+          const gap = m && t && m.hands && t.hands ? Math.round((mc.pct - tc.pct) * 10) / 10 : null;
+          html += compareCell(mc ? mc.pct : undefined, tc ? tc.pct : undefined, gap);
+        });
+        html += "</tr>";
+      });
+      return html + "</tbody></table>";
+    }
+
+    function renderDetail(data) {
+      const { line, user, gto } = data;
+      const pickList = [...picks.hand, ...picks.draw];
+      let html = '<button id="back">← Back</button>';
+      html += `<div class="filter-line">${escapeHtml(line.name)} (${escapeHtml(line.line)}) · ${escapeHtml(filterLine())}</div>`;
+      html += `<div id="picks">${pickList.length ? "Picks: " + pickList.map(escapeHtml).join(", ") + ` · ${user.hands_total} yours · ${gto.hands_total.toLocaleString()} GTO <button id="clear">Clear</button>` : '<span class="legend">Click a hand or draw row to filter both sides.</span>'}</div>`;
+      html += '<div class="cols"><div>' + distributionTable(user, gto) + splitTable(user, gto) + "</div>";
+      html += "<div>" + typeTable("hand", "hand_type", "By hand", user.hand_split, gto.hand_split) + "</div>";
+      html += "<div>" + typeTable("draw", "draw_type", "By draw", user.draw_split, gto.draw_split) + "</div></div>";
+      html += `<h2>Your hands (${user.hands_total})</h2>` + renderTable(user.hands);
+      html += `<h2>GTO hands (${Math.min(200, gto.hands_total)} of ${gto.hands_total.toLocaleString()})</h2>` + renderTable(gto.hands);
+      outputEl.innerHTML = html;
+      document.getElementById("back").addEventListener("click", () => { view.line = null; loadRows(); });
+      const clear = document.getElementById("clear");
+      if (clear) clear.addEventListener("click", () => { picks = { hand: new Set(), draw: new Set() }; loadDetail(); });
+      outputEl.querySelectorAll("tr.pickable").forEach(tr => tr.addEventListener("click", () => {
+        const set = picks[tr.dataset.dim];
+        const name = tr.dataset.name;
+        set.has(name) ? set.delete(name) : set.add(name);
+        loadDetail();
+      }));
+    }
+
+    // --- Hands table (same columns as the hands page) ---
+
+    const SUIT_SYMBOLS = { c: "♣", d: "♦", h: "♥", s: "♠" };
+    function renderCards(cardStr) {
+      if (!cardStr) return "—";
+      return cardStr.trim().split(/\s+/).map(card => {
+        const symbol = SUIT_SYMBOLS[card[1]] || escapeHtml(card[1]);
+        return `<span class="card card-${escapeHtml(card[1])}" data-sym="${symbol}" title="${escapeHtml(card)}"><span class="rank">${escapeHtml(card[0])}</span></span>`;
+      }).join("");
+    }
+    const formatCell = value => value === null || value === undefined || value === "" ? "—"
+      : typeof value === "number" && !Number.isInteger(value) ? value.toFixed(2) : escapeHtml(String(value));
+    const renderAction = (act, size) => !act ? "—" : escapeHtml(act) + (size === null || size === undefined ? "" : ` ${Math.round(size)}%`);
+    const formatBB = value => value === null || value === undefined ? "—" : value.toFixed(1);
+    const COLUMNS = [
+      { label: "Date", render: r => formatCell(r.date_played) },
+      { label: "Action", render: r => formatCell(r.measured_action) },
+      { label: "Hand type", render: r => formatCell(r.hand_type) },
+      { label: "Cards", render: r => renderCards(r.hole_cards) },
+      { label: "Flop", render: r => renderCards(r.flop) },
+      { label: "Flop action", render: r => renderAction(r.f_act, r.f_size) },
+      { label: "Turn", render: r => renderCards(r.turn) },
+      { label: "Turn action", render: r => renderAction(r.t_act, r.t_size) },
+      { label: "River", render: r => renderCards(r.river) },
+      { label: "River action", render: r => renderAction(r.r_act, r.r_size) },
+      { label: "Pot (BB)", render: r => formatBB(r.pot_bb), cls: "num" },
+      { label: "Result (BB)", render: r => formatBB(r.result_bb), cls: "num" },
+    ];
+    function renderTable(rows) {
+      if (!rows || rows.length === 0) return "<p>No matching hands.</p>";
+      let html = '<div class="table-scroll"><table><thead><tr>' + COLUMNS.map(c => `<th>${c.label}</th>`).join("") + "</tr></thead><tbody>";
+      rows.forEach(row => {
+        const outcome = row.result_bb > 0 ? "win" : row.result_bb < 0 ? "loss" : "";
+        html += `<tr class="${outcome}">` + COLUMNS.map(c => `<td${c.cls ? ` class="${c.cls}"` : ""}>${c.render(row)}</td>`).join("") + "</tr>";
+      });
+      return html + "</tbody></table></div>";
+    }
+
+    // --- Start ---
+
+    async function start() {
+      CONFIG = await (await fetch("/dashboards/config")).json();
+      dashboardEl.innerHTML = CONFIG.dashboards.map(d => `<option value="${d.id}">${escapeHtml(d.name)}</option>`).join("");
+      selectedFlop = multiSelect("flop-types", CONFIG.flop_types, v => "Flop: " + joinedOrAny(v), false, refresh);
+      selectedTurn = multiSelect("turn-types", CONFIG.turn_labels, v => "Turn: " + joinedOrAny(v), true, refresh);
+      selectedRiver = multiSelect("river-types", CONFIG.river_labels, v => "River: " + joinedOrAny(v), true, refresh);
+      const sizesEl = document.getElementById("sizes");
+      CONFIG.sizes.forEach(size => {
+        const button = document.createElement("button");
+        button.textContent = size;
+        button.addEventListener("click", () => {
+          sizes.has(size) ? sizes.delete(size) : sizes.add(size);
+          button.classList.toggle("on", sizes.has(size));
+          refresh();
+        });
+        sizesEl.append(button);
+      });
+      ["dashboard", "date-from", "date-to"].forEach(id => document.getElementById(id).addEventListener("change", refresh));
+      loadRows();
+    }
+    start();
+  </script>
+</body>
+</html>
