@@ -5,7 +5,7 @@ import dashboards
 from line_parser import SpotInputError, parse_line
 
 
-def frame(letters, flop_type="Low", turn_type="Brick", hand_type="Air", draw_type="No draw"):
+def frame(letters, flop_type="Low", turn_type="Brick", hand_type="No made hand", draw_type="No draw"):
     return pd.DataFrame({
         "id_hand": range(1, len(letters) + 1), "measured_action": letters,
         "flop_type": flop_type, "turn_type": turn_type, "river_type": None,
@@ -102,3 +102,51 @@ def test_every_registry_line_parses():
     for board in dashboards.DASHBOARDS.values():
         for line in board["lines"]:
             parse_line(line["line"], board["role"], board["position"])
+
+
+@pytest.fixture
+def details(monkeypatch):
+    calls = []
+
+    def fake(id_hands, id_player=None, engine=None):
+        calls.append({"ids": list(id_hands), "id_player": id_player})
+        return pd.DataFrame({"id_hand": list(id_hands)})
+
+    monkeypatch.setattr("dashboards.get_hand_details", fake)
+    monkeypatch.setattr("dashboards.gto_hero_id", lambda: 99)
+    monkeypatch.setattr("dashboards.gto_engine", lambda: None)
+    return calls
+
+
+def test_detail_has_both_sides_with_the_same_shape(sides, details):
+    sides["user"]["X-B"] = frame(["Fs", "Cl"], hand_type="Top pair Gk")
+    sides["gto"]["X-B"] = frame(["Fs", "Fs", "Cl"], hand_type="Overpair")
+    out = dashboards.line_detail("2bp_ip_pfr", "vs_probe_turn")
+    assert out["line"]["line"] == "X-B"
+    for name, total in [("user", 2), ("gto", 3)]:
+        detail = out[name]
+        assert detail["hands_total"] == total
+        assert set(detail) == {"hands_total", "distribution", "split", "hand_split", "draw_split", "hands"}
+        assert detail["split"] is not None
+    assert [r["hand_type"] for r in out["gto"]["hand_split"]] == ["Overpair"]
+
+
+def test_gto_hands_capped_at_200_with_total(sides, details):
+    sides["gto"]["X"] = frame(["X"] * 250)
+    out = dashboards.line_detail("2bp_ip_pfr", "cbet_flop")
+    assert out["gto"]["hands_total"] == 250 and len(out["gto"]["hands"]) == 200
+    assert details[-1]["id_player"] == 99
+
+
+def test_hand_pick_filters_both_sides(sides, details):
+    sides["user"]["X"] = pd.concat([frame(["Bs"], hand_type="Overpair"), frame(["X"])])
+    sides["gto"]["X"] = pd.concat([frame(["X"], hand_type="Overpair"), frame(["Bs"])])
+    out = dashboards.line_detail("2bp_ip_pfr", "cbet_flop", hand_types=["Overpair"])
+    assert out["user"]["hands_total"] == 1 and out["gto"]["hands_total"] == 1
+    assert pct(out["user"], "B") == 100.0 and pct(out["gto"], "B") == 0.0
+    assert {r["hand_type"] for r in out["user"]["hand_split"]} == {"Overpair", "No made hand"}
+
+
+def test_unknown_line_id_errors(sides, details):
+    with pytest.raises(SpotInputError):
+        dashboards.line_detail("2bp_ip_pfr", "nope")

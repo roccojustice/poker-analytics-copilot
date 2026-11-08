@@ -1,11 +1,15 @@
 """GTO dashboards: per spot, the user's frequencies next to the GTO bot DB's, line by line."""
 from board_types import FLOP_TYPES, RIVER_LABELS, TURN_LABELS
-from db import run_spot_query
+from db import get_hand_details, gto_engine, gto_hero_id, run_spot_query
 from gto_cache import line_matches
 from line_parser import SpotInputError, parse_line
 from sizing import SIZE_BUCKETS
 from spot_sql import build_spot_query, splits_by_size
-from spotlight import _checked, _distribution, classify, filter_types
+from draws import DRAW_TYPES
+from hand_strength import HAND_TYPES
+from spotlight import _checked, _distribution, _draw_split, _hand_split, _split, classify, filter_types
+
+GTO_HANDS_SHOWN = 200
 
 DASHBOARDS = {
     "2bp_ip_pfr": {
@@ -104,3 +108,59 @@ def dashboard_rows(dashboard_id, flop_types=(), turn_types=(), river_types=(), f
             row["gap"] = gap(row["user"], row["gto"])
         rows.append(row)
     return rows
+
+
+def line_entry(board, line_id):
+    entry = next((e for e in board["lines"] if e["id"] == line_id), None)
+    if entry is None:
+        raise SpotInputError(f"Unknown line: {line_id}")
+    return entry
+
+
+def hand_rows(matches, full, fetch):
+    """Hand details merged with the label and the type columns; NaN -> None for JSON."""
+    if matches.empty:
+        return []
+    extra = matches.assign(measured_action=full).astype(object)
+    hands = fetch(list(matches["id_hand"])).merge(extra, on="id_hand", how="left")
+    return hands.astype(object).where(hands.notna(), None).to_dict(orient="records")
+
+
+def detail(matches, spec, hand_types, draw_types, fetch, shown=None):
+    """One side of a line's detail; each type table counts over the other table's picks only."""
+    prefix = spec.decision.hero
+    by_draw = filter_types(matches, draw_types=draw_types)
+    by_hand = filter_types(matches, hand_types=hand_types)
+    picked = filter_types(by_draw, hand_types=hand_types)
+    full, unsized = labels(picked, spec)
+    shown_hands = picked.sort_values("id_hand").head(shown) if shown else picked
+    return {
+        "hands_total": len(picked),
+        "distribution": _distribution(unsized, spec.measured, prefix),
+        "split": _split(full, prefix) if splits_by_size(spec) else None,
+        "hand_split": _hand_split(by_draw["hand_type"].astype(object), labels(by_draw, spec)[1], spec, prefix),
+        "draw_split": _draw_split(by_hand["draw_type"].astype(object), labels(by_hand, spec)[1], spec, prefix),
+        "hands": hand_rows(shown_hands, labels(shown_hands, spec)[0], fetch),
+    }
+
+
+def line_detail(dashboard_id, line_id, flop_types=(), turn_types=(), river_types=(), faced_sizes=(), hand_types=(),
+                draw_types=(), date_from=None, date_to=None):
+    board = dashboard(dashboard_id)
+    entry = line_entry(board, line_id)
+    filters = check_filters(flop_types, turn_types, river_types, faced_sizes)
+    hand_types = _checked(hand_types, HAND_TYPES, "hand type")
+    draw_types = _checked(draw_types, DRAW_TYPES, "draw type")
+    spec = parse_line(entry["line"], board["role"], board["position"])
+    reason = blank_reason(spec.decision.street, turn_types, river_types)
+    if reason:
+        raise SpotInputError(reason)
+    user = side_matches(user_matches(board, entry["line"], date_from, date_to), spec, filters, faced_sizes)
+    gto = side_matches(gto_matches(board, entry["line"]), spec, filters, faced_sizes)
+    return {
+        "line": entry,
+        "user": detail(user, spec, hand_types, draw_types, get_hand_details),
+        "gto": detail(gto, spec, hand_types, draw_types,
+                      lambda ids: get_hand_details(ids, id_player=gto_hero_id(), engine=gto_engine()),
+                      shown=GTO_HANDS_SHOWN),
+    }
