@@ -114,8 +114,8 @@ and its distribution:
 | M3 | Minimal usable UI (NL text query) | ✅ Session 52. Failed in real use (Session 58); superseded by M5 |
 | M4 | **Spotlight core:** `line_parser.py` + `spot_sql.py` + `POST /spot` | ✅ Session 58. Oracle 9/9 exact (hand sets + distributions), no exceptions |
 | M5 | **Spotlight UI:** bar, Line input, Formations, result view | ✅ Session 59. 4 PT4 export diffs 0/0; the three failed questions answered in the UI |
-| M6 | v1 study session | Run 1 (Session 60): fell back to PT4 for missing breakdown filters. Re-run after M7 |
-| M7 | **Breakdown filters**: sizing, board/runout, hand strength, BB result | Each validated against PT4 by exact set membership; M6 re-run passes |
+| M6 | v1 study session | ✅ Session 72. Run 3: no in-scope fallback to PT4 (only the deferred replayer). **v1 done** |
+| M7 | **Breakdown filters**: sizing, board/runout, hand strength, BB result | ✅ Session 72. Validated against PT4 where PT4 has an equivalent; M6 run 3 passed |
 | M8 | Dashboards: one per line, 20 total. Each design defined by the user when reached | Each line has its dashboard |
 | M9 | Packaging: one command to launch, no dev shell | Runs as an app |
 
