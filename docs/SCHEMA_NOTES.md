@@ -286,3 +286,12 @@ Base: `3bp_ip_pfc_faced_cbet_flop` + `faced_cbet_turn` (`flg_t_cbet_def_opp = tr
   every PT4-only hand is a flop all-in with no turn action (blank `T Act`); the PT4 filter keeps
   them, Spotlight rightly doesn't, since nobody bet the turn. Without them both are 0 / 0.
 - `XRs` reads Hero's bet when he was raised: `street_bet_sql` matches PT4's filter on those hands.
+
+## GTO bot DB (Session 72)
+
+- `PT4_2026_11_07_184219`: 1,500,000 hands, PokerStars format, 6-max (`cnt_players = 6`, normal
+  6-max position codes), 100.5 BB stacks. `Player1/2/3/5` never VPIP. Bot `Hero` is always BTN
+  (`cnt_p_raise = 1`), bot `Villain` always BB (calls; no 3-bets); `cnt_players_f = 2` in every hand.
+- `Hero` bot's `holecard_1/2` are known in every hand; `Villain` bot's only at showdown (826,858 / 1.5M).
+- `cash_hand_histories.history` holds the full raw hand-history text for every hand (also in the user's
+  DB: 341,909 / 341,909).
