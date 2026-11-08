@@ -295,3 +295,6 @@ Base: `3bp_ip_pfc_faced_cbet_flop` + `faced_cbet_turn` (`flg_t_cbet_def_opp = tr
 - `Hero` bot's `holecard_1/2` are known in every hand; `Villain` bot's only at showdown (826,858 / 1.5M).
 - `cash_hand_histories.history` holds the full raw hand-history text for every hand (also in the user's
   DB: 341,909 / 341,909).
+- **PT4 diff on the GTO DB (Session 73):** `2bp ip pfr X --formation "BB vs BTN" --label B` (Hero bot
+  cbets a checked flop), run with `POSTGRES_DB` / `HERO_NAME` pointed at the GTO DB: 761,697 = 761,697,
+  0 / 0. The GTO side's Spotlight SQL matches PT4 beyond preflop.
