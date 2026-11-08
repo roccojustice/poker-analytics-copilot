@@ -316,3 +316,39 @@ def test_spot_unknown_draw_type_is_400():
     response = client.post("/spot", json=SPOT_BODY | {"draw_types": ["Monster"]})
     assert response.status_code == 400
     assert response.json() == {"error": "Unknown draw type: Monster"}
+
+
+def test_dashboards_config_lists_the_dashboards_and_filters():
+    body = client.get("/dashboards/config").json()
+    assert body["dashboards"][0]["id"] == "2bp_ip_pfr"
+    assert body["dashboards"][0]["lines"][0]["line"] == "X"
+    assert body["sizes"] == ["S", "M", "L", "O"] and "Low" in body["flop_types"]
+
+
+def test_dashboard_returns_rows(monkeypatch):
+    seen = {}
+    monkeypatch.setattr("api.dashboard_rows", lambda dashboard_id, **kw: seen.update(id=dashboard_id, **kw) or ["r"])
+    response = client.post("/dashboard", json={"dashboard": "2bp_ip_pfr", "flop_types": ["Low"], "faced_sizes": ["S"]})
+    assert response.status_code == 200 and response.json() == {"rows": ["r"]}
+    assert seen["id"] == "2bp_ip_pfr" and seen["flop_types"] == ["Low"] and seen["faced_sizes"] == ["S"]
+
+
+def test_dashboard_line_returns_the_detail(monkeypatch):
+    monkeypatch.setattr("api.line_detail", lambda dashboard_id, line_id, **kw: {"line": line_id, "kw": sorted(kw)})
+    response = client.post("/dashboard/line", json={"dashboard": "2bp_ip_pfr", "line_id": "cbet_flop",
+                                                     "hand_types": ["Overpair"]})
+    assert response.status_code == 200 and response.json()["line"] == "cbet_flop"
+    assert "hand_types" in response.json()["kw"]
+
+
+def test_dashboard_rejects_unknown_fields():
+    assert client.post("/dashboard", json={"dashboard": "2bp_ip_pfr", "nope": 1}).status_code == 422
+
+
+def test_dashboard_input_error_is_a_400(monkeypatch):
+    def boom(dashboard_id, **kw):
+        raise SpotInputError("Unknown dashboard: x")
+
+    monkeypatch.setattr("api.dashboard_rows", boom)
+    response = client.post("/dashboard", json={"dashboard": "x"})
+    assert response.status_code == 400 and response.json() == {"error": "Unknown dashboard: x"}

@@ -8,6 +8,9 @@ from llm_parser import parse_user_query
 from query_router import run_query, is_filter_query, has_distribution
 from line_parser import SpotInputError
 from spotlight import run_spot
+from board_types import FLOP_TYPES, RIVER_LABELS, TURN_LABELS
+from dashboards import DASHBOARDS, dashboard_rows, line_detail
+from sizing import SIZE_BUCKETS
 
 app = FastAPI()
 
@@ -89,6 +92,52 @@ def spot(request: SpotRequest):
         "hand_split": result["hand_split"],
         "draw_split": result["draw_split"],
     }
+
+
+class DashboardRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    dashboard: str
+    flop_types: list[str] = []
+    turn_types: list[str] = []
+    river_types: list[str] = []
+    faced_sizes: list[str] = []
+    date_from: date | None = None
+    date_to: date | None = None
+
+
+class LineDetailRequest(DashboardRequest):
+    line_id: str
+    hand_types: list[str] = []
+    draw_types: list[str] = []
+
+
+@app.get("/dashboards/config")
+def dashboards_config():
+    return {
+        "dashboards": [{"id": key, "name": board["name"], "formations": board["formations"], "lines": board["lines"]}
+                       for key, board in DASHBOARDS.items()],
+        "flop_types": list(FLOP_TYPES), "turn_labels": list(TURN_LABELS), "river_labels": list(RIVER_LABELS),
+        "sizes": list(SIZE_BUCKETS),
+    }
+
+
+@app.post("/dashboard")
+def dashboard(request: DashboardRequest):
+    fields = request.model_dump()
+    try:
+        return {"rows": dashboard_rows(fields.pop("dashboard"), **fields)}
+    except SpotInputError as exc:
+        return JSONResponse(status_code=400, content={"error": str(exc)})
+
+
+@app.post("/dashboard/line")
+def dashboard_line(request: LineDetailRequest):
+    fields = request.model_dump()
+    try:
+        return line_detail(fields.pop("dashboard"), fields.pop("line_id"), **fields)
+    except SpotInputError as exc:
+        return JSONResponse(status_code=400, content={"error": str(exc)})
 
 
 app.mount("/", StaticFiles(directory="static", html=True), name="static")
