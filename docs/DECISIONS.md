@@ -456,3 +456,15 @@ dropped in favour of crossed sets: actions, hand types and draw types are three 
 OR within, AND across. A type cell adds its type and its action to their sets. The table picks
 cover what the Hand / Draw dropdowns did, so the dropdowns were removed; `/spot` keeps
 `hand_types` / `draw_types`. User's call.
+
+## 2026-11-07 (Session 72) — GTO dashboards: same pipeline on a second DB, the GTO side precomputed
+
+The user built a PT4 database of bot-vs-bot GTO hands (1.5M, BTN open vs BB call, 6-max seats) to
+compare frequencies line by line. Both sides run the validated Spotlight SQL and the same Python
+classification, so no filter has a second implementation. Measured on the cbet line: 1,463,558 GTO
+hands, 21 s of SQL and ~5 min of classification, so the GTO side is computed once per line into a
+local `cache/` (never written into PT4), keyed by the DB's hand count, and held in memory; the user
+side stays live (10-minute in-process reuse, ~1 s per refresh). The user side is fixed to `BB vs
+BTN` because the bots play only that formation. Spots played by the GTO `Villain` bot (`2bp oop
+pfc`) are out: its cards are known only at showdown (55%). Spec:
+`docs/superpowers/specs/2026-11-07-gto-dashboard-design.md`.
