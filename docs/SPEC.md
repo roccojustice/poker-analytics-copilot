@@ -116,7 +116,7 @@ and its distribution:
 | M5 | **Spotlight UI:** bar, Line input, Formations, result view | ✅ Session 59. 4 PT4 export diffs 0/0; the three failed questions answered in the UI |
 | M6 | v1 study session | ✅ Session 72. Run 3: no in-scope fallback to PT4 (only the deferred replayer). **v1 done** |
 | M7 | **Breakdown filters**: sizing, board/runout, hand strength, BB result | ✅ Session 72. Validated against PT4 where PT4 has an equivalent; M6 run 3 passed |
-| M8 | Dashboards: one per line, 20 total. Each design defined by the user when reached | Each line has its dashboard |
+| M8 | **GTO dashboards:** one per spot, the user's frequencies vs a GTO bot DB, line by line, with the breakdown filters. Each spot's line list defined by the user. First: `2bp ip pfr` (`docs/superpowers/specs/2026-11-07-gto-dashboard-design.md`) | Each spot the user studies has its dashboard |
 | M9 | Packaging: one command to launch, no dev shell | Runs as an app |
 
 ## Conserved from earlier work
