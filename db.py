@@ -6,19 +6,47 @@ from sqlalchemy import create_engine
 from poker_cards import decode_card_id
 
 load_dotenv()
-engine = create_engine(f'postgresql+psycopg2://{os.getenv("POSTGRES_USER")}:{os.getenv("POSTGRES_PASSWORD")}@{os.getenv("POSTGRES_HOST")}:{os.getenv("POSTGRES_PORT")}/{os.getenv("POSTGRES_DB")}')
+def _engine_for(database):
+    return create_engine(f'postgresql+psycopg2://{os.getenv("POSTGRES_USER")}:{os.getenv("POSTGRES_PASSWORD")}@{os.getenv("POSTGRES_HOST")}:{os.getenv("POSTGRES_PORT")}/{database}')
+
+
+engine = _engine_for(os.getenv("POSTGRES_DB"))
+user_engine = engine  # the default when a query function gets engine=None
+
+
+@cache
+def gto_engine():
+    """The GTO bot database's engine, same server and credentials as the user's."""
+    database = os.getenv("GTO_POSTGRES_DB")
+    if not database:
+        raise RuntimeError("GTO_POSTGRES_DB is not set in .env")
+    return _engine_for(database)
+
+
+def player_id(db_engine, name):
+    """A player's id_player by name: PT4 renumbers players on every rebuild."""
+    df = pd.read_sql("SELECT id_player FROM player WHERE player_name = %(name)s",
+                     db_engine, params={"name": name})
+    if len(df) != 1:
+        raise RuntimeError(f"Player {name!r} matches {len(df)} players, expected 1")
+    return int(df["id_player"].iloc[0])
 
 @cache
 def hero_id():
-    """Hero's id_player, looked up by HERO_NAME: PT4 renumbers players on every rebuild."""
+    """Hero's id_player, looked up by HERO_NAME."""
     name = os.getenv("HERO_NAME")
     if not name:
         raise RuntimeError("HERO_NAME is not set in .env")
-    df = pd.read_sql("SELECT id_player FROM player WHERE player_name = %(hero_name)s",
-                     engine, params={"hero_name": name})
-    if len(df) != 1:
-        raise RuntimeError(f"HERO_NAME {name!r} matches {len(df)} players, expected 1")
-    return int(df["id_player"].iloc[0])
+    return player_id(engine, name)
+
+
+@cache
+def gto_hero_id():
+    """The GTO bot's id_player in the GTO database, looked up by GTO_HERO_NAME."""
+    name = os.getenv("GTO_HERO_NAME")
+    if not name:
+        raise RuntimeError("GTO_HERO_NAME is not set in .env")
+    return player_id(gto_engine(), name)
 
 def get_hero_hands():
 
@@ -96,7 +124,7 @@ def run_distribution_query(where_clause, params, conditions, id_player=None, sin
     df = pd.read_sql(query, engine, params=params)
     return df
 
-def run_spot_query(where_clause, params, measured_sql, id_player=None):
+def run_spot_query(where_clause, params, measured_sql, id_player=None, engine=None):
 
     query = f"""
         SELECT chps.id_hand, chs.card_1, chs.card_2, chs.card_3, chs.card_4, chs.card_5,
@@ -116,9 +144,9 @@ def run_spot_query(where_clause, params, measured_sql, id_player=None):
         ORDER BY chps.id_hand"""
 
     params = params | {"id_player": hero_id() if id_player is None else id_player}
-    return pd.read_sql(query, engine, params=params)
+    return pd.read_sql(query, user_engine if engine is None else engine, params=params)
 
-def get_hand_details(id_hands, id_player=None):
+def get_hand_details(id_hands, id_player=None, engine=None):
 
     query = """
         SELECT
@@ -173,7 +201,7 @@ def get_hand_details(id_hands, id_player=None):
         ORDER BY chps.date_played DESC"""
 
     params = {"id_hands": list(id_hands), "id_player": hero_id() if id_player is None else id_player}
-    df = pd.read_sql(query, engine, params=params)
+    df = pd.read_sql(query, user_engine if engine is None else engine, params=params)
 
     def decode(card_id):
         if pd.isna(card_id) or card_id == 0:

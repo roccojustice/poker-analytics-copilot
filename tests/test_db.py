@@ -217,8 +217,8 @@ def test_hero_id_resolves_name_with_bound_param(monkeypatch, fresh_hero):
 
     monkeypatch.setattr("db.pd.read_sql", fake)
     assert fresh_hero.hero_id() == 148938
-    assert "%(hero_name)s" in seen["query"] and "RoccoJustice" not in seen["query"]
-    assert seen["params"] == {"hero_name": "RoccoJustice"}
+    assert "%(name)s" in seen["query"] and "RoccoJustice" not in seen["query"]
+    assert seen["params"] == {"name": "RoccoJustice"}
 
 
 def test_hero_id_is_cached(monkeypatch, fresh_hero):
@@ -261,3 +261,49 @@ def test_queries_default_to_hero_id(monkeypatch):
     with pytest.raises(LookupError):
         db.get_hand_details([1])
     assert seen["id_player"] == 77
+
+
+def test_run_spot_query_uses_the_given_engine_and_player(monkeypatch):
+    seen = {}
+    monkeypatch.setattr("db.pd.read_sql", lambda q, e, params=None: seen.update(engine=e, params=params))
+    sentinel = object()
+    run_spot_query(" AND true", {}, "'X'", id_player=7, engine=sentinel)
+    assert seen["engine"] is sentinel and seen["params"]["id_player"] == 7
+
+
+def test_get_hand_details_uses_the_given_engine(monkeypatch):
+    seen = {}
+
+    def fake(q, e, params=None):
+        seen.update(engine=e, params=params)
+        return pd.DataFrame([HAND_ROW])
+
+    monkeypatch.setattr("db.pd.read_sql", fake)
+    sentinel = object()
+    get_hand_details([1], id_player=7, engine=sentinel)
+    assert seen["engine"] is sentinel and seen["params"]["id_player"] == 7
+
+
+@pytest.mark.parametrize("ids", [[], [1, 2]])
+def test_player_id_fails_loud_unless_one_row(monkeypatch, ids):
+    import db
+    monkeypatch.setattr("db.pd.read_sql", lambda q, e, params=None: pd.DataFrame({"id_player": ids}))
+    with pytest.raises(RuntimeError, match="Hero"):
+        db.player_id(object(), "Hero")
+
+
+def test_player_id_binds_the_name(monkeypatch):
+    import db
+    seen = {}
+    monkeypatch.setattr("db.pd.read_sql",
+                        lambda q, e, params=None: seen.update(q=q, params=params) or pd.DataFrame({"id_player": [3]}))
+    assert db.player_id(object(), "Hero") == 3
+    assert "%(name)s" in seen["q"] and seen["params"] == {"name": "Hero"}
+
+
+def test_gto_engine_requires_env(monkeypatch):
+    import db
+    db.gto_engine.cache_clear()
+    monkeypatch.delenv("GTO_POSTGRES_DB", raising=False)
+    with pytest.raises(RuntimeError, match="GTO_POSTGRES_DB"):
+        db.gto_engine()
