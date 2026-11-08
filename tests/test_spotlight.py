@@ -554,3 +554,10 @@ def test_filter_types_turn_labels_overlap():
                           "hand_type": ["Air"], "draw_type": ["No draw"]})
     assert len(spotlight.filter_types(frame, turn_types=["BP high"])) == 1
     assert len(spotlight.filter_types(frame, turn_types=["Brick"])) == 0
+
+
+def test_filter_types_works_on_category_columns():
+    frame = pd.DataFrame({"id_hand": [1, 2], "flop_type": ["x", "x"], "turn_type": ["FC, BP high", "Brick"],
+                          "river_type": [None, None], "hand_type": ["Air", "Air"], "draw_type": ["No draw"] * 2})
+    out = spotlight.filter_types(frame.astype("category"), turn_types=["BP high"])
+    assert list(out["id_hand"].astype(int)) == [1]

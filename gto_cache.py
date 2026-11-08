@@ -12,6 +12,7 @@ from spotlight import classify
 
 CACHE_DIR = Path("cache")
 CHUNK = 50_000
+_loaded = {}  # path -> frame, so a request never re-reads a pickle
 
 
 def cache_key():
@@ -41,8 +42,11 @@ def _classify(matches, street):
 def line_matches(pot, position, role, line, formations):
     """The GTO bot's hands for a Line: id_hand, measured_action and the classification columns."""
     path = CACHE_DIR / cache_key() / f"{_slug(pot, position, role, line, formations)}.pkl"
+    if path in _loaded:
+        return _loaded[path]
     if path.exists():
-        return pd.read_pickle(path)
+        _loaded[path] = pd.read_pickle(path)
+        return _loaded[path]
     spec = parse_line(line, role, position)
     where, params, measured_sql = build_spot_query(pot, position, role, spec, formations)
     matches = run_spot_query(where, params, measured_sql, id_player=gto_hero_id(), engine=gto_engine())
@@ -50,4 +54,23 @@ def line_matches(pot, position, role, line, formations):
     matches = matches.astype({c: "category" for c in matches.columns if matches[c].dtype == object})
     path.parent.mkdir(parents=True, exist_ok=True)
     matches.to_pickle(path)
+    _loaded[path] = matches
     return matches
+
+
+def build():
+    """Builds every dashboard line's cache, printing hand counts and times."""
+    import time
+    from dashboards import DASHBOARDS
+    for board in DASHBOARDS.values():
+        for entry in board["lines"]:
+            start = time.time()
+            matches = line_matches(board["pot"], board["position"], board["role"], entry["line"], board["formations"])
+            print(f"{entry['name']:<20} {len(matches):>10,} hands  {time.time() - start:6.1f} s", flush=True)
+
+
+if __name__ == "__main__":
+    import sys
+    if sys.argv[1:] != ["build"]:
+        sys.exit("usage: python gto_cache.py build")
+    build()

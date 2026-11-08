@@ -126,7 +126,8 @@ def _labels_column(matches, cards, labeler):
 
 
 def _keep(column, selected):
-    return column.map(lambda labels: bool(set(labels.split(", ")) & set(selected)))
+    hits = [labels for labels in column.dropna().unique() if set(labels.split(", ")) & set(selected)]
+    return column.isin(hits)  # per distinct value, not per hand: works on category columns too
 
 
 BOARD_SIZE = {"f": 3, "t": 4, "r": 5}

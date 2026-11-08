@@ -60,3 +60,14 @@ def test_chunked_classification_equals_single_pass(fake_db, monkeypatch):
     monkeypatch.setattr("gto_cache.CHUNK", 1)
     chunked = gto_cache._classify(rows, "f")
     pd.testing.assert_frame_equal(chunked, spotlight.classify(rows, "f"))
+
+
+def test_loaded_lines_stay_in_memory(fake_db, monkeypatch):
+    gto_cache.line_matches("2bp", "ip", "pfr", "X", ["BB vs BTN"])
+    gto_cache._loaded.clear()
+    reads = []
+    real = pd.read_pickle
+    monkeypatch.setattr("gto_cache.pd.read_pickle", lambda path: reads.append(path) or real(path))
+    gto_cache.line_matches("2bp", "ip", "pfr", "X", ["BB vs BTN"])
+    gto_cache.line_matches("2bp", "ip", "pfr", "X", ["BB vs BTN"])
+    assert len(reads) == 1
