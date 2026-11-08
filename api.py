@@ -111,6 +111,7 @@ class LineDetailRequest(DashboardRequest):
     line_id: str
     hand_types: list[str] = []
     draw_types: list[str] = []
+    actions: list[str] = []
 
 
 @app.get("/dashboards/config")

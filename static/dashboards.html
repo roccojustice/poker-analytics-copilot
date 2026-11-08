@@ -77,7 +77,8 @@
     const dashboardEl = document.getElementById("dashboard");
     let CONFIG = null;
     let view = { line: null };  // null = level 1, else the line id shown in level 2
-    let picks = { hand: new Set(), draw: new Set() };
+    const noPicks = () => ({ action: new Set(), hand: new Set(), draw: new Set() });
+    let picks = noPicks();
     let latestRequest = 0;
 
     const escapeHtml = str => { const div = document.createElement("div"); div.textContent = str; return div.innerHTML; };
@@ -224,7 +225,7 @@
         + section("Your bets", BET_COLUMNS, bets) + section("Facing a bet", RESPONSE_COLUMNS, responses);
       outputEl.querySelectorAll("tr.line-row").forEach(tr => tr.addEventListener("click", () => {
         view.line = tr.dataset.line;
-        picks = { hand: new Set(), draw: new Set() };
+        picks = noPicks();
         loadDetail();
       }));
     }
@@ -233,7 +234,7 @@
 
     async function loadDetail() {
       const hands = [...picks.hand].flatMap(name => CONFIG.hand_groups[name] || [name]);  // a group is sent as its leaves
-      const data = await post("/dashboard/line", { ...filters(), line_id: view.line, hand_types: [...new Set(hands)], draw_types: [...picks.draw] });
+      const data = await post("/dashboard/line", { ...filters(), line_id: view.line, hand_types: [...new Set(hands)], draw_types: [...picks.draw], actions: [...picks.action] });
       if (data) renderDetail(data);
     }
 
@@ -242,8 +243,9 @@
       let html = '<table class="dash"><thead><tr><th>Action</th><th class="cell">you · GTO</th><th class="num">Hands (you · GTO)</th></tr></thead><tbody>';
       user.distribution.forEach(r => {
         const g = theirs[r.label];
-        const gap = user.hands_total && gto.hands_total ? Math.round((r.pct - g.pct) * 10) / 10 : null;
-        html += `<tr class="${r.parent ? "sub" : ""}"><td>${escapeHtml(r.name)}</td>${compareCell(r.pct, g.pct, gap)}<td class="num">${r.hands} · ${g.hands.toLocaleString()}</td></tr>`;
+        const gap = r.pct != null && g.pct != null ? Math.round((r.pct - g.pct) * 10) / 10 : null;  // pct None = no hands
+        const selected = picks.action.has(r.label) || (r.parent && picks.action.has(r.parent));
+        html += `<tr class="pickable ${r.parent ? "sub" : ""} ${selected ? "selected" : ""}" data-dim="action" data-name="${escapeHtml(r.label)}"><td>${escapeHtml(r.name)}</td>${compareCell(r.pct, g.pct, gap)}<td class="num">${r.hands} · ${g.hands.toLocaleString()}</td></tr>`;
       });
       return html + "</tbody></table>";
     }
@@ -269,7 +271,10 @@
       const mine = Object.fromEntries(user.map(r => [r[key], r]));
       const theirs = Object.fromEntries(gto.map(r => [r[key], r]));
       const names = [...new Set([...gto.map(r => r[key]), ...user.map(r => r[key])])];
-      const actions = ((gto[0] || user[0] || { cells: [] }).cells).filter(c => !c.parent);
+      const cells = (gto[0] || user[0] || { cells: [] }).cells;
+      // with action picks, only the picked actions' columns (a parent pick brings its sizes)
+      const actions = picks.action.size ? cells.filter(c => picks.action.has(c.label) || picks.action.has(c.parent))
+                                        : cells.filter(c => !c.parent);
       let html = `<h3>${title}</h3><table class="dash"><thead><tr><th>${dim === "hand" ? "Hand" : "Draw"}</th><th class="num">Share (you · GTO)</th>`;
       actions.forEach(a => html += `<th class="cell">${escapeHtml(a.name)}</th>`);
       html += "</tr></thead><tbody>";
@@ -291,10 +296,11 @@
 
     function renderDetail(data) {
       const { line, user, gto } = data;
-      const pickList = [...picks.hand, ...picks.draw];
+      const actionName = Object.fromEntries(user.distribution.map(r => [r.label, r.name]));
+      const pickList = [...[...picks.action].map(label => actionName[label] || label), ...picks.hand, ...picks.draw];
       let html = '<button id="back">← Back</button>';
       html += `<div class="filter-line">${escapeHtml(line.name)} (${escapeHtml(line.line)}) · ${escapeHtml(filterLine())}</div>`;
-      html += `<div id="picks">${pickList.length ? "Picks: " + pickList.map(escapeHtml).join(", ") + ` · ${user.hands_total} yours · ${gto.hands_total.toLocaleString()} GTO <button id="clear">Clear</button>` : '<span class="legend">Click a hand or draw row to filter both sides.</span>'}</div>`;
+      html += `<div id="picks">${pickList.length ? "Picks: " + pickList.map(escapeHtml).join(", ") + ` · ${user.hands_total} yours · ${gto.hands_total.toLocaleString()} GTO <button id="clear">Clear</button>` : '<span class="legend">Click an action, hand or draw row to filter both sides.</span>'}</div>`;
       html += '<div class="cols"><div>' + distributionTable(user, gto) + splitTable(user, gto) + "</div>";
       html += "<div>" + typeTable("hand", "hand_type", "By hand", user.hand_split, gto.hand_split) + "</div>";
       html += "<div>" + typeTable("draw", "draw_type", "By draw", user.draw_split, gto.draw_split) + "</div></div>";
@@ -303,7 +309,7 @@
       outputEl.innerHTML = html;
       document.getElementById("back").addEventListener("click", () => { view.line = null; loadRows(); });
       const clear = document.getElementById("clear");
-      if (clear) clear.addEventListener("click", () => { picks = { hand: new Set(), draw: new Set() }; loadDetail(); });
+      if (clear) clear.addEventListener("click", () => { picks = noPicks(); loadDetail(); });
       outputEl.querySelectorAll("tr.pickable").forEach(tr => tr.addEventListener("click", () => {
         const set = picks[tr.dataset.dim];
         const name = tr.dataset.name;

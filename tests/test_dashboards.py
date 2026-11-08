@@ -181,3 +181,43 @@ def test_a_side_with_no_hands_has_no_pct(sides, details):
     assert all(r["pct"] is None for r in out["user"]["distribution"])
     large = next(r for r in out["gto"]["split"] if r["size"] == "L")  # GTO never faced a large bet here
     assert all(cell["pct"] is None for cell in large["cells"])
+
+
+def test_action_pick_filters_hands_and_type_tables_not_the_action_table(sides, details):
+    sides["user"]["X"] = pd.concat([frame(["Bs"], hand_type="Overpair"), frame(["Bl"]), frame(["X"])])
+    sides["gto"]["X"] = pd.concat([frame(["X"], hand_type="Overpair"), frame(["Bs", "Bs"])])
+    out = dashboards.line_detail("2bp_ip_pfr", "cbet_flop", actions=["B"])
+    assert out["user"]["hands_total"] == 2 and out["gto"]["hands_total"] == 2
+    assert {h["measured_action"] for h in out["user"]["hands"]} == {"Bs", "Bl"}
+    assert pct(out["user"], "X") == 33.3  # the action table ignores its own picks
+    assert {r["hand_type"]: r["hands"] for r in out["user"]["hand_split"]} == {"Overpair": 1, "No made hand": 1}
+    assert [r["draw_type"] for r in out["gto"]["draw_split"]] == ["No draw"]
+
+
+def test_size_pick_keeps_that_size_only_and_picks_or_together(sides, details):
+    sides["user"]["X"] = frame(["Bs", "Bl", "Bo", "X"])
+    sides["gto"]["X"] = frame(["Bs"])
+    assert dashboards.line_detail("2bp_ip_pfr", "cbet_flop", actions=["Bl"])["user"]["hands_total"] == 1
+    out = dashboards.line_detail("2bp_ip_pfr", "cbet_flop", actions=["Bl", "X"])
+    assert {h["measured_action"] for h in out["user"]["hands"]} == {"Bl", "X"}
+
+
+def test_action_pick_with_a_hand_pick_is_and(sides, details):
+    sides["user"]["X"] = pd.concat([frame(["Bs"], hand_type="Overpair"), frame(["X"], hand_type="Overpair"),
+                                    frame(["Bs"])])
+    sides["gto"]["X"] = frame(["Bs"])
+    out = dashboards.line_detail("2bp_ip_pfr", "cbet_flop", actions=["B"], hand_types=["Overpair"])
+    assert out["user"]["hands_total"] == 1
+    assert pct(out["user"], "B") == 50.0  # Overpair hands only, both actions
+
+
+def test_response_pick_matches_every_faced_size(sides, details):
+    sides["user"]["X-B"] = frame(["Fs", "Cl", "Cs"])
+    sides["gto"]["X-B"] = frame(["Fs"])
+    out = dashboards.line_detail("2bp_ip_pfr", "vs_probe_turn", actions=["C"])
+    assert out["user"]["hands_total"] == 2
+
+
+def test_unknown_action_pick_errors(sides, details):
+    with pytest.raises(SpotInputError):
+        dashboards.line_detail("2bp_ip_pfr", "cbet_flop", actions=["Q"])
