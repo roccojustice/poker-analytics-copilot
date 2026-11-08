@@ -7,5 +7,6 @@ __pycache__/
 venv/
 playground.ipynb
 learning_notes.ipynb
-scratch.py.superpowers/
+scratch.py
+.superpowers/
 cache/
