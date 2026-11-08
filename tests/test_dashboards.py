@@ -171,3 +171,13 @@ def test_user_side_is_reused_for_ten_minutes(monkeypatch):
 def frame_cards():
     from test_spotlight import fake_matches
     return fake_matches([(1, "Bs")])
+
+
+def test_a_side_with_no_hands_has_no_pct(sides, details):
+    sides["gto"]["X-B"] = frame(["Fs", "Cs"])
+    vs = row(dashboards.dashboard_rows("2bp_ip_pfr"), "vs_probe_turn")
+    assert all(r["pct"] is None for r in vs["user"]["distribution"])
+    out = dashboards.line_detail("2bp_ip_pfr", "vs_probe_turn")
+    assert all(r["pct"] is None for r in out["user"]["distribution"])
+    large = next(r for r in out["gto"]["split"] if r["size"] == "L")  # GTO never faced a large bet here
+    assert all(cell["pct"] is None for cell in large["cells"])

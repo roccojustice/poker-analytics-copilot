@@ -79,7 +79,6 @@
     let view = { line: null };  // null = level 1, else the line id shown in level 2
     let picks = { hand: new Set(), draw: new Set() };
     let latestRequest = 0;
-    let groupLeaves = {};  // hand group -> its leaf types, filled when the hand table renders
 
     const escapeHtml = str => { const div = document.createElement("div"); div.textContent = str; return div.innerHTML; };
 
@@ -155,15 +154,22 @@
         const data = await response.json();
         if (request !== latestRequest) return null;
         outputEl.style.opacity = 1;
-        if (!response.ok) { outputEl.innerHTML = `<div class="error">${escapeHtml(data.error || "Request failed")}</div>`; return null; }
+        if (!response.ok) { showError(data.error || "Request failed"); return null; }
         return data;
       } catch (err) {
-        if (request === latestRequest) { outputEl.style.opacity = 1; outputEl.innerHTML = `<div class="error">${escapeHtml(err.message)}</div>`; }
+        if (request === latestRequest) { outputEl.style.opacity = 1; showError(err.message); }
         return null;
       }
     }
 
     function refresh() { view.line ? loadDetail() : loadRows(); }
+
+    // An error inside a line's detail keeps a way back to the rows
+    function showError(message) {
+      outputEl.innerHTML = (view.line ? '<button id="back">← Back</button>' : "") + `<div class="error">${escapeHtml(message)}</div>`;
+      const back = document.getElementById("back");
+      if (back) back.addEventListener("click", () => { view.line = null; loadRows(); });
+    }
 
     // --- Cells ---
 
@@ -195,7 +201,7 @@
         columns.forEach(c => html += `<th class="cell">${c}</th>`);
         html += "</tr></thead><tbody>";
         list.forEach(row => {
-          html += `<tr class="line-row" data-line="${row.id}"><td>${escapeHtml(row.name)} <small class="muted">${escapeHtml(row.line)}</small></td>`;
+          html += `<tr class="${row.reason ? "" : "line-row"}" data-line="${escapeHtml(row.id)}"><td>${escapeHtml(row.name)} <small class="muted">${escapeHtml(row.line)}</small></td>`;
           if (row.reason) {
             html += `<td class="num muted" title="${escapeHtml(row.reason)}">—</td>` + columns.map(() => `<td class="cell muted" title="${escapeHtml(row.reason)}">—</td>`).join("");
           } else {
@@ -226,7 +232,7 @@
     // --- Level 2 ---
 
     async function loadDetail() {
-      const hands = [...picks.hand].flatMap(name => groupLeaves[name] || [name]);  // a group is sent as its leaves
+      const hands = [...picks.hand].flatMap(name => CONFIG.hand_groups[name] || [name]);  // a group is sent as its leaves
       const data = await post("/dashboard/line", { ...filters(), line_id: view.line, hand_types: [...new Set(hands)], draw_types: [...picks.draw] });
       if (data) renderDetail(data);
     }
@@ -264,8 +270,6 @@
       const theirs = Object.fromEntries(gto.map(r => [r[key], r]));
       const names = [...new Set([...gto.map(r => r[key]), ...user.map(r => r[key])])];
       const actions = ((gto[0] || user[0] || { cells: [] }).cells).filter(c => !c.parent);
-      const leavesOf = name => [...new Set(user.concat(gto).filter(r => r.parent === name).map(r => r[key]))];
-      names.forEach(name => { if (leavesOf(name).length) groupLeaves[name] = leavesOf(name); });
       let html = `<h3>${title}</h3><table class="dash"><thead><tr><th>${dim === "hand" ? "Hand" : "Draw"}</th><th class="num">Share (you · GTO)</th>`;
       actions.forEach(a => html += `<th class="cell">${escapeHtml(a.name)}</th>`);
       html += "</tr></thead><tbody>";

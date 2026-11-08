@@ -1,3 +1,5 @@
+from pathlib import Path
+
 import pandas as pd
 import pytest
 
@@ -71,3 +73,46 @@ def test_loaded_lines_stay_in_memory(fake_db, monkeypatch):
     gto_cache.line_matches("2bp", "ip", "pfr", "X", ["BB vs BTN"])
     gto_cache.line_matches("2bp", "ip", "pfr", "X", ["BB vs BTN"])
     assert len(reads) == 1
+
+
+def test_cache_key_changes_when_ids_change_at_equal_count(monkeypatch):
+    class FakeEngine:
+        class url:
+            database = "gto"
+    monkeypatch.setattr("gto_cache.gto_engine", lambda: FakeEngine)
+    stats = {"n": 1500, "last": 1500}
+    monkeypatch.setattr("gto_cache.pd.read_sql", lambda q, e: pd.DataFrame([stats]))
+    first = gto_cache.cache_key()
+    stats["last"] = 3000  # regenerated: same count, new ids
+    assert gto_cache.cache_key() != first
+
+
+def test_failed_write_leaves_no_pickle(fake_db, monkeypatch):
+    _, _, cache_dir = fake_db
+
+    def broken(self, path, *args, **kwargs):
+        Path(path).write_bytes(b"half")
+        raise OSError("disk full")
+
+    monkeypatch.setattr(pd.DataFrame, "to_pickle", broken)
+    with pytest.raises(OSError):
+        gto_cache.line_matches("2bp", "ip", "pfr", "X", ["BB vs BTN"])
+    assert list((cache_dir / "gto-3").glob("*.pkl")) == []
+
+
+def test_concurrent_requests_build_a_line_once(fake_db, monkeypatch):
+    import threading
+    import time
+    calls, rows, _ = fake_db
+
+    def slow_query(where, params, measured_sql, id_player=None, engine=None):
+        calls.append(id_player)
+        time.sleep(0.2)
+        return rows.copy()
+
+    monkeypatch.setattr("gto_cache.run_spot_query", slow_query)
+    threads = [threading.Thread(target=gto_cache.line_matches, args=("2bp", "ip", "pfr", "X", ["BB vs BTN"]))
+               for _ in range(3)]
+    [t.start() for t in threads]
+    [t.join() for t in threads]
+    assert len(calls) == 1

@@ -83,9 +83,19 @@ def labels(matches, spec):
     return full, (full.str[:len(prefix) + 1] if splits_by_size(spec) else full)
 
 
+def _no_data(rows, hands):
+    """No hands means no frequency: pct None, not 0.0%."""
+    return [dict(r, pct=None) for r in rows] if not hands else rows
+
+
+def _split_rows(full, prefix):
+    return [dict(r, cells=_no_data(r["cells"], r["hands"])) for r in _split(full, prefix)]
+
+
 def side(matches, spec):
     _, unsized = labels(matches, spec)
-    return {"hands": len(matches), "distribution": _distribution(unsized, spec.measured, spec.decision.hero)}
+    return {"hands": len(matches),
+            "distribution": _no_data(_distribution(unsized, spec.measured, spec.decision.hero), len(matches))}
 
 
 def gap(user, gto):
@@ -149,8 +159,8 @@ def detail(matches, spec, hand_types, draw_types, fetch, shown=None):
     shown_hands = picked.sort_values("id_hand").head(shown) if shown else picked
     return {
         "hands_total": len(picked),
-        "distribution": _distribution(unsized, spec.measured, prefix),
-        "split": _split(full, prefix) if splits_by_size(spec) else None,
+        "distribution": _no_data(_distribution(unsized, spec.measured, prefix), len(picked)),
+        "split": _split_rows(full, prefix) if splits_by_size(spec) else None,
         "hand_split": _hand_split(by_draw["hand_type"].astype(object), labels(by_draw, spec)[1], spec, prefix),
         "draw_split": _draw_split(by_hand["draw_type"].astype(object), labels(by_hand, spec)[1], spec, prefix),
         "hands": hand_rows(shown_hands, labels(shown_hands, spec)[0], fetch),

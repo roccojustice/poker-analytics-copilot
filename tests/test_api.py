@@ -352,3 +352,8 @@ def test_dashboard_input_error_is_a_400(monkeypatch):
     monkeypatch.setattr("api.dashboard_rows", boom)
     response = client.post("/dashboard", json={"dashboard": "x"})
     assert response.status_code == 400 and response.json() == {"error": "Unknown dashboard: x"}
+
+
+def test_dashboards_config_ships_the_hand_groups():
+    from hand_strength import HAND_GROUPS
+    assert client.get("/dashboards/config").json()["hand_groups"] == {k: list(v) for k, v in HAND_GROUPS.items()}
