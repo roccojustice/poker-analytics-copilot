@@ -38,5 +38,6 @@ GTO preflop exact. Final review done; I-1..I-6 fixed.
 
 ## Uncommitted work in the tree
 
-- None. **Parked, untracked on purpose:** `docs/reports.md` + `spikes/line_volume.py`. Don't commit, don't delete.
+- **Nothing pushed (user's call, Session 72):** `main` is 4 commits ahead of `origin/main`; `feat/gto-dashboard` (16 commits on top) is local only. Push / merge next session.
+- - None. **Parked, untracked on purpose:** `docs/reports.md` + `spikes/line_volume.py`. Don't commit, don't delete.
 - `.env` now also needs `GTO_POSTGRES_DB` / `GTO_HERO_NAME` (added locally). After re-importing bot hands: `python gto_cache.py build`.
