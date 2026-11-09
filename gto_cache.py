@@ -2,6 +2,7 @@
 import os
 import re
 import threading
+from functools import cache
 from multiprocessing import Pool
 from pathlib import Path
 
@@ -19,6 +20,7 @@ _locks = {}  # path -> lock, so concurrent requests build a line once
 _locks_guard = threading.Lock()
 
 
+@cache  # the GTO DB is fixed: checked once per process, a re-import is picked up on restart
 def cache_key():
     """Names the cache after the GTO DB, its hand count and last id: a re-import never serves stale numbers."""
     engine = gto_engine()

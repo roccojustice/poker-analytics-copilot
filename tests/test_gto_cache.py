@@ -75,16 +75,31 @@ def test_loaded_lines_stay_in_memory(fake_db, monkeypatch):
     assert len(reads) == 1
 
 
+class FakeEngine:
+    class url:
+        database = "gto"
+
+
 def test_cache_key_changes_when_ids_change_at_equal_count(monkeypatch):
-    class FakeEngine:
-        class url:
-            database = "gto"
     monkeypatch.setattr("gto_cache.gto_engine", lambda: FakeEngine)
     stats = {"n": 1500, "last": 1500}
     monkeypatch.setattr("gto_cache.pd.read_sql", lambda q, e: pd.DataFrame([stats]))
+    gto_cache.cache_key.cache_clear()
     first = gto_cache.cache_key()
     stats["last"] = 3000  # regenerated: same count, new ids
+    gto_cache.cache_key.cache_clear()  # a re-import is picked up on restart
     assert gto_cache.cache_key() != first
+
+
+def test_cache_key_queries_the_db_once_per_process(monkeypatch):
+    monkeypatch.setattr("gto_cache.gto_engine", lambda: FakeEngine)
+    queries = []
+    monkeypatch.setattr("gto_cache.pd.read_sql",
+                        lambda q, e: queries.append(q) or pd.DataFrame([{"n": 1500, "last": 1500}]))
+    gto_cache.cache_key.cache_clear()
+    gto_cache.cache_key()
+    gto_cache.cache_key()
+    assert len(queries) == 1
 
 
 def test_failed_write_leaves_no_pickle(fake_db, monkeypatch):
