@@ -130,6 +130,12 @@
           ]
         },
         {
+          "ranks": "Q97",
+          "textures": [
+            "two-tone"
+          ]
+        },
+        {
           "ranks": "Q96",
           "textures": [
             "rainbow",
@@ -140,6 +146,36 @@
           "ranks": "Q95",
           "textures": [
             "rainbow",
+            "two-tone"
+          ]
+        },
+        {
+          "ranks": "Q94",
+          "textures": [
+            "two-tone"
+          ]
+        },
+        {
+          "ranks": "Q93",
+          "textures": [
+            "two-tone"
+          ]
+        },
+        {
+          "ranks": "Q92",
+          "textures": [
+            "two-tone"
+          ]
+        },
+        {
+          "ranks": "Q87",
+          "textures": [
+            "two-tone"
+          ]
+        },
+        {
+          "ranks": "Q86",
+          "textures": [
             "two-tone"
           ]
         },
@@ -158,6 +194,30 @@
           ]
         },
         {
+          "ranks": "Q83",
+          "textures": [
+            "two-tone"
+          ]
+        },
+        {
+          "ranks": "Q82",
+          "textures": [
+            "two-tone"
+          ]
+        },
+        {
+          "ranks": "K98",
+          "textures": [
+            "two-tone"
+          ]
+        },
+        {
+          "ranks": "K97",
+          "textures": [
+            "two-tone"
+          ]
+        },
+        {
           "ranks": "K96",
           "textures": [
             "rainbow",
@@ -166,6 +226,267 @@
         },
         {
           "ranks": "K95",
+          "textures": [
+            "rainbow",
+            "two-tone"
+          ]
+        },
+        {
+          "ranks": "K94",
+          "textures": [
+            "two-tone"
+          ]
+        },
+        {
+          "ranks": "K93",
+          "textures": [
+            "two-tone"
+          ]
+        },
+        {
+          "ranks": "K92",
+          "textures": [
+            "two-tone"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "small bet",
+      "boards": [
+        {
+          "ranks": "T98",
+          "textures": [
+            "rainbow",
+            "two-tone"
+          ]
+        },
+        {
+          "ranks": "T97",
+          "textures": [
+            "rainbow",
+            "two-tone"
+          ]
+        },
+        {
+          "ranks": "T96",
+          "textures": [
+            "rainbow",
+            "two-tone"
+          ]
+        },
+        {
+          "ranks": "987",
+          "textures": [
+            "rainbow",
+            "two-tone"
+          ]
+        },
+        {
+          "ranks": "986",
+          "textures": [
+            "rainbow",
+            "two-tone"
+          ]
+        },
+        {
+          "ranks": "985",
+          "textures": [
+            "rainbow",
+            "two-tone"
+          ]
+        },
+        {
+          "ranks": "876",
+          "textures": [
+            "rainbow",
+            "two-tone"
+          ]
+        },
+        {
+          "ranks": "875",
+          "textures": [
+            "rainbow",
+            "two-tone"
+          ]
+        },
+        {
+          "ranks": "874",
+          "textures": [
+            "rainbow",
+            "two-tone"
+          ]
+        },
+        {
+          "ranks": "765",
+          "textures": [
+            "rainbow",
+            "two-tone"
+          ]
+        },
+        {
+          "ranks": "764",
+          "textures": [
+            "rainbow",
+            "two-tone"
+          ]
+        },
+        {
+          "ranks": "763",
+          "textures": [
+            "rainbow",
+            "two-tone"
+          ]
+        },
+        {
+          "ranks": "T87",
+          "textures": [
+            "rainbow",
+            "two-tone"
+          ]
+        },
+        {
+          "ranks": "T86",
+          "textures": [
+            "rainbow",
+            "two-tone"
+          ]
+        },
+        {
+          "ranks": "T76",
+          "textures": [
+            "rainbow",
+            "two-tone"
+          ]
+        },
+        {
+          "ranks": "976",
+          "textures": [
+            "rainbow",
+            "two-tone"
+          ]
+        },
+        {
+          "ranks": "975",
+          "textures": [
+            "rainbow",
+            "two-tone"
+          ]
+        },
+        {
+          "ranks": "965",
+          "textures": [
+            "rainbow",
+            "two-tone"
+          ]
+        },
+        {
+          "ranks": "865",
+          "textures": [
+            "rainbow",
+            "two-tone"
+          ]
+        },
+        {
+          "ranks": "864",
+          "textures": [
+            "rainbow",
+            "two-tone"
+          ]
+        },
+        {
+          "ranks": "854",
+          "textures": [
+            "rainbow",
+            "two-tone"
+          ]
+        },
+        {
+          "ranks": "754",
+          "textures": [
+            "rainbow",
+            "two-tone"
+          ]
+        },
+        {
+          "ranks": "753",
+          "textures": [
+            "rainbow",
+            "two-tone"
+          ]
+        },
+        {
+          "ranks": "743",
+          "textures": [
+            "rainbow",
+            "two-tone"
+          ]
+        },
+        {
+          "ranks": "654",
+          "textures": [
+            "rainbow",
+            "two-tone"
+          ]
+        },
+        {
+          "ranks": "653",
+          "textures": [
+            "rainbow",
+            "two-tone"
+          ]
+        },
+        {
+          "ranks": "652",
+          "textures": [
+            "rainbow",
+            "two-tone"
+          ]
+        },
+        {
+          "ranks": "643",
+          "textures": [
+            "rainbow",
+            "two-tone"
+          ]
+        },
+        {
+          "ranks": "642",
+          "textures": [
+            "rainbow",
+            "two-tone"
+          ]
+        },
+        {
+          "ranks": "632",
+          "textures": [
+            "rainbow",
+            "two-tone"
+          ]
+        },
+        {
+          "ranks": "543",
+          "textures": [
+            "rainbow",
+            "two-tone"
+          ]
+        },
+        {
+          "ranks": "542",
+          "textures": [
+            "rainbow",
+            "two-tone"
+          ]
+        },
+        {
+          "ranks": "532",
+          "textures": [
+            "rainbow",
+            "two-tone"
+          ]
+        },
+        {
+          "ranks": "432",
           "textures": [
             "rainbow",
             "two-tone"
