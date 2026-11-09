@@ -52,6 +52,20 @@
     .card::after { content: attr(data-sym); position: absolute; right: -0.3em; bottom: -0.35em; font-size: 2.2em; line-height: 1; opacity: 0.3; }
     .card .rank { position: relative; z-index: 1; }
     .card-s { background: #4a4a4a; } .card-h { background: #b01c1c; } .card-d { background: #2b3fc4; } .card-c { background: #169c2c; }
+    #groups-editor { margin-top: 0.75rem; border: 1px solid #bbb; padding: 0.75rem; display: flex; gap: 1.5rem; flex-wrap: wrap; }
+    #groups-editor[hidden] { display: none; }
+    #groups-editor .group-list div { padding: 0.3rem 0.6rem; cursor: pointer; }
+    #groups-editor .group-list div.on { background: #dbe7f8; font-weight: bold; }
+    #groups-editor .group-list .add { color: #2b5fab; }
+    #groups-editor .row { display: flex; gap: 0.6rem; align-items: center; flex-wrap: wrap; margin: 0.4rem 0; }
+    #groups-editor .ranks button { width: 2rem; height: 2rem; border: 1px solid #bbb; background: #fff; cursor: pointer; font-weight: bold; }
+    #groups-editor .ranks button.on { background: #2b5fab; color: #fff; }
+    #groups-editor .preview { font-family: monospace; font-size: 1.1rem; min-width: 3rem; }
+    #groups-editor textarea { width: 26rem; max-width: 100%; height: 2.5rem; font-family: monospace; }
+    #groups-editor .chip { display: inline-block; font-family: monospace; border: 1px solid #bbb; border-radius: 1rem; padding: 0.1rem 0.5rem; margin: 0.15rem; }
+    #groups-editor .chip b { cursor: pointer; color: #b71c1c; margin-left: 0.3rem; }
+    #groups-editor h4 { margin: 0.6rem 0 0.2rem; font-size: 0.85rem; color: #666; }
+    #edit-groups { color: #2b5fab; cursor: pointer; font-size: 0.95rem; }
     tr.win td { background: #c8e6c9; }
     tr.loss td { background: #ffcdd2; }
   </style>
@@ -64,12 +78,15 @@
     <details class="formations" id="flop-types"><summary>Flop: Any</summary><div class="panel"></div></details>
     <details class="formations" id="turn-types"><summary>Turn: Any</summary><div class="panel"></div></details>
     <details class="formations" id="river-types"><summary>River: Any</summary><div class="panel"></div></details>
+    <select id="board-group"></select>
+    <a id="edit-groups">Edit groups…</a>
     <div class="seg" id="sizes"><span>Faced size</span></div>
     <div class="dates">
       <label>Your hands from <input type="date" id="date-from"></label>
       <label>to <input type="date" id="date-to"></label>
     </div>
   </div>
+  <div id="groups-editor" hidden></div>
   <div id="output"></div>
 
   <script>
@@ -132,6 +149,7 @@
         faced_sizes: [...sizes],
         date_from: document.getElementById("date-from").value || null,
         date_to: document.getElementById("date-to").value || null,
+        board_group: groupEl.value ? JSON.parse(groupEl.value) : null,
       };
     }
 
@@ -143,6 +161,7 @@
       if (f.turn_types.length) parts.push("Turn: " + f.turn_types.join(", "));
       if (f.river_types.length) parts.push("River: " + f.river_types.join(", "));
       if (f.faced_sizes.length) parts.push("Faced: " + f.faced_sizes.join(""));
+      if (f.board_group) parts.push("Board group: " + (f.board_group.negate ? "NOT " : "") + f.board_group.name);
       if (f.date_from || f.date_to) parts.push(`Your hands ${f.date_from || "…"} → ${f.date_to || "…"}`);
       return parts.join(" · ");
     }
@@ -356,6 +375,136 @@
       return html + "</tbody></table></div>";
     }
 
+    // --- Board groups ---
+
+    const groupEl = document.getElementById("board-group");
+    const editorEl = document.getElementById("groups-editor");
+    const RANKS = "AKQJT98765432".split("");
+    const TEXTURES = ["rainbow", "two-tone"];
+    const currentBoard = () => CONFIG.dashboards.find(d => d.id === dashboardEl.value);
+    let draft = [], editing = 0, rankPicks = [], textures = [...TEXTURES], editorError = "";
+
+    // Keeps the current pick if its group still exists, else Any
+    function fillGroupSelect() {
+      const before = groupEl.value;
+      const options = [["", "Board group: Any"]];
+      currentBoard().groups.forEach(g => {
+        options.push([JSON.stringify({ name: g.name, negate: false }), g.name]);
+        options.push([JSON.stringify({ name: g.name, negate: true }), "NOT " + g.name]);
+      });
+      groupEl.replaceChildren(...options.map(([value, text]) => new Option(text, value)));  // DOM, not HTML: values hold quotes
+      groupEl.value = options.some(([value]) => value === before) ? before : "";
+    }
+
+    function resetDraft() {
+      draft = JSON.parse(JSON.stringify(currentBoard().groups));
+      editing = 0; rankPicks = []; editorError = "";
+    }
+
+    const sortRanks = ranks => ranks.slice().sort((a, b) => RANKS.indexOf(a) - RANKS.indexOf(b));
+
+    // A board already in the group gets the new textures added
+    function addBoard(ranks) {
+      const group = draft[editing];
+      const existing = group.boards.find(b => b.ranks === ranks);
+      if (existing) existing.textures = TEXTURES.filter(t => existing.textures.includes(t) || textures.includes(t));
+      else group.boards.push({ ranks, textures: TEXTURES.filter(t => textures.includes(t)) });
+    }
+
+    function newGroupName() {
+      const names = new Set(draft.map(g => g.name.toLowerCase()));
+      let name = "new group", n = 2;
+      while (names.has(name)) name = `new group ${n++}`;
+      return name;
+    }
+
+    function renderEditor() {
+      const group = draft[editing];
+      let html = '<div class="group-list">' + draft.map((g, i) =>
+        `<div data-pick="${i}" class="${i === editing ? "on" : ""}">${escapeHtml(g.name)} <span class="muted">(${g.boards.length})</span></div>`).join("")
+        + '<div class="add" data-new>+ New group</div></div><div>';
+      if (group) {
+        html += `<div class="row"><label>Name <input id="group-name"></label><button data-delete>Delete group</button></div>`;
+        html += '<div><b>Add a board</b> <span class="muted">(3 clicks; click a rank twice for a pair)</span></div>';
+        html += '<div class="row ranks">' + RANKS.map(r => `<button data-rank="${r}" class="${rankPicks.includes(r) ? "on" : ""}">${r}</button>`).join("") + "</div>";
+        html += `<div class="row"><span class="preview">${rankPicks.join("") || "—"}</span>`
+          + TEXTURES.map(t => `<label><input type="checkbox" data-texture="${t}" ${textures.includes(t) ? "checked" : ""}> ${t}</label>`).join("")
+          + '<button data-add>Add</button><button data-clear>Clear</button></div>';
+        html += '<div class="row"><textarea id="paste" placeholder="or paste several: J98 J97 J96 …"></textarea><button data-paste>Add pasted</button><span class="muted">they take the checked textures</span></div>';
+        const bySet = {};
+        group.boards.forEach((b, i) => (bySet[b.textures.join(" + ")] ||= []).push([b, i]));
+        html += `<div><b>Boards (${group.boards.length})</b>` + Object.entries(bySet).map(([set, boards]) =>
+          `<h4>${escapeHtml(set)}</h4>` + boards.map(([b, i]) => `<span class="chip">${escapeHtml(b.ranks)}<b data-remove="${i}">×</b></span>`).join("")).join("") + "</div>";
+      } else {
+        html += '<p class="muted">No groups yet.</p>';
+      }
+      if (editorError) html += `<div class="error">${escapeHtml(editorError)}</div>`;
+      html += '<div class="row"><button data-save><b>Save</b></button><button data-cancel>Cancel</button></div></div>';
+      editorEl.innerHTML = html;
+      const nameEl = document.getElementById("group-name");
+      if (nameEl) nameEl.value = group.name;
+    }
+
+    async function saveGroups() {
+      try {
+        const response = await fetch(`/dashboards/${encodeURIComponent(dashboardEl.value)}/groups`, {
+          method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ groups: draft }) });
+        const data = await response.json();
+        if (!response.ok) { editorError = data.error || "Save failed"; renderEditor(); return; }
+        currentBoard().groups = data.groups;
+        const keep = editing;
+        resetDraft();
+        editing = Math.min(keep, Math.max(draft.length - 1, 0));
+        fillGroupSelect();
+        renderEditor();
+        refresh();
+      } catch (err) { editorError = err.message; renderEditor(); }
+    }
+
+    async function cancelEdits() {
+      const fresh = await (await fetch("/dashboards/config")).json();
+      CONFIG.dashboards = fresh.dashboards;
+      resetDraft();
+      fillGroupSelect();
+      renderEditor();
+      refresh();
+    }
+
+    editorEl.addEventListener("input", event => {
+      if (event.target.id === "group-name") draft[editing].name = event.target.value;
+    });
+    editorEl.addEventListener("change", event => {
+      if (event.target.dataset.texture) textures = TEXTURES.filter(t => editorEl.querySelector(`input[data-texture="${t}"]`).checked);
+    });
+    editorEl.addEventListener("click", event => {
+      const t = event.target.closest("[data-pick],[data-new],[data-delete],[data-rank],[data-add],[data-clear],[data-paste],[data-remove],[data-save],[data-cancel]");
+      if (!t) return;
+      const d = t.dataset;
+      editorError = "";
+      if (d.pick !== undefined) { editing = Number(d.pick); rankPicks = []; }
+      else if (d.new !== undefined) { draft.push({ name: newGroupName(), boards: [] }); editing = draft.length - 1; }
+      else if (d.delete !== undefined) { draft.splice(editing, 1); editing = Math.max(editing - 1, 0); }
+      else if (d.rank) rankPicks = rankPicks.length < 3 ? sortRanks([...rankPicks, d.rank]) : [d.rank];
+      else if (d.add !== undefined) {
+        if (rankPicks.length !== 3 || !textures.length) return;
+        addBoard(rankPicks.join("")); rankPicks = [];
+      }
+      else if (d.clear !== undefined) rankPicks = [];
+      else if (d.paste !== undefined) {
+        if (!textures.length) return;
+        document.getElementById("paste").value.split(/[\s,]+/).filter(x => /^[AKQJT2-9]{3}$/i.test(x))
+          .forEach(x => addBoard(sortRanks(x.toUpperCase().split("")).join("")));
+      }
+      else if (d.remove !== undefined) draft[editing].boards.splice(Number(d.remove), 1);
+      else if (d.save !== undefined) return saveGroups();
+      else if (d.cancel !== undefined) return cancelEdits();
+      renderEditor();
+    });
+    document.getElementById("edit-groups").addEventListener("click", () => {
+      editorEl.hidden = !editorEl.hidden;
+      if (!editorEl.hidden) renderEditor();
+    });
+
     // --- Start ---
 
     async function start() {
@@ -375,7 +524,10 @@
         });
         sizesEl.append(button);
       });
-      ["dashboard", "date-from", "date-to"].forEach(id => document.getElementById(id).addEventListener("change", refresh));
+      dashboardEl.addEventListener("change", () => { fillGroupSelect(); resetDraft(); if (!editorEl.hidden) renderEditor(); });
+      ["dashboard", "date-from", "date-to", "board-group"].forEach(id => document.getElementById(id).addEventListener("change", refresh));
+      fillGroupSelect();
+      resetDraft();
       loadRows();
     }
     start();
