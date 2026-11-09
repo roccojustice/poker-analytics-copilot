@@ -9,7 +9,7 @@ from query_router import run_query, is_filter_query, has_distribution
 from line_parser import SpotInputError
 from spotlight import run_spot
 from board_types import FLOP_TYPES, RIVER_LABELS, TURN_LABELS
-from dashboards import DASHBOARDS, dashboard_rows, line_detail
+from dashboards import DASHBOARDS, dashboard_rows, groups, line_detail, save_groups
 from sizing import SIZE_BUCKETS
 from hand_strength import HAND_GROUPS
 
@@ -95,6 +95,17 @@ def spot(request: SpotRequest):
     }
 
 
+class BoardGroupPick(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    name: str
+    negate: bool = False
+
+
+class GroupsRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    groups: list[dict]
+
+
 class DashboardRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
@@ -105,6 +116,7 @@ class DashboardRequest(BaseModel):
     faced_sizes: list[str] = []
     date_from: date | None = None
     date_to: date | None = None
+    board_group: BoardGroupPick | None = None
 
 
 class LineDetailRequest(DashboardRequest):
@@ -117,7 +129,8 @@ class LineDetailRequest(DashboardRequest):
 @app.get("/dashboards/config")
 def dashboards_config():
     return {
-        "dashboards": [{"id": key, "name": board["name"], "formations": board["formations"], "lines": board["lines"]}
+        "dashboards": [{"id": key, "name": board["name"], "formations": board["formations"], "lines": board["lines"],
+                        "groups": groups(key)}
                        for key, board in DASHBOARDS.items()],
         "flop_types": list(FLOP_TYPES), "turn_labels": list(TURN_LABELS), "river_labels": list(RIVER_LABELS),
         "sizes": list(SIZE_BUCKETS), "hand_groups": {group: list(leaves) for group, leaves in HAND_GROUPS.items()},
@@ -138,6 +151,14 @@ def dashboard_line(request: LineDetailRequest):
     fields = request.model_dump()
     try:
         return line_detail(fields.pop("dashboard"), fields.pop("line_id"), **fields)
+    except SpotInputError as exc:
+        return JSONResponse(status_code=400, content={"error": str(exc)})
+
+
+@app.put("/dashboards/{dashboard_id}/groups")
+def put_groups(dashboard_id: str, request: GroupsRequest):
+    try:
+        return {"groups": save_groups(dashboard_id, request.groups)}
     except SpotInputError as exc:
         return JSONResponse(status_code=400, content={"error": str(exc)})
 

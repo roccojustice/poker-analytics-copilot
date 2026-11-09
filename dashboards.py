@@ -3,6 +3,7 @@ import time
 
 import pandas as pd
 
+import board_groups
 from board_types import FLOP_TYPES, RIVER_LABELS, TURN_LABELS
 from db import get_hand_details, gto_engine, gto_hero_id, run_spot_query
 from gto_cache import line_matches
@@ -69,9 +70,29 @@ def blank_reason(street, turn_types, river_types):
     return None
 
 
-def side_matches(matches, spec, filters, faced_sizes):
-    """Applies the type filters and, on a response to a bet, the faced-size filter."""
+def group_pick(dashboard_id, board_group):
+    """A board_group request field -> (group, negate), or None for Any."""
+    if not board_group:
+        return None
+    return board_groups.find(dashboard_id, board_group["name"]), bool(board_group.get("negate"))
+
+
+def groups(dashboard_id):
+    dashboard(dashboard_id)
+    return board_groups.load(dashboard_id)
+
+
+def save_groups(dashboard_id, new_groups):
+    dashboard(dashboard_id)
+    return board_groups.save(dashboard_id, new_groups)
+
+
+def side_matches(matches, spec, filters, faced_sizes, group=None):
+    """Applies the type filters, the board group and, on a response to a bet, the faced-size filter."""
     matches = filter_types(matches, **filters)
+    if group:
+        keep = board_groups.in_group(matches, group[0])
+        matches = matches[~keep if group[1] else keep]
     if faced_sizes and splits_by_size(spec):
         size_letters = [s.lower() for s in faced_sizes]
         matches = matches[matches["measured_action"].astype(str).str[-1].isin(size_letters)]
@@ -115,9 +136,10 @@ def check_filters(flop_types, turn_types, river_types, faced_sizes):
 
 
 def dashboard_rows(dashboard_id, flop_types=(), turn_types=(), river_types=(), faced_sizes=(), date_from=None,
-                   date_to=None):
+                   date_to=None, board_group=None):
     board = dashboard(dashboard_id)
     filters = check_filters(flop_types, turn_types, river_types, faced_sizes)
+    group = group_pick(dashboard_id, board_group)
     rows = []
     for entry in board["lines"]:
         spec = parse_line(entry["line"], board["role"], board["position"])
@@ -128,8 +150,9 @@ def dashboard_rows(dashboard_id, flop_types=(), turn_types=(), river_types=(), f
                "user": None, "gto": None, "gap": {}}
         if row["reason"] is None:
             row["user"] = side(side_matches(user_matches(board, entry["line"], date_from, date_to), spec, filters,
-                                            faced_sizes), spec)
-            row["gto"] = side(side_matches(gto_matches(board, entry["line"]), spec, filters, faced_sizes), spec)
+                                            faced_sizes, group), spec)
+            row["gto"] = side(side_matches(gto_matches(board, entry["line"]), spec, filters, faced_sizes, group),
+                              spec)
             row["gap"] = gap(row["user"], row["gto"])
         rows.append(row)
     return rows
@@ -195,7 +218,7 @@ def detail(matches, spec, hand_types, draw_types, fetch, shown=None, actions=())
 
 
 def line_detail(dashboard_id, line_id, flop_types=(), turn_types=(), river_types=(), faced_sizes=(), hand_types=(),
-                draw_types=(), date_from=None, date_to=None, actions=()):
+                draw_types=(), date_from=None, date_to=None, actions=(), board_group=None):
     board = dashboard(dashboard_id)
     entry = line_entry(board, line_id)
     filters = check_filters(flop_types, turn_types, river_types, faced_sizes)
@@ -206,8 +229,9 @@ def line_detail(dashboard_id, line_id, flop_types=(), turn_types=(), river_types
     reason = blank_reason(spec.decision.street, turn_types, river_types)
     if reason:
         raise SpotInputError(reason)
-    user = side_matches(user_matches(board, entry["line"], date_from, date_to), spec, filters, faced_sizes)
-    gto = side_matches(gto_matches(board, entry["line"]), spec, filters, faced_sizes)
+    group = group_pick(dashboard_id, board_group)
+    user = side_matches(user_matches(board, entry["line"], date_from, date_to), spec, filters, faced_sizes, group)
+    gto = side_matches(gto_matches(board, entry["line"]), spec, filters, faced_sizes, group)
     return {
         "line": entry,
         "user": detail(user, spec, hand_types, draw_types, get_hand_details, actions=actions),

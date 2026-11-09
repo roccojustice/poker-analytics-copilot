@@ -5,10 +5,12 @@ import dashboards
 from line_parser import SpotInputError, parse_line
 
 
-def frame(letters, flop_type="Low", turn_type="Brick", hand_type="No made hand", draw_type="No draw"):
+def frame(letters, flop_type="Low", turn_type="Brick", hand_type="No made hand", draw_type="No draw",
+          flop_ranks="J98", flop_texture="rainbow"):
     return pd.DataFrame({
         "id_hand": range(1, len(letters) + 1), "measured_action": letters,
-        "flop_type": flop_type, "turn_type": turn_type, "river_type": None,
+        "flop_type": flop_type, "flop_ranks": flop_ranks, "flop_texture": flop_texture,
+        "turn_type": turn_type, "river_type": None,
         "hand_type": hand_type, "draw_type": draw_type,
     })
 
@@ -221,3 +223,55 @@ def test_response_pick_matches_every_faced_size(sides, details):
 def test_unknown_action_pick_errors(sides, details):
     with pytest.raises(SpotInputError):
         dashboards.line_detail("2bp_ip_pfr", "cbet_flop", actions=["Q"])
+
+
+@pytest.fixture
+def groups(monkeypatch, tmp_path):
+    monkeypatch.setattr("board_groups.GROUPS_FILE", tmp_path / "g.json")
+    dashboards.save_groups("2bp_ip_pfr", [{"name": "g", "boards": [{"ranks": "J98", "textures": ["rainbow"]}]}])
+
+
+def mixed():
+    return pd.concat([frame(["Bs"]), frame(["X"], flop_ranks="Q96")]).assign(id_hand=[1, 2])
+
+
+def test_group_pick_filters_both_sides(sides, groups):
+    sides["user"]["X"] = mixed()
+    sides["gto"]["X"] = mixed()
+    cbet = row(dashboards.dashboard_rows("2bp_ip_pfr", board_group={"name": "g", "negate": False}), "cbet_flop")
+    assert pct(cbet["user"], "B") == 100.0 and pct(cbet["gto"], "B") == 100.0
+    cbet = row(dashboards.dashboard_rows("2bp_ip_pfr", board_group={"name": "g", "negate": True}), "cbet_flop")
+    assert pct(cbet["user"], "B") == 0.0 and pct(cbet["gto"], "B") == 0.0
+
+
+def test_negated_group_is_the_exact_complement(groups):
+    spec = parse_line("X", "pfr", "ip")
+    matches = pd.concat([frame(["X"] * 3), frame(["X"] * 2, flop_ranks="Q96"),
+                         frame(["X"], flop_texture="two-tone")]).assign(id_hand=range(6))
+    kept = {negate: set(dashboards.side_matches(matches, spec, {}, (),
+                                                dashboards.group_pick("2bp_ip_pfr", {"name": "g", "negate": negate}))
+                        ["id_hand"]) for negate in (False, True)}
+    assert kept[False] == {0, 1, 2} and kept[False] | kept[True] == set(range(6)) and not kept[False] & kept[True]
+
+
+def test_group_pick_reaches_line_detail(sides, details, groups):
+    sides["user"]["X"] = mixed()
+    sides["gto"]["X"] = mixed()
+    out = dashboards.line_detail("2bp_ip_pfr", "cbet_flop", board_group={"name": "g", "negate": False})
+    assert out["user"]["hands_total"] == 1 and out["gto"]["hands_total"] == 1
+
+
+def test_no_group_pick_keeps_every_hand(sides, groups):
+    sides["user"]["X"] = mixed()
+    cbet = row(dashboards.dashboard_rows("2bp_ip_pfr"), "cbet_flop")
+    assert cbet["user"]["hands"] == 2
+
+
+def test_unknown_group_pick_errors(sides, groups):
+    with pytest.raises(SpotInputError, match="gone"):
+        dashboards.dashboard_rows("2bp_ip_pfr", board_group={"name": "gone", "negate": False})
+
+
+def test_save_groups_rejects_an_unknown_dashboard(groups):
+    with pytest.raises(SpotInputError):
+        dashboards.save_groups("nope", [])

@@ -1,4 +1,5 @@
 from datetime import date
+import pytest
 from fastapi.testclient import TestClient
 from api import app
 import pandas as pd
@@ -357,3 +358,44 @@ def test_dashboard_input_error_is_a_400(monkeypatch):
 def test_dashboards_config_ships_the_hand_groups():
     from hand_strength import HAND_GROUPS
     assert client.get("/dashboards/config").json()["hand_groups"] == {k: list(v) for k, v in HAND_GROUPS.items()}
+
+
+@pytest.fixture
+def groups_file(monkeypatch, tmp_path):
+    monkeypatch.setattr("board_groups.GROUPS_FILE", tmp_path / "g.json")
+
+
+def test_dashboards_config_ships_each_dashboards_groups(groups_file):
+    client.put("/dashboards/2bp_ip_pfr/groups", json={"groups": [{"name": "g", "boards": []}]})
+    assert client.get("/dashboards/config").json()["dashboards"][0]["groups"] == [{"name": "g", "boards": []}]
+
+
+def test_put_groups_saves_and_returns_normalized(groups_file):
+    response = client.put("/dashboards/2bp_ip_pfr/groups",
+                          json={"groups": [{"name": "g", "boards": [{"ranks": "98j", "textures": ["rainbow"]}]}]})
+    assert response.status_code == 200
+    assert response.json() == {"groups": [{"name": "g", "boards": [{"ranks": "J98", "textures": ["rainbow"]}]}]}
+
+
+@pytest.mark.parametrize("dashboard, groups", [
+    ("2bp_ip_pfr", [{"name": "g", "boards": [{"ranks": "J9", "textures": ["rainbow"]}]}]),
+    ("nope", []),
+])
+def test_put_groups_bad_input_is_a_400(groups_file, dashboard, groups):
+    response = client.put(f"/dashboards/{dashboard}/groups", json={"groups": groups})
+    assert response.status_code == 400 and "error" in response.json()
+
+
+def test_dashboard_accepts_a_board_group(monkeypatch):
+    seen = {}
+    monkeypatch.setattr("api.dashboard_rows", lambda dashboard_id, **kw: seen.update(kw) or [])
+    client.post("/dashboard", json={"dashboard": "2bp_ip_pfr", "board_group": {"name": "g", "negate": True}})
+    assert seen["board_group"] == {"name": "g", "negate": True}
+
+
+def test_dashboard_line_accepts_a_board_group(monkeypatch):
+    seen = {}
+    monkeypatch.setattr("api.line_detail", lambda dashboard_id, line_id, **kw: seen.update(kw) or {})
+    client.post("/dashboard/line", json={"dashboard": "2bp_ip_pfr", "line_id": "cbet_flop",
+                                         "board_group": {"name": "g"}})
+    assert seen["board_group"] == {"name": "g", "negate": False}
