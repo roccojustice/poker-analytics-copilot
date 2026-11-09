@@ -298,3 +298,9 @@ Base: `3bp_ip_pfc_faced_cbet_flop` + `faced_cbet_turn` (`flg_t_cbet_def_opp = tr
 - **PT4 diff on the GTO DB (Session 73):** `2bp ip pfr X --formation "BB vs BTN" --label B` (Hero bot
   cbets a checked flop), run with `POSTGRES_DB` / `HERO_NAME` pointed at the GTO DB: 761,697 = 761,697,
   0 / 0. The GTO side's Spotlight SQL matches PT4 beyond preflop.
+- **Flop subset (Session 73):** the GTO DB deals only **119 distinct flop rank triples**, each with **one
+  fixed suit pattern** (e.g. `J95` only rainbow, `Q96` only two-tone), dealt about equally often
+  (11,551–11,976 hands per flop on the `2bp ip pfr X` cbet line, 1,463,558 total; 77,700 monotone).
+  So GTO numbers are exact per flop, but a flop type / board group pools its subset flops unweighted
+  (GTOw subset weights are not applied). Of the 24 `overbet` seed boards only 6 exist here: J76 r,
+  J95 r, J84 tt, J93 tt, J94 tt, Q96 tt.
