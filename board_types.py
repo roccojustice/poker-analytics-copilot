@@ -33,6 +33,19 @@ def flop_type(card_1, card_2, card_3):
     return classify([decode_card_id(int(card)) for card in (card_1, card_2, card_3)])
 
 
+TEXTURES = {3: "rainbow", 2: "two-tone", 1: "monotone"}
+
+
+def flop_ranks(card_1, card_2, card_3):
+    """The flop's ranks, high to low: "J98", "JJ5"."""
+    ranks = [decode_card_id(int(card))[0] for card in (card_1, card_2, card_3)]
+    return "".join(sorted(ranks, key=RANKS.index, reverse=True))
+
+
+def flop_texture(card_1, card_2, card_3):
+    return TEXTURES[len({decode_card_id(int(card))[1] for card in (card_1, card_2, card_3)})]
+
+
 
 TURN_LABELS = ("FC", "SC", "BP high", "BP mid", "BP low", "BW A", "BW K", "BW Q", "BW J", "FDP", "Brick")
 RIVER_LABELS = tuple(label for label in TURN_LABELS if label != "FDP")

@@ -128,7 +128,8 @@ def test_nan_in_hand_details_becomes_none(monkeypatch):
     install(monkeypatch, fake_matches([(1, "B")]), details)
     hands = spotlight.run_spot("2bp", "ip", "pfr", "XC-X")["hands"]
     assert hands.to_dict(orient="records") == [
-        {"id_hand": 1, "amt_won": None, "flop_type": "BLL", "turn_type": "Brick", "river_type": None,
+        {"id_hand": 1, "amt_won": None, "flop_type": "BLL", "flop_ranks": "K93", "flop_texture": "rainbow",
+         "turn_type": "Brick", "river_type": None,
          "hand_type": "No made hand", "draw_type": "No draw", "measured_action": "B"}]
 
 
@@ -561,3 +562,8 @@ def test_filter_types_works_on_category_columns():
                           "river_type": [None, None], "hand_type": ["Air", "Air"], "draw_type": ["No draw"] * 2})
     out = spotlight.filter_types(frame.astype("category"), turn_types=["BP high"])
     assert list(out["id_hand"].astype(int)) == [1]
+
+
+def test_classify_adds_flop_ranks_and_texture():
+    out = spotlight.classify(fake_matches([(1, "X")]), "f")
+    assert list(out["flop_ranks"]) == ["K93"] and list(out["flop_texture"]) == ["rainbow"]

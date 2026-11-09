@@ -1,6 +1,6 @@
 import pandas as pd
 
-from board_types import FLOP_TYPES, RIVER_LABELS, TURN_LABELS, flop_type, river_labels, turn_labels
+from board_types import FLOP_TYPES, RIVER_LABELS, TURN_LABELS, flop_ranks, flop_texture, flop_type, river_labels, turn_labels
 from db import run_spot_query, get_hand_details
 from draws import DRAW_TYPES, draw_type
 from hand_strength import HAND_GROUPS, HAND_TYPES, hand_type
@@ -141,6 +141,8 @@ def classify(matches, street):
     hand_cards = ["holecard_1", "holecard_2", *cards[:BOARD_SIZE[street]]]
     matches = matches.assign(
         flop_type=_board_column(matches, cards[:3], flop_type),
+        flop_ranks=_board_column(matches, cards[:3], flop_ranks),
+        flop_texture=_board_column(matches, cards[:3], flop_texture),
         turn_type=_labels_column(matches, cards[:4], turn_labels) if street in ("t", "r") else none,
         river_type=_labels_column(matches, cards, river_labels) if street == "r" else none,
         hand_type=_board_column(matches, hand_cards, hand_type),

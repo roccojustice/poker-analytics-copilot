@@ -29,7 +29,7 @@ def test_miss_queries_classifies_and_stores(fake_db):
     calls, _, cache_dir = fake_db
     out = gto_cache.line_matches("2bp", "ip", "pfr", "X", ["BB vs BTN"])
     assert calls == [99]
-    assert len(list((cache_dir / "gto-3").glob("*.pkl"))) == 1
+    assert len(list((cache_dir / f"gto-3-{gto_cache.CACHE_VERSION}").glob("*.pkl"))) == 1
     assert list(out["id_hand"]) == [1, 2, 3]
 
 
@@ -46,7 +46,7 @@ def test_new_key_rebuilds(fake_db, monkeypatch):
     monkeypatch.setattr("gto_cache.cache_key", lambda: "gto-4")
     gto_cache.line_matches("2bp", "ip", "pfr", "X", ["BB vs BTN"])
     assert len(calls) == 2
-    assert (cache_dir / "gto-4").is_dir()
+    assert (cache_dir / f"gto-4-{gto_cache.CACHE_VERSION}").is_dir()
 
 
 def test_classification_matches_spotlight(fake_db):
@@ -112,7 +112,7 @@ def test_failed_write_leaves_no_pickle(fake_db, monkeypatch):
     monkeypatch.setattr(pd.DataFrame, "to_pickle", broken)
     with pytest.raises(OSError):
         gto_cache.line_matches("2bp", "ip", "pfr", "X", ["BB vs BTN"])
-    assert list((cache_dir / "gto-3").glob("*.pkl")) == []
+    assert list((cache_dir / f"gto-3-{gto_cache.CACHE_VERSION}").glob("*.pkl")) == []
 
 
 def test_concurrent_requests_build_a_line_once(fake_db, monkeypatch):
@@ -131,3 +131,10 @@ def test_concurrent_requests_build_a_line_once(fake_db, monkeypatch):
     [t.start() for t in threads]
     [t.join() for t in threads]
     assert len(calls) == 1
+
+
+def test_cache_path_is_versioned(fake_db):
+    _, _, cache_dir = fake_db
+    gto_cache.line_matches("2bp", "ip", "pfr", "X", ["BB vs BTN"])
+    assert (cache_dir / f"gto-3-{gto_cache.CACHE_VERSION}").is_dir()
+    assert not (cache_dir / "gto-3").exists()

@@ -15,6 +15,7 @@ from spotlight import classify
 
 CACHE_DIR = Path("cache")
 CHUNK = 50_000
+CACHE_VERSION = "v2"  # bump when the classified columns change: old pickles are never read
 _loaded = {}  # path -> frame, so a request never re-reads a pickle
 _locks = {}  # path -> lock, so concurrent requests build a line once
 _locks_guard = threading.Lock()
@@ -47,7 +48,7 @@ def _classify(matches, street):
 
 def line_matches(pot, position, role, line, formations):
     """The GTO bot's hands for a Line: id_hand, measured_action and the classification columns."""
-    path = CACHE_DIR / cache_key() / f"{_slug(pot, position, role, line, formations)}.pkl"
+    path = CACHE_DIR / f"{cache_key()}-{CACHE_VERSION}" / f"{_slug(pot, position, role, line, formations)}.pkl"
     if path in _loaded:
         return _loaded[path]
     with _locks_guard:

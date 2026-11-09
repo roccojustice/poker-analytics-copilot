@@ -3,6 +3,8 @@ from itertools import combinations
 import pytest
 import random
 
+import board_types
+from test_spotlight import card_id
 from board_types import (
     FLOP_TYPES, RIVER_LABELS, TURN_LABELS, classify, flop_type, river_labels, runout_labels, turn_labels,
 )
@@ -160,3 +162,13 @@ def test_runout_ids_decode():
     assert turn_labels(52, 51, 50, 49) == ("FC", "SC")
     with pytest.raises(ValueError):
         river_labels(1, 2, 3, 4, 0)
+
+
+@pytest.mark.parametrize("flop, ranks, texture", [
+    ("9d8cJh", "J98", "rainbow"), ("Js5h5s", "J55", "two-tone"), ("2c2dAc", "A22", "two-tone"),
+    ("ThTdTs", "TTT", "rainbow"), ("Kh7h2h", "K72", "monotone"),
+])
+def test_flop_ranks_and_texture(flop, ranks, texture):
+    ids = [card_id(flop[i:i + 2]) for i in (0, 2, 4)]
+    assert board_types.flop_ranks(*ids) == ranks
+    assert board_types.flop_texture(*ids) == texture
