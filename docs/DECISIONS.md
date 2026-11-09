@@ -468,3 +468,19 @@ side stays live (10-minute in-process reuse, ~1 s per refresh). The user side is
 BTN` because the bots play only that formation. Spots played by the GTO `Villain` bot (`2bp oop
 pfc`) are out: its cards are known only at showdown (55%). Spec:
 `docs/superpowers/specs/2026-11-07-gto-dashboard-design.md`.
+
+## 2026-11-08 (Session 73) — Action picks are server-side on the dashboards
+
+On the hands page the action / hand / draw picks filter client-side. On the dashboards only the
+first 200 GTO hands reach the page, so the picks are sent to `line_detail` and applied there,
+over every GTO hand. User's call (Session 73).
+
+## 2026-11-08 (Session 73) — Board groups: explicit board lists, group-independent hand columns
+
+The user's GTOw boards that share a strategy (e.g. the overbet boards of `2bp ip pfr` BTN) cut
+across flop types, so they can't be a flop type or a formula ("2grap"): a group is an explicit list
+of rank triples + textures, edited on the page, per dashboard. Each hand carries `flop_ranks` and
+`flop_texture`, which don't depend on any group, so editing a group never rebuilds the GTO cache
+(the cache was rebuilt once, `CACHE_VERSION = "v2"`). A two-tone entry matches any suit placement;
+monotone flops never match (Monotone is its own flop type). User's calls; the columns are the
+assistant's. Spec: `docs/superpowers/specs/2026-11-08-board-groups-design.md`.
