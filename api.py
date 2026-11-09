@@ -11,7 +11,8 @@ from spotlight import run_spot
 from board_types import FLOP_TYPES, RIVER_LABELS, TURN_LABELS
 from dashboards import DASHBOARDS, dashboard_rows, groups, line_detail, save_groups
 from sizing import SIZE_BUCKETS
-from hand_strength import HAND_GROUPS
+from hand_strength import HAND_GROUPS, HAND_TYPES
+from draws import DRAW_TYPES
 
 app = FastAPI()
 
@@ -134,6 +135,7 @@ def dashboards_config():
                        for key, board in DASHBOARDS.items()],
         "flop_types": list(FLOP_TYPES), "turn_labels": list(TURN_LABELS), "river_labels": list(RIVER_LABELS),
         "sizes": list(SIZE_BUCKETS), "hand_groups": {group: list(leaves) for group, leaves in HAND_GROUPS.items()},
+        "hand_types": list(HAND_TYPES), "draw_types": list(DRAW_TYPES),
     }
 
 

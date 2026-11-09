@@ -399,3 +399,10 @@ def test_dashboard_line_accepts_a_board_group(monkeypatch):
     client.post("/dashboard/line", json={"dashboard": "2bp_ip_pfr", "line_id": "cbet_flop",
                                          "board_group": {"name": "g"}})
     assert seen["board_group"] == {"name": "g", "negate": False}
+
+
+def test_dashboards_config_ships_the_type_orders():
+    from draws import DRAW_TYPES
+    from hand_strength import HAND_TYPES
+    body = client.get("/dashboards/config").json()
+    assert body["hand_types"] == list(HAND_TYPES) and body["draw_types"] == list(DRAW_TYPES)

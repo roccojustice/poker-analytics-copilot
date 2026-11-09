@@ -286,10 +286,17 @@
       return html + "</tbody></table>";
     }
 
+    // Canonical row order whichever side has the type: a group sits right before its first leaf
+    function typeRank(dim, name) {
+      const order = dim === "hand" ? CONFIG.hand_types : CONFIG.draw_types;
+      const leaves = dim === "hand" ? CONFIG.hand_groups[name] : null;
+      return leaves ? Math.min(...leaves.map(l => order.indexOf(l))) - 0.5 : order.indexOf(name);
+    }
+
     function typeTable(dim, key, title, user, gto) {
       const mine = Object.fromEntries(user.map(r => [r[key], r]));
       const theirs = Object.fromEntries(gto.map(r => [r[key], r]));
-      const names = [...new Set([...gto.map(r => r[key]), ...user.map(r => r[key])])];
+      const names = [...new Set([...gto.map(r => r[key]), ...user.map(r => r[key])])].sort((a, b) => typeRank(dim, a) - typeRank(dim, b));
       const cells = (gto[0] || user[0] || { cells: [] }).cells;
       // with action picks, only the picked actions' columns (a parent pick brings its sizes)
       const actions = picks.action.size ? cells.filter(c => picks.action.has(c.label) || picks.action.has(c.parent))
