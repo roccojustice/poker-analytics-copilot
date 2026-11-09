@@ -69,7 +69,7 @@ Writes are atomic (temp file + `os.replace`, as in `gto_cache`).
 Validation on save (400 / `SpotInputError` on bad input): unknown dashboard; group name empty,
 or duplicated within the dashboard (case-insensitive); `ranks` not exactly 3 rank chars (normalized:
 uppercase, sorted high to low); `textures` empty or containing anything but `rainbow` / `two-tone`;
-trips (`JJJ`) with `two-tone` (three cards of one rank are always rainbow). A board repeated in a
+trips (`JJJ`) with only `two-tone` (three cards of one rank are always rainbow; rainbow + two-tone is stored as rainbow). `load` normalizes too, so a hand-edited file still matches. A board repeated in a
 group is merged (textures unioned), not an error.
 
 The editor keeps a working copy of all the dashboard's groups; switching groups keeps unsaved edits,

@@ -19,7 +19,7 @@ def _read():
 
 
 def load(dashboard_id):
-    return _read().get(dashboard_id, [])
+    return normalize(_read().get(dashboard_id, []))  # a hand-edited "98j" still matches
 
 
 def _ranks(raw):
@@ -33,8 +33,10 @@ def _textures(raw, ranks):
     textures = set(raw or ())
     if not textures or textures - set(TEXTURES):
         raise SpotInputError(f"{ranks}: textures are rainbow and/or two-tone")
-    if len(set(ranks)) == 1 and "two-tone" in textures:
-        raise SpotInputError(f"{ranks}: trips are always rainbow")
+    if len(set(ranks)) == 1:
+        if "rainbow" not in textures:
+            raise SpotInputError(f"{ranks}: trips are always rainbow")
+        textures = {"rainbow"}  # both ticked = any texture, and trips have only one
     return textures
 
 

@@ -98,3 +98,14 @@ def test_seed_file_is_valid_and_has_overbet():
     overbet = data["2bp_ip_pfr"][0]
     assert overbet["name"] == "overbet" and len(overbet["boards"]) == 24
     assert all(b["textures"] == ["rainbow", "two-tone"] for b in overbet["boards"])
+
+
+def test_load_normalizes_a_hand_edited_file(groups_file):
+    groups_file.write_text(json.dumps({"2bp_ip_pfr": [{"name": "g", "boards": [{"ranks": "98j",
+                                                                               "textures": ["rainbow"]}]}]}))
+    assert board_groups.load("2bp_ip_pfr")[0]["boards"] == [{"ranks": "J98", "textures": ["rainbow"]}]
+
+
+def test_trips_with_both_textures_keep_rainbow():
+    out = board_groups.normalize([{"name": "g", "boards": [{"ranks": "aaa", "textures": ["rainbow", "two-tone"]}]}])
+    assert out[0]["boards"] == [{"ranks": "AAA", "textures": ["rainbow"]}]
