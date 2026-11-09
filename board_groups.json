@@ -1,0 +1,177 @@
+{
+  "2bp_ip_pfr": [
+    {
+      "name": "overbet",
+      "boards": [
+        {
+          "ranks": "J98",
+          "textures": [
+            "rainbow",
+            "two-tone"
+          ]
+        },
+        {
+          "ranks": "J97",
+          "textures": [
+            "rainbow",
+            "two-tone"
+          ]
+        },
+        {
+          "ranks": "J96",
+          "textures": [
+            "rainbow",
+            "two-tone"
+          ]
+        },
+        {
+          "ranks": "J95",
+          "textures": [
+            "rainbow",
+            "two-tone"
+          ]
+        },
+        {
+          "ranks": "J94",
+          "textures": [
+            "rainbow",
+            "two-tone"
+          ]
+        },
+        {
+          "ranks": "J93",
+          "textures": [
+            "rainbow",
+            "two-tone"
+          ]
+        },
+        {
+          "ranks": "J92",
+          "textures": [
+            "rainbow",
+            "two-tone"
+          ]
+        },
+        {
+          "ranks": "J87",
+          "textures": [
+            "rainbow",
+            "two-tone"
+          ]
+        },
+        {
+          "ranks": "J86",
+          "textures": [
+            "rainbow",
+            "two-tone"
+          ]
+        },
+        {
+          "ranks": "J85",
+          "textures": [
+            "rainbow",
+            "two-tone"
+          ]
+        },
+        {
+          "ranks": "J84",
+          "textures": [
+            "rainbow",
+            "two-tone"
+          ]
+        },
+        {
+          "ranks": "J83",
+          "textures": [
+            "rainbow",
+            "two-tone"
+          ]
+        },
+        {
+          "ranks": "J82",
+          "textures": [
+            "rainbow",
+            "two-tone"
+          ]
+        },
+        {
+          "ranks": "J76",
+          "textures": [
+            "rainbow",
+            "two-tone"
+          ]
+        },
+        {
+          "ranks": "J75",
+          "textures": [
+            "rainbow",
+            "two-tone"
+          ]
+        },
+        {
+          "ranks": "J74",
+          "textures": [
+            "rainbow",
+            "two-tone"
+          ]
+        },
+        {
+          "ranks": "J73",
+          "textures": [
+            "rainbow",
+            "two-tone"
+          ]
+        },
+        {
+          "ranks": "J72",
+          "textures": [
+            "rainbow",
+            "two-tone"
+          ]
+        },
+        {
+          "ranks": "Q96",
+          "textures": [
+            "rainbow",
+            "two-tone"
+          ]
+        },
+        {
+          "ranks": "Q95",
+          "textures": [
+            "rainbow",
+            "two-tone"
+          ]
+        },
+        {
+          "ranks": "Q85",
+          "textures": [
+            "rainbow",
+            "two-tone"
+          ]
+        },
+        {
+          "ranks": "Q84",
+          "textures": [
+            "rainbow",
+            "two-tone"
+          ]
+        },
+        {
+          "ranks": "K96",
+          "textures": [
+            "rainbow",
+            "two-tone"
+          ]
+        },
+        {
+          "ranks": "K95",
+          "textures": [
+            "rainbow",
+            "two-tone"
+          ]
+        }
+      ]
+    }
+  ]
+}
