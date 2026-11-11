@@ -304,3 +304,8 @@ Base: `3bp_ip_pfc_faced_cbet_flop` + `faced_cbet_turn` (`flg_t_cbet_def_opp = tr
   So GTO numbers are exact per flop, but a flop type / board group pools its subset flops unweighted
   (GTOw subset weights are not applied). Of the 24 `overbet` seed boards only 6 exist here: J76 r,
   J95 r, J84 tt, J93 tt, J94 tt, Q96 tt.
+- **Board-group coverage (Session 74, cbet line `X`):** `overbet` (37 boards, 61 board × texture keys):
+  7 keys in the GTO DB (the 6 above + Q87 tt), 82,652 GTO hands; 26 of the user's 264 hands fall on
+  them. `small bet` (34 boards, 68 keys): 10 keys (T86 r, 986 tt, 975 tt, 854 r, 743 r, 532 tt, 764 r,
+  542 tt, 654 tt, 643 tt), 95,154 GTO hands; 35 of 258 user hands. Low flops reach the `X` line less
+  often (7,145 on 643 tt vs ~12k on high flops): BB donks more there, not a dealing gap.

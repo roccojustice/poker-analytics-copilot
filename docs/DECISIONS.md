@@ -484,3 +484,11 @@ of rank triples + textures, edited on the page, per dashboard. Each hand carries
 (the cache was rebuilt once, `CACHE_VERSION = "v2"`). A two-tone entry matches any suit placement;
 monotone flops never match (Monotone is its own flop type). User's calls; the columns are the
 assistant's. Spec: `docs/superpowers/specs/2026-11-08-board-groups-design.md`.
+
+## 2026-11-10 (Session 74) — Board groups compare by family, not board by board
+
+The GTO side covers only 7/61 (`overbet`) and 10/68 (`small bet`) of the group's board × texture
+keys; ~90% of the user's hands fall on boards the bot never played. Kept as is: a group is a strategic
+class the user defines, so pooling is an accepted approximation. Rejected a "GTO-covered only" toggle
+(user sample drops to 26–35 hands, too few for frequencies). A coverage label on the page stays
+optional. User's call.
